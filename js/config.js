@@ -11,7 +11,7 @@ const CONFIG = {
   base: { col: 8, row: 12, hearts: 10 },
 
   economy: {
-    startPeaches: 10,
+    startPeaches: 12,
     killRewardBase: 1,
     waveRewardBase: 6,               // 过波奖 = base + 波次
     sellRefund: 4,                   // 出售字塔返还（神将另加 4×等级）
@@ -22,7 +22,7 @@ const CONFIG = {
     base: 9, step: 1,                // 费用 = base + step × 已召唤次数
     godChance: 0.24,                 // 神将字概率
     pityAfter: 4,                    // 连续 N 抽普通字后必出神将字
-    startChars: 3,                   // 开局免费发字
+    startChars: 4,                   // 开局免费发字
     rackSize: 5,
   },
 
@@ -133,6 +133,9 @@ const CONFIG = {
   },
   waveCount: 10,
   waveHpGrowth: 1.14,
+  // 前期保护：前 earlyWaveCount 波敌人血量乘 earlyWaveHpEase（给新玩家上手缓冲）
+  earlyWaveCount: 3,
+  earlyWaveHpEase: 0.85,
   waveIntermission: 6,   // 波间备战秒数
 
   /* 局外成长：修炼天赋（魂晶购买，永久生效） */
@@ -178,7 +181,8 @@ function buildWaves() {
   for (let n = 1; n <= CONFIG.waveCount; n++) {
     const list = [];
     const isBoss = n % 5 === 0;
-    const count = 5 + 3 * n;
+    let count = 5 + 3 * n;
+    if (n === 1) count = 6;   // 第一波减量，热身
     for (let i = 0; i < count; i++) {
       let type = 'ghost';
       const r = RNG.next();
@@ -188,7 +192,8 @@ function buildWaves() {
       list.push({ t: 2 + i * 1.1, type });
     }
     if (isBoss) list.push({ t: 2 + count * 1.1 + 2, type: 'boss' });
-    waves.push({ n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1), spawns: list });
+    const ease = n <= CONFIG.earlyWaveCount ? CONFIG.earlyWaveHpEase : 1;
+    waves.push({ n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1) * ease, spawns: list });
   }
   return waves;
 }
