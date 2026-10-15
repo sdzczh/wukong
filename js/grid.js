@@ -11,16 +11,13 @@ const Grid = {
 
   buildTiles() {
     const river = new Set(CONFIG.board.riverRows);
+    // 路径格集来自每局随机的路线拐点（见 main.js rollRoute）
     const pathSet = new Set();
-    for (let r = 0; r <= CONFIG.board.bridgeRow; r++) pathSet.add('0,' + r);          // 左廊
-    for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.bridgeRow); // 奈何桥
-    for (let r = CONFIG.board.bridgeRow; r < this.rows; r++) pathSet.add('8,' + r);    // 右廊
-    // 开局开放带：奈何桥两侧各 openBand 行；其余地块上锁，需铲子开垦
-    const openRows = new Set([
-      CONFIG.board.bridgeRow - CONFIG.field.openBand,
-      CONFIG.board.bridgeRow + CONFIG.field.openBand,
-    ]);
+    for (let r = 0; r <= CONFIG.board.bridgeRow; r++) pathSet.add(CONFIG.pathCells[0][0] + ',' + r);   // 入口廊
+    for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.bridgeRow);                   // 奈何桥
+    for (let r = CONFIG.board.bridgeRow; r < this.rows; r++) pathSet.add(CONFIG.pathCells[2][0] + ',' + r); // 出口廊
     this.tiles = [];
+    const landKeys = [];
     for (let r = 0; r < this.rows; r++) {
       const row = [];
       for (let c = 0; c < this.cols; c++) {
@@ -29,9 +26,31 @@ const Grid = {
         else if (river.has(r)) type = 'river';
         else type = ((r * 7 + c * 13) % 5 === 0) ? 'white' : 'purple';
         const land = (type === 'white' || type === 'purple');
-        row.push({ type, tower: null, locked: land && !openRows.has(r) });
+        row.push({ type, tower: null, locked: land });
+        if (land) landKeys.push(c + ',' + r);
       }
       this.tiles.push(row);
+    }
+    // 随机开放开局地块：nearOpen 格贴近路径（车比雪夫距离 ≤2），其余全图随机
+    const near = [], far = [];
+    for (const key of landKeys) {
+      const [c, r] = key.split(',').map(Number);
+      let d = 99;
+      for (const p of pathSet) {
+        const [pc, pr] = p.split(',').map(Number);
+        const dd = Math.max(Math.abs(pc - c), Math.abs(pr - r));
+        if (dd < d) d = dd;
+      }
+      (d <= 2 ? near : far).push(key);
+    }
+    const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = RNG.int(i + 1);[a[i], a[j]] = [a[j], a[i]]; } };
+    shuffle(near); shuffle(far);
+    const openSet = new Set();
+    for (let i = 0; i < CONFIG.field.nearOpen && i < near.length; i++) openSet.add(near[i]);
+    for (let i = 0; openSet.size < CONFIG.field.startOpen && i < far.length; i++) openSet.add(far[i]);
+    for (const key of openSet) {
+      const [c, r] = key.split(',').map(Number);
+      this.tiles[r][c].locked = false;
     }
   },
 

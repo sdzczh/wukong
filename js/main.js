@@ -13,7 +13,9 @@ const Game = {
   startRun() {
     resetRun();
     Director.reset();
-    Grid.buildTiles();          // 重建棋盘：清除单位 + 恢复「封」字锁定地块
+    rollRoute();                // 每局随机路线
+    Grid.buildTiles();          // 重建棋盘：新路线 + 随机开放格 + 恢复「封」字锁定
+    Grid.buildPath();           // 路径像素随新路线重算
     R.state = 'battle';
     Panels.hide();
     RackUI.hideSel();
@@ -280,9 +282,10 @@ function drawTiles() {
 function drawBridgeAndDecor(now) {
   const tile = Grid.tile;
   const row = CONFIG.board.bridgeRow;
+  const c0 = CONFIG.pathCells[0][0], c1 = CONFIG.pathCells[2][0];   // 桥两端（入口列 / 出口列）
 
-  // 奈何桥（木板铺在桥行上）
-  for (let c = 0; c < Grid.cols; c++) {
+  // 奈何桥（木板只铺在入口列与出口列之间）
+  for (let c = c0; c <= c1; c++) {
     const x = Grid.ox + c * tile, y = Grid.oy + row * tile;
     ctx.fillStyle = (c % 2 === 0) ? '#7a5236' : '#6d4830';
     ctx.fillRect(x, y + 3, tile, tile - 6);
@@ -298,16 +301,16 @@ function drawBridgeAndDecor(now) {
   ctx.strokeStyle = '#5a3d28'; ctx.lineWidth = 5; ctx.lineCap = 'round';
   const ry0 = Grid.oy + row * tile + 2, ry1 = ry0 + tile - 4;
   ctx.beginPath();
-  ctx.moveTo(Grid.ox, ry0); ctx.lineTo(Grid.ox + tile * Grid.cols, ry0);
-  ctx.moveTo(Grid.ox, ry1); ctx.lineTo(Grid.ox + tile * Grid.cols, ry1);
+  ctx.moveTo(Grid.ox + c0 * tile, ry0); ctx.lineTo(Grid.ox + (c1 + 1) * tile, ry0);
+  ctx.moveTo(Grid.ox + c0 * tile, ry1); ctx.lineTo(Grid.ox + (c1 + 1) * tile, ry1);
   ctx.stroke();
-  for (let c = 0; c <= Grid.cols; c += 1) {
+  for (let c = c0; c <= c1 + 1; c += 1) {
     const x = Grid.ox + c * tile;
     ctx.beginPath(); ctx.moveTo(x, ry0 - 2); ctx.lineTo(x, ry1 + 2); ctx.stroke();
   }
 
-  // 鬼门关（路径起点）
-  const gate = Grid.center(0, 0);
+  // 鬼门关（路径起点，随入口列移动）
+  const gate = Grid.center(CONFIG.pathCells[0][0], CONFIG.pathCells[0][1]);
   ctx.save();
   ctx.translate(gate.x, gate.y);
   const pulse = 0.5 + Math.sin(now * 2) * 0.12;
@@ -733,6 +736,19 @@ Bus.on('shovelAt', cell => {
   RackUI.refresh();
   HUD.refresh();
 });
+
+/* ---------- 每局随机路线 ---------- */
+/* 入口列 ∈ {0,1,2}、桥行 ∈ 冥河行、出口列 ∈ {6,7,8}，27 种走法；
+   同步改写 CONFIG.pathCells / bridgeRow / base.col，下游全部自动跟随 */
+function rollRoute() {
+  const river = CONFIG.board.riverRows;
+  const bridgeRow = river[RNG.int(river.length)];
+  const entryCol = RNG.int(3);            // 0..2
+  const exitCol = 6 + RNG.int(3);         // 6..8
+  CONFIG.board.bridgeRow = bridgeRow;
+  CONFIG.base.col = exitCol;
+  CONFIG.pathCells = [[entryCol, 0], [entryCol, bridgeRow], [exitCol, bridgeRow], [exitCol, CONFIG.board.rows - 1]];
+}
 
 /* ---------- 启动 ---------- */
 Save.load();
