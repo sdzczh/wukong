@@ -14,7 +14,7 @@ const RackUI = {
     this.shovelBtn.addEventListener('click', () => {
       SFX.ensure(); SFX.play('click');
       R.tool = R.tool === 'shovel' ? null : 'shovel';
-      if (R.tool === 'shovel') { R.armedSlot = -1; HUD.toast('点选棋盘上单位，将其铲回架子'); }
+      if (R.tool === 'shovel') { R.armedSlot = -1; HUD.toast('点「封」字地块开垦；点单位铲回架子'); }
       this.refresh();
     });
 

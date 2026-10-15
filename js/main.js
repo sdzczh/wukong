@@ -13,13 +13,13 @@ const Game = {
   startRun() {
     resetRun();
     Director.reset();
-    Grid.resetTowers();
+    Grid.buildTiles();          // 重建棋盘：清除单位 + 恢复「封」字锁定地块
     R.state = 'battle';
     Panels.hide();
     RackUI.hideSel();
     RackUI.dealStartChars();
     HUD.refresh();
-    HUD.toast('点击架子上的字放到棋盘；两个同字同级的单位叠放升级，特定两字合成神将');
+    HUD.toast('点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
   },
   pause() {
     if (R.state !== 'battle') return;
@@ -248,6 +248,20 @@ function drawTiles() {
         ctx.fillRect(x, y, tile, tile);
         continue;
       }
+      // 锁定地块：暗色石板 + 「封」字
+      if (t.locked) {
+        ctx.fillStyle = '#332c42';
+        roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
+        ctx.fill();
+        ctx.fillStyle = '#3d3550';
+        roundRect(ctx, x + 5, y + 5, tile - 10, tile - 10, 6);
+        ctx.fill();
+        ctx.fillStyle = '#5a5074';
+        ctx.font = `900 ${Math.round(tile * 0.4)}px "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('封', x + tile / 2, y + tile / 2 + 2);
+        continue;
+      }
       // 紫砖 / 白石
       const isWhite = t.type === 'white';
       ctx.fillStyle = isWhite ? '#e7dfcf' : '#7e6f9e';
@@ -394,6 +408,21 @@ function drawDropHints() {
     const t = Grid.tiles[h.r][h.c].tower;
     if (t) drawRangeCircle(t, 0.3);
   }
+  // 铲子悬停：标记可作用目标（锁定地块 / 已有单位）
+  if (R.tool === 'shovel' && h) {
+    const t = Grid.tiles[h.r][h.c];
+    if (t.locked || t.tower) {
+      const p = Grid.center(h.c, h.r);
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = '#ffd867'; ctx.lineWidth = 3;
+      ctx.setLineDash([6, 5]);
+      roundRect(ctx, p.x - tile * 0.44, p.y - tile * 0.44, tile * 0.88, tile * 0.88, 9);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   if (R.selected) drawSelectedInfo();
 }
 
@@ -667,11 +696,28 @@ Bus.on('waveClear', n => {
   if (n >= CONFIG.waveCount) Game.gameOver(true);
 });
 
-/* 铲子：把单位铲回架子（架满则铲除） */
+/* 铲子：开垦「封」字地块；点单位则铲回架子（架满则铲除） */
 Bus.on('shovelAt', cell => {
-  const t = Grid.tiles[cell.r][cell.c].tower;
-  if (!t) { HUD.toast('这里没有单位'); return; }
+  const tile = Grid.tiles[cell.r][cell.c];
   if (R.shovelLeft <= 0) { R.tool = null; RackUI.refresh(); return; }
+
+  // 开垦新地块
+  if (tile.locked) {
+    tile.locked = false;
+    R.shovelLeft--;
+    R.tool = null;
+    const p = Grid.center(cell.c, cell.r);
+    FX.ring(p.x, p.y, Grid.tile * 0.55, '#d9cdb4');
+    FX.float('开垦', p.x, p.y - Grid.tile * 0.3, '#d9cdb4', 16);
+    SFX.play('place');
+    HUD.toast('开垦新地块');
+    RackUI.refresh();
+    HUD.refresh();
+    return;
+  }
+
+  const t = tile.tower;
+  if (!t) { HUD.toast('点「封」字地块开垦，或点单位铲回架子'); return; }
   const slot = R.rack.findIndex(x => !x);
   Merge.removeUnit(t);
   if (slot >= 0) {

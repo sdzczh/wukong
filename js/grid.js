@@ -15,6 +15,11 @@ const Grid = {
     for (let r = 0; r <= CONFIG.board.bridgeRow; r++) pathSet.add('0,' + r);          // 左廊
     for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.bridgeRow); // 奈何桥
     for (let r = CONFIG.board.bridgeRow; r < this.rows; r++) pathSet.add('8,' + r);    // 右廊
+    // 开局开放带：奈何桥两侧各 openBand 行；其余地块上锁，需铲子开垦
+    const openRows = new Set([
+      CONFIG.board.bridgeRow - CONFIG.field.openBand,
+      CONFIG.board.bridgeRow + CONFIG.field.openBand,
+    ]);
     this.tiles = [];
     for (let r = 0; r < this.rows; r++) {
       const row = [];
@@ -23,7 +28,8 @@ const Grid = {
         if (pathSet.has(c + ',' + r)) type = 'path';
         else if (river.has(r)) type = 'river';
         else type = ((r * 7 + c * 13) % 5 === 0) ? 'white' : 'purple';
-        row.push({ type, tower: null });
+        const land = (type === 'white' || type === 'purple');
+        row.push({ type, tower: null, locked: land && !openRows.has(r) });
       }
       this.tiles.push(row);
     }
@@ -77,10 +83,15 @@ const Grid = {
   placeable(c, r) {
     if (!this.inBounds(c, r)) return false;
     const t = this.tiles[r][c];
-    return (t.type === 'purple' || t.type === 'white') && !t.tower;
+    return (t.type === 'purple' || t.type === 'white') && !t.tower && !t.locked;
   },
 
-  resetTowers() {
-    for (const row of this.tiles) for (const t of row) t.tower = null;
+  /* 仍被锁定的地块（开垦候选） */
+  lockedCells() {
+    const out = [];
+    for (let r = 0; r < this.rows; r++)
+      for (let c = 0; c < this.cols; c++)
+        if (this.tiles[r][c].locked) out.push({ c, r });
+    return out;
   },
 };
