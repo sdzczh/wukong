@@ -19,7 +19,7 @@ const Game = {
     RackUI.hideSel();
     RackUI.dealStartChars();
     HUD.refresh();
-    HUD.toast('点击架子上的字放到棋盘；两个相同的字叠放可升级');
+    HUD.toast('点击架子上的字放到棋盘；两个同字同级的单位叠放升级，特定两字合成神将');
   },
   pause() {
     if (R.state !== 'battle') return;
@@ -157,12 +157,12 @@ function render(now) {
   drawRiver(now);
   drawTiles();
   drawBridgeAndDecor(now);
-  drawDropHints();
 
   for (const t of R.towers) t.draw(ctx);
   for (const e of R.enemies) e.draw(ctx, now);
   for (const p of R.projectiles) p.draw(ctx);
   FX.draw(ctx);
+  drawDropHints();
 
   drawVignette();
 }
@@ -337,25 +337,55 @@ function drawBridgeAndDecor(now) {
   ctx.restore();
 }
 
+/* 当前持握（拖拽中 / 已点选架子字）的来源/字/等级，无则 null */
+function heldItem() {
+  const dragging = Input.activeDrag() && R.drag;
+  if (dragging && R.drag.src.type === 'board') {
+    const u = R.drag.src.unit;
+    return { src: 'board', ch: u.def.char, lv: u.level };
+  }
+  const slot = dragging ? R.drag.src.slot : R.armedSlot;
+  if (slot >= 0) {
+    const it = R.rack[slot];
+    if (!it) return null;
+    return it.type === 'char'
+      ? { src: 'rack', ch: it.ch, lv: 1 }
+      : { src: 'rack', ch: it.unit.def.char, lv: it.unit.level };
+  }
+  return null;
+}
+
 /* 放置/合成预览染色 + 选中信息 */
 function drawDropHints() {
   const tile = Grid.tile;
   const h = R.hover;
 
-  // 预览：拖拽中或已点选架子字 → 显示落点可行性
-  const preview = Input.activeDrag() || (R.armedSlot >= 0 && R.rack[R.armedSlot]);
-  if (preview && h) {
-    const t = Grid.tiles[h.r][h.c];
-    const occupied = !!t.tower;
-    let ok;
-    if (occupied) ok = true;                                   // 有单位必可（合成/换位）
-    else ok = Grid.placeable(h.c, h.r) && R.towers.length < CONFIG.towerCap;
+  // 预览：按真实判定结果显示落点——绿=放置/合成升级，黄=换位，红=不可
+  const held = heldItem();
+  if (held && h) {
+    const t = Grid.tiles[h.r][h.c].tower;
+    let state;
+    if (!t) {
+      state = (Grid.placeable(h.c, h.r) && R.towers.length < CONFIG.towerCap) ? 'ok' : 'fail';
+    } else {
+      const v = Merge.judge(held.ch, held.lv, t);
+      if (v === 'level' || v === 'general-level' || v === 'pair') state = 'ok';
+      // 换位只对棋盘↔拖拽有效；架子字落到不可合成的塔上视为不可
+      else state = (v === 'swap' && held.src === 'board') ? 'swap' : 'fail';
+    }
     const p = Grid.center(h.c, h.r);
     ctx.save();
     ctx.globalAlpha = 0.5;
-    ctx.fillStyle = ok ? '#7fe08a' : '#c05a5a';
+    ctx.fillStyle = state === 'ok' ? '#7fe08a' : state === 'swap' ? '#e8c05a' : '#c05a5a';
     roundRect(ctx, p.x - tile * 0.42, p.y - tile * 0.42, tile * 0.84, tile * 0.84, 9);
     ctx.fill();
+    // 格角小标：合=可合成 换=换位 ×=不可
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#1d1628';
+    ctx.font = `900 ${Math.round(tile * 0.3)}px "PingFang SC", sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(state === 'ok' ? '合' : state === 'swap' ? '换' : '×',
+                 p.x + tile * 0.25, p.y + tile * 0.25);
     ctx.restore();
   }
 
@@ -525,7 +555,7 @@ const Input = {
       // swap：placeOnto 已把棋盘单位换回架子
     }
     if (res.action === 'fail') {
-      HUD.toast('这里不能摆放');
+      HUD.toast(res.reason === 'merge-level' ? '需要两个同字同级的单位才能合成，可拖到空格摆放' : '这里不能摆放');
       if (armed) return;   // 点选模式保留 armed，等待下一次点格
     } else {
       R.armedSlot = -1;
@@ -675,7 +705,7 @@ requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
 window.GAME = {
-  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User,
+  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input,
   startRun: () => Game.startRun(),
   place: (c, r, key) => {
     if (!Grid.placeable(c, r) || R.towers.length >= CONFIG.towerCap) return false;

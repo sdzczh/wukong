@@ -59,13 +59,14 @@ const Merge = {
     if (R.selected === u) { R.selected = null; if (window.RackUI) RackUI.hideSel(); }
   },
 
-  /* 判定 aChar（拖动方的字）放到 b 上的结果 */
+  /* 判定 aChar/aLevel（拖动方的字/单位）放到 b 上的结果。
+     合成规则：两个同字同级的单位才能合成升级；不同级只能换位 */
   judge(aChar, aLevel, b) {
     if (b.isGeneral) {
-      if (aChar === b.def.char) return b.level >= b.maxLevel ? 'swap' : 'general-level';
+      if (aChar === b.def.char) return (aLevel === b.level && b.level < b.maxLevel) ? 'general-level' : 'swap';
       return 'swap';
     }
-    if (aChar === b.def.char) return b.level >= b.maxLevel ? 'swap' : 'level';
+    if (aChar === b.def.char) return (aLevel === b.level && b.level < b.maxLevel) ? 'level' : 'swap';
     if (CONFIG.pairs[aChar + b.def.char] || CONFIG.pairs[b.def.char + aChar]) return 'pair';
     return 'swap';
   },
@@ -115,7 +116,7 @@ const Merge = {
       Bus.emit('towerMerged', { kind: 'pair', unit: g });
       return { action: 'pair', unit: g };
     }
-    // swap：棋盘↔棋盘换位置；架子字↔棋盘单位互换（单位回架）
+    // swap：仅棋盘↔棋盘换位（两塔都在棋盘，交换格子）
     if (aUnit) {
       const ac = aUnit.col, ar = aUnit.row, bc = b.col, br = b.row;
       Merge.removeUnit(aUnit); Merge.removeUnit(b);
@@ -125,20 +126,8 @@ const Merge = {
       SFX.play('place');
       return { action: 'swap', unit: na };
     }
-    const slot = a.slot;
-    if (slot == null || R.rack[slot] == null) return { action: 'fail' };
-    if (R.rack.filter(x => x).length >= CONFIG.summon.rackSize && !R.rack[slot]) return { action: 'fail' };
-    // b 回架，字上棋盘
-    const rackItem = R.rack[slot];
-    R.rack[slot] = null;
-    const bc = b.col, br = b.row;
-    Merge.removeUnit(b);
-    Merge.makeUnit(Merge.towerKeyOfChar(aChar), bc, br);
-    // b 单位转为架子上的一项（保留等级）
-    R.rack[slot] = { type: 'unit', unit: b };
-    SFX.play('place');
-    Bus.emit('rackChanged');
-    return { action: 'swap', unit: null };
+    // 架子字 → 棋盘塔：不同级/不同字不再弹塔回架（防误操作），视为不可合成
+    return { action: 'fail', reason: 'merge-level' };
   },
 
   /* 首次合成神将：图鉴解锁 + 魂晶奖励 */
