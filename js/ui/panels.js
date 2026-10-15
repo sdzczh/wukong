@@ -45,12 +45,16 @@ const Panels = {
 
   showMenu() {
     const s = Save.data;
+    const d = new Date();
+    const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const dailyBest = (s.daily && s.daily.key === key) ? s.daily.best : 0;
     this._fill(
       '无敌悟空',
       `道友「${s.username || '无名氏'}」· 文字合成塔防 · 地府篇`,
-      `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}`,
+      `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}<br>今日轮回最佳　${dailyBest}　波`,
       [
         { text: '开 始 战 斗', fn: () => Game.startRun() },
+        { text: '每 日 轮 回', fn: () => Game.startDaily(), ghost: true },
         { text: '修 炼', fn: () => TalentUI.show('menu'), ghost: true },
         { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
         { text: '改 名 号', fn: () => this.showNameEntry(() => this.showMenu()), ghost: true },
@@ -87,11 +91,14 @@ const Panels = {
     const reward = R.crystalsEarned;
     const title = win ? '大 捷' : (R.endless ? '壮 烈 战 殁' : '殿 破');
     const sub = win ? '幽魂尽散，轮回重明' : (R.endless ? `无尽征战止步于第 ${R.wave} 波` : '魂落黄泉，殿陷敌手');
+    const dailyLine = R.daily
+      ? `<br>今日轮回最佳　${(Save.data.daily && Save.data.daily.key === R.daily) ? Save.data.daily.best : R.wave}　波`
+      : '';
     const stats =
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
       `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}`;
+      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine;
     this._fill(title, sub, stats, [
       { text: '再 来 一 局', fn: () => Game.startRun() },
       { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },

@@ -19,6 +19,7 @@ const R = {
   summonsDone: 0,     // 累计召唤次数（召唤价递增）
   rack: [],           // 召唤架 5 格，元素 null | {type:'char'|'unit', ch?, lv?, unit?}
   draft: null,        // 本轮召唤选牌（数组），再召唤时旧的未选卡作废
+  daily: null,        // 每日轮回的日期种子（普通局为 null）
   pityMiss: 0,        // 距上次神字的普通抽数
   armedSlot: -1,      // 点选后待放置的格子索引（-1 无）
   drag: null,         // {from:'rack'|'board', slot?, unit?} 拖拽中的来源
@@ -44,6 +45,7 @@ function resetRun() {
   R.summonsDone = 0;
   R.rack = new Array(CONFIG.summon.rackSize).fill(null);
   R.draft = null;
+  R.daily = null;
   R.pityMiss = 0;
   R.armedSlot = -1;
   R.drag = null;

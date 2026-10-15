@@ -1,11 +1,40 @@
 /* WebAudio 程序合成音效（零素材） */
 const SFX = {
   ctx: null,
+  bgm: null,
   ensure() {
     if (!this.ctx) {
       try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
     }
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    this.startBgm();
+  },
+
+  /* 地府氛围底噪：A1+E2 低鸣 + 微失谐高八度，慢速呼吸 LFO，常驻循环 */
+  startBgm() {
+    if (!this.ctx || this.bgm) return;
+    const c = this.ctx;
+    const g = c.createGain(); g.gain.value = 0;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300;
+    const o1 = c.createOscillator(); o1.type = 'sine'; o1.frequency.value = 55;
+    const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = 82.41;
+    const o3 = c.createOscillator(); o3.type = 'triangle'; o3.frequency.value = 110; o3.detune.value = 6;
+    const g3 = c.createGain(); g3.gain.value = 0.3;
+    const lfo = c.createOscillator(); lfo.frequency.value = 0.07;
+    const lfoG = c.createGain(); lfoG.gain.value = 0.018;
+    lfo.connect(lfoG); lfoG.connect(g.gain);
+    o1.connect(g); o2.connect(g); o3.connect(g3); g3.connect(g);
+    g.connect(lp); lp.connect(c.destination);
+    o1.start(); o2.start(); o3.start(); lfo.start();
+    this.bgm = { g };
+    this.refreshBgm();
+  },
+
+  /* 跟随音效开关：开 → 低音量常驻，关 → 淡出 */
+  refreshBgm() {
+    if (!this.bgm || !this.ctx) return;
+    const target = Save.data.sound ? 0.05 : 0.0001;
+    this.bgm.g.gain.setTargetAtTime(target, this.ctx.currentTime, 1.0);
   },
   tone(freq, dur, type, vol, slide) {
     if (!Save.data.sound || !this.ctx) return;

@@ -7,6 +7,7 @@ const RackUI = {
     this.summonBtn = document.getElementById('btn-summon');
     this.shovelBtn = document.getElementById('btn-shovel');
     this.selPanel = document.getElementById('sel-panel');
+    this.itemPanel = document.getElementById('item-panel');
     this.draftBar = document.getElementById('draft-bar');
     this.ghost = document.getElementById('drag-ghost');
     this.stageEl = document.getElementById('stage');
@@ -19,14 +20,29 @@ const RackUI = {
       this.refresh();
     });
 
-    // 选牌条：点卡入架，✕ 放弃整轮
+    // 选牌条：点卡入架，刷新重 roll 本轮，✕ 放弃整轮
     this.draftBar.addEventListener('click', e => {
       const card = e.target.closest('.draft-card');
       if (card) { SFX.ensure(); this.pickDraft(+card.dataset.i); }
     });
+    this.draftBar.querySelector('.draft-refresh').addEventListener('click', () => { SFX.ensure(); this.refreshDraft(); });
     this.draftBar.querySelector('.draft-x').addEventListener('click', () => { SFX.play('click'); this.discardDraft(); });
 
     this.buildSlots();
+  },
+
+  /* 3 桃重 roll 当前 5 张（不动保底计数） */
+  refreshDraft() {
+    if (!R.draft || !R.draft.length) return;
+    const cost = CONFIG.summon.refreshCost;
+    if (R.peaches < cost) { HUD.toast('蟠桃不足'); SFX.play('click'); return; }
+    R.peaches -= cost;
+    const godSet = this._godSet();
+    R.draft = [];
+    for (let i = 0; i < CONFIG.summon.draftSize; i++) R.draft.push(this._rollDraftCard(godSet));
+    SFX.play('summon');
+    this.renderDraft();
+    HUD.refresh();
   },
 
   /* ---------- 召唤 ---------- */
@@ -167,15 +183,88 @@ const RackUI = {
       return `<div class="draft-card${isGod ? ' god' : ''}" data-i="${i}">` +
         `<span class="dchar" style="color:${isGod ? '#7a6fd0' : '#4a3b52'}">${d.ch}</span>${lvTxt}${hint}</div>`;
     }).join('');
+    // 刷新按钮可用态
+    const rf = this.draftBar.querySelector('.draft-refresh');
+    rf.textContent = `刷新 ${CONFIG.summon.refreshCost}桃`;
+    rf.classList.toggle('disabled', R.peaches < CONFIG.summon.refreshCost);
+  },
+
+  /* 神将字的配对字（如 悟 → 空） */
+  _pairOf(ch) {
+    for (const two in CONFIG.pairs) if (two.includes(ch)) return two.replace(ch, '');
+    return '';
   },
 
   /* 神将字的配对提示（如 悟 → 配「空」） */
   _pairHintText(ch) {
-    for (const two in CONFIG.pairs) {
-      if (two.includes(ch)) return `<span class="dpair">配「${two.replace(ch, '')}」</span>`;
-    }
-    return '';
+    const p = this._pairOf(ch);
+    return p ? `<span class="dpair">配「${p}」</span>` : '';
   },
+
+  /* ---------- 架子物品面板（长按架子格）：出售字卡 / 献祭神将字 ---------- */
+  showItemPanel(slot) {
+    const item = R.rack[slot];
+    if (!item) return;
+    this.hideSel();
+    R.armedSlot = -1;
+    if (item.type === 'unit') {
+      const u = item.unit;
+      this.itemPanel.innerHTML =
+        `<div class="sel-head"><span class="sel-char" style="color:${u.def.color || '#4a3b52'}">${u.def.char}</span>` +
+        `<span class="sel-name">${u.def.name}</span><span class="sel-lv">Lv.${u.level}</span>` +
+        `<button class="sel-close">×</button></div>` +
+        `<div class="sel-body">已铲回架子的单位，拖到棋盘可继续作战</div>` +
+        `<button class="item-sell">出售 +${Merge.sellValue(u)} 桃</button>`;
+      this.itemPanel.querySelector('.item-sell').addEventListener('click', () => {
+        R.peaches += Merge.sellValue(u);
+        R.rack[slot] = null;
+        SFX.play('sell');
+        this.hideItemPanel(); this.refresh(); HUD.refresh();
+      });
+    } else {
+      const lv = item.lv || 1;
+      const isGod = !CONFIG.charToTower[item.ch];
+      const towerName = isGod ? '' : CONFIG.towers[CONFIG.charToTower[item.ch]].name;
+      // 献祭目标：棋盘上已唤醒的配对神将
+      let feedTarget = null;
+      if (isGod) {
+        for (const t of R.towers) {
+          if (t.isGeneral && t.def.pair && t.def.pair.includes(item.ch)) { feedTarget = t; break; }
+        }
+      }
+      const body = isGod
+        ? `神将字 · 与「${this._pairOf(item.ch)}」凑对唤醒神将，或拖出棋盘成灵字塔`
+        : `${towerName}字卡 · 放到棋盘即成 ${towerName} Lv${lv}`;
+      const sellVal = CONFIG.summon.sellBase + lv;
+      this.itemPanel.innerHTML =
+        `<div class="sel-head"><span class="sel-char" style="color:${isGod ? '#7a4e86' : '#4a3b52'}">${item.ch}</span>` +
+        `<span class="sel-name">${isGod ? '神将字' : towerName + '字卡'}</span><span class="sel-lv">Lv.${lv}</span>` +
+        `<button class="sel-close">×</button></div>` +
+        `<div class="sel-body"><div>${body}</div></div>` +
+        (feedTarget ? `<button class="item-feed">献祭给${feedTarget.def.name}　经验 +${CONFIG.summon.sacrificeExp}</button>` : '') +
+        `<button class="item-sell">出售 +${sellVal} 桃</button>`;
+      this.itemPanel.querySelector('.item-sell').addEventListener('click', () => {
+        R.peaches += sellVal;
+        R.rack[slot] = null;
+        SFX.play('sell');
+        this.hideItemPanel(); this.refresh(); HUD.refresh();
+      });
+      const feedBtn = this.itemPanel.querySelector('.item-feed');
+      if (feedBtn) feedBtn.addEventListener('click', () => {
+        R.rack[slot] = null;
+        feedTarget.gainExp(CONFIG.summon.sacrificeExp);
+        FX.ring(feedTarget.x, feedTarget.y, Grid.tile * 0.8, '#9a6fd0');
+        FX.float('+' + CONFIG.summon.sacrificeExp + ' 经验', feedTarget.x, feedTarget.y - Grid.tile * 0.6, '#c9a2ff', 15);
+        SFX.play('merge');
+        this.hideItemPanel(); this.refresh(); HUD.refresh();
+      });
+    }
+    this.itemPanel.querySelector('.sel-close').addEventListener('click', () => { SFX.play('click'); this.hideItemPanel(); });
+    this.itemPanel.classList.remove('hidden');
+    this.refresh();
+  },
+
+  hideItemPanel() { if (this.itemPanel) this.itemPanel.classList.add('hidden'); },
 
   /* 开局免费发字 */
   dealStartChars() {
@@ -263,13 +352,14 @@ const RackUI = {
     const d = t.def;
     const rows = [];
     if (d.kind === 'aura') {
-      rows.push(`战鼓：周围友塔攻速 +${Math.round(d.auraRate * 100)}%`);
+      const rate = Math.round((d.auraRate + (d.auraLvStep || 0) * (t.level - 1)) * 100);
+      rows.push(`战鼓：周围 ${(t.rangePx / Grid.tile).toFixed(1)} 格友塔攻速 +${rate}%`);
     } else {
       rows.push(`攻击 ${t.atk}　攻速 ${d.rate}/s　射程 ${(t.rangePx / Grid.tile).toFixed(1)} 格`);
     }
     if (t.isGeneral) {
       const st = t.skillT <= 0 ? '✦ 就绪' : `冷却 ${Math.max(0, t.skillT).toFixed(1)}s`;
-      rows.push(`经验 ${t.exp}/10${t.level >= t.maxLevel ? '（已满级）' : ''}`);
+      rows.push(`经验 ${t.exp}/${t.expNeed}${t.level >= t.maxLevel ? '（已满级）' : ''}`);
       rows.push(`技能 · ${d.skill.name}（${st}）：${d.skill.desc}`);
     }
     if (d.pairHint) rows.push(`与「${d.pairHint.with}」合成 ${d.pairHint.general}`);
@@ -290,6 +380,7 @@ const RackUI = {
   hideSel() {
     R.selected = null;
     this.selPanel.classList.add('hidden');
+    this.hideItemPanel();
   },
 
   sellSelected() {

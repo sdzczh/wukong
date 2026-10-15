@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>无敌悟空 · 文字塔防</title>
-<link rel="stylesheet" href="css/style.css?v=20261015c">
+<link rel="stylesheet" href="css/style.css?v=20261015d">
 </head>
 <body>
 <div id="stage">
@@ -44,12 +44,13 @@
 
   <!-- 召唤选牌：一次 5 张点选入架，未选的再次召唤时作废 -->
   <div id="draft-bar" class="hidden">
-    <div class="draft-title">召唤结果 · 点选入架<span class="draft-tip">未选的卡，再次召唤时消失</span><button class="draft-x">放 弃</button></div>
+    <div class="draft-title">召唤结果 · 点选入架<span class="draft-tip">未选的卡，再次召唤时消失</span><button class="draft-refresh">刷新 3桃</button><button class="draft-x">放 弃</button></div>
     <div class="draft-cards"></div>
   </div>
 
-  <!-- 选中单位面板 / 拖拽幽灵 -->
+  <!-- 选中单位面板 / 架子字卡面板（长按） / 拖拽幽灵 -->
   <div id="sel-panel" class="hidden"></div>
+  <div id="item-panel" class="hidden"></div>
   <div id="drag-ghost" class="hidden"></div>
 
   <!-- 弹层 -->
@@ -63,27 +64,27 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261015c"></script>
-<script src="js/rng.js?v=20261015c"></script>
-<script src="js/save.js?v=20261015c"></script>
-<script src="js/user.js?v=20261015c"></script>
-<script src="js/talents.js?v=20261015c"></script>
-<script src="js/audio.js?v=20261015c"></script>
-<script src="js/state.js?v=20261015c"></script>
-<script src="js/grid.js?v=20261015c"></script>
-<script src="js/ui/fx.js?v=20261015c"></script>
-<script src="js/battle/enemy.js?v=20261015c"></script>
-<script src="js/battle/projectile.js?v=20261015c"></script>
-<script src="js/battle/tower.js?v=20261015c"></script>
-<script src="js/battle/general.js?v=20261015c"></script>
-<script src="js/battle/merge.js?v=20261015c"></script>
-<script src="js/battle/skill.js?v=20261015c"></script>
-<script src="js/battle/director.js?v=20261015c"></script>
-<script src="js/ui/hud.js?v=20261015c"></script>
-<script src="js/ui/rack.js?v=20261015c"></script>
-<script src="js/ui/panels.js?v=20261015c"></script>
-<script src="js/ui/codex.js?v=20261015c"></script>
-<script src="js/ui/talent.js?v=20261015c"></script>
-<script src="js/main.js?v=20261015c"></script>
+<script src="js/config.js?v=20261015d"></script>
+<script src="js/rng.js?v=20261015d"></script>
+<script src="js/save.js?v=20261015d"></script>
+<script src="js/user.js?v=20261015d"></script>
+<script src="js/talents.js?v=20261015d"></script>
+<script src="js/audio.js?v=20261015d"></script>
+<script src="js/state.js?v=20261015d"></script>
+<script src="js/grid.js?v=20261015d"></script>
+<script src="js/ui/fx.js?v=20261015d"></script>
+<script src="js/battle/enemy.js?v=20261015d"></script>
+<script src="js/battle/projectile.js?v=20261015d"></script>
+<script src="js/battle/tower.js?v=20261015d"></script>
+<script src="js/battle/general.js?v=20261015d"></script>
+<script src="js/battle/merge.js?v=20261015d"></script>
+<script src="js/battle/skill.js?v=20261015d"></script>
+<script src="js/battle/director.js?v=20261015d"></script>
+<script src="js/ui/hud.js?v=20261015d"></script>
+<script src="js/ui/rack.js?v=20261015d"></script>
+<script src="js/ui/panels.js?v=20261015d"></script>
+<script src="js/ui/codex.js?v=20261015d"></script>
+<script src="js/ui/talent.js?v=20261015d"></script>
+<script src="js/main.js?v=20261015d"></script>
 </body>
 </html>

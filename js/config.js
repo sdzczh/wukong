@@ -18,6 +18,7 @@ const CONFIG = {
     killRewardBase: 1,
     waveRewardBase: 6,               // 过波奖 = base + 波次
     sellRefund: 4,                   // 出售字塔返还（神将另加 4×等级）
+    interestEvery: 10, interestCap: 5,  // 过波息钱：每持 10 桃 +1，单波上限 +5
   },
 
   // 召唤（抽字）：一次召唤弹出 draftSize 张卡，点选入架，未选的再召唤时消失
@@ -28,6 +29,9 @@ const CONFIG = {
     startChars: 4,                   // 开局免费发字
     rackSize: 5,
     draftSize: 5,
+    refreshCost: 3,                  // 选牌条刷新当前 5 卡的费用（不影响保底计数）
+    sellBase: 2,                     // 架子上字卡出售 = base + 等级
+    sacrificeExp: 6,                 // 神将字献祭给配对神将的经验
     // 自走棋式卡片分级：普通字卡随波次出现 Lv2/Lv3（神将字恒为 Lv1）
     cardLv: { lv2From: 2, lv2Step: 0.05, lv2Cap: 0.35, lv3From: 6, lv3Step: 0.04, lv3Cap: 0.20, maxCardLv: 3 },
   },
@@ -38,6 +42,7 @@ const CONFIG = {
   /* 灵宝掉落（击杀概率掉落，自动拾取） */
   drops: {
     chance: 0.03, bossChance: 1,
+    endlessDecay: 0.85,            // 无尽征战：第 10 波后掉率每波 ×0.85
     mightMul: 1.2, mightDur: 15,   // 兵符：全体攻击 +
     mightPeach: 8,                 // 桃袋
     mightHeart: 1,                 // 轮回符
@@ -73,8 +78,8 @@ const CONFIG = {
              desc: '穿刺：攻击贯穿直线上至多 3 个敌人' },
     staff: { char: '棍', name: '铁棍', atk: 12, rate: 1.2, range: 1.6, kind: 'cleave', cleave: 3,
              desc: '横扫：攻击目标及相邻 2 个敌人' },
-    camp:  { char: '营', name: '战营', atk: 0, rate: 0, range: 2.2, kind: 'aura', auraRate: 0.15,
-             desc: '战鼓：周围 2 格友塔攻速 +15%（自身不攻击）' },
+    camp:  { char: '营', name: '战营', atk: 0, rate: 0, range: 2.2, kind: 'aura', auraRate: 0.15, auraLvStep: 0.05,
+             desc: '战鼓：周围 2 格友塔攻速 +15%（每级扩圈、攻速再 +5%，自身不攻击）' },
 
     /* ---------- 神将（两字合成；Lv1 基准，每级攻击×1.6；技能 M3 启用） ---------- */
     wukong:  { char: '悟空', name: '孙悟空', general: true, rarity: '橙', pair: ['悟', '空'], color: '#c98a2e',
@@ -131,11 +136,11 @@ const CONFIG = {
 
   // 敌人（魂系）
   enemies: {
-    ghost:  { char: '魂', name: '幽魂', hp: 20,  speed: 0.9, reward: 1,  dmg: 1, size: 0.62, color: '#8d97b8' },
-    wraith: { char: '怨', name: '怨魂', hp: 14,  speed: 1.6, reward: 1,  dmg: 1, size: 0.56, color: '#5cc0a8' },
-    brute:  { char: '厉', name: '厉魂', hp: 70,  speed: 0.7, reward: 2,  dmg: 1, size: 0.70, color: '#c05a72', armor: 3 },
-    swarm:  { char: '游', name: '游魂', hp: 8,   speed: 1.3, reward: 1,  dmg: 1, size: 0.46, color: '#9aa3b8' },
-    boss:   { char: '鬼', name: '鬼将', hp: 600, speed: 0.5, reward: 20, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
+    ghost:  { char: '魂', name: '幽魂', hp: 20,  speed: 0.9, reward: 1,  exp: 1, dmg: 1, size: 0.62, color: '#8d97b8' },
+    wraith: { char: '怨', name: '怨魂', hp: 14,  speed: 1.6, reward: 1,  exp: 1, dmg: 1, size: 0.56, color: '#5cc0a8' },
+    brute:  { char: '厉', name: '厉魂', hp: 70,  speed: 0.7, reward: 2,  exp: 2, dmg: 1, size: 0.70, color: '#c05a72', armor: 3 },
+    swarm:  { char: '游', name: '游魂', hp: 8,   speed: 1.3, reward: 1,  exp: 1, dmg: 1, size: 0.46, color: '#9aa3b8' },
+    boss:   { char: '鬼', name: '鬼将', hp: 600, speed: 0.5, reward: 20, exp: 4, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
   },
   waveCount: 10,
   waveHpGrowth: 1.14,

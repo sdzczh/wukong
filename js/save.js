@@ -7,6 +7,7 @@ const Save = {
       username: '',                       // 道友名号（本地用户模块，无账号体系）
       bestWave: 0, totalKills: 0, crystals: 0,
       sound: true,
+      daily: { key: 0, best: 0 },         // 每日轮回当日最佳（key=yyyymmdd）
       codex: {},                          // 神将图鉴点亮（M3）
       talents: { po: 0, zs: 0, cs: 0 },   // 三系已点层数（M4）
       wukongKills: 0,

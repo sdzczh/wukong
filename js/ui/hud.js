@@ -20,8 +20,7 @@ const HUD = {
       Save.write();
       this.refreshSound();
       SFX.play('click');
-    });
-    document.getElementById('btn-fast').addEventListener('click', () => {
+    });    document.getElementById('btn-fast').addEventListener('click', () => {
       SFX.ensure(); SFX.play('click');
       R.timeScale = R.timeScale === 1 ? 2 : 1;
       this.refresh();
@@ -33,6 +32,7 @@ const HUD = {
 
   refreshSound() {
     document.getElementById('btn-sound').classList.toggle('off', !Save.data.sound);
+    SFX.refreshBgm();
   },
 
   refresh() {

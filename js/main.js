@@ -10,8 +10,11 @@ const Game = {
     Panels.showMenu();
     HUD.refresh();
   },
-  startRun() {
+  startRun(seedKey) {
+    // 每日轮回传日期种子（当天全员同图同卡池）；普通局恢复随机种子
+    RNG.seed(seedKey || ((Date.now() >>> 0) || 1));
     resetRun();
+    R.daily = seedKey || null;
     Director.reset();
     rollRoute();                // 每局随机路线
     Grid.buildTiles();          // 重建棋盘：新路线 + 随机开放格 + 恢复「封」字锁定
@@ -23,7 +26,13 @@ const Game = {
     RackUI.discardDraft();
     RackUI.dealStartChars();
     HUD.refresh();
-    HUD.toast('点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
+    HUD.toast(R.daily ? '每日轮回：今日全场同图，比谁走得更远' : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
+  },
+
+  /* 每日轮回：按日期种子开局（固定路线与抽卡序列） */
+  startDaily() {
+    const d = new Date();
+    this.startRun(d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate());
   },
   pause() {
     if (R.state !== 'battle') return;
@@ -45,6 +54,11 @@ const Game = {
     s.crystals += R.crystalsEarned;
     s.totalKills += R.kills;
     s.bestWave = Math.max(s.bestWave, R.wave);
+    if (R.daily) {
+      // 每日轮回：只记录当日的最佳波次
+      if (!s.daily || s.daily.key !== R.daily) s.daily = { key: R.daily, best: 0 };
+      s.daily.best = Math.max(s.daily.best, R.wave);
+    }
     Save.write();
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
@@ -91,7 +105,11 @@ const view = { k: 1, ox: 0, oy: 0 };
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const vw = window.innerWidth, vh = window.innerHeight;
+  // 视口扣除安全区内边距（刘海/Home 条），舞台在安全区内居中
+  const cs = getComputedStyle(document.body);
+  const safeX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const safeY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const vw = window.innerWidth - safeX, vh = window.innerHeight - safeY;
   const k = Math.min(vw / CONFIG.logicalW, vh / CONFIG.logicalH);
   const stage = document.getElementById('stage');
   // 舞台保持 720×1280 逻辑像素，整体 transform 缩放：
@@ -442,13 +460,24 @@ const Input = {
     const item = R.rack[slot];
     if (!item) return;
     e.preventDefault();
+    this.hideItemPanel();
     this.gesture = { src: { type: 'rack', slot }, x0: e.clientX, y0: e.clientY, dragging: false };
+    // 长按 550ms 无拖动 → 打开字卡面板（出售/献祭）
+    clearTimeout(this._lpTimer);
+    this._lpTimer = setTimeout(() => {
+      if (this.gesture && !this.gesture.dragging && this.gesture.src.type === 'rack') {
+        this.gesture = null;
+        SFX.play('click');
+        RackUI.showItemPanel(slot);
+      }
+    }, 550);
   },
 
   /* 画布按下 */
   canvasDown(e) {
     SFX.ensure();
     if (R.state !== 'battle') return;
+    this.hideItemPanel();
     const p = toLogical(e.clientX, e.clientY);
     const cell = Grid.cellAt(p.x, p.y);
 
@@ -484,6 +513,7 @@ const Input = {
     if (!g) return;
     if (!g.dragging) {
       if (Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 10) return;
+      clearTimeout(this._lpTimer);
       g.dragging = true;
       R.drag = { src: g.src };
       const label = g.src.type === 'rack' ? RackUI.itemLabel(R.rack[g.src.slot]) : g.src.unit.def.char;
@@ -497,6 +527,7 @@ const Input = {
     const g = this.gesture;
     this.gesture = null;
     R.drag = null;
+    clearTimeout(this._lpTimer);
     RackUI.hideGhost();
     if (!g) return;
     if (R.state !== 'battle') return;
@@ -539,6 +570,8 @@ const Input = {
 
   rackElContains(el) { return RackUI.rackEl && RackUI.rackEl.contains(el); },
 
+  hideItemPanel() { clearTimeout(this._lpTimer); RackUI.hideItemPanel(); },
+
   /* 架子字落棋盘（armed=true 时点选路径，失败保留 armed） */
   dropRack(slot, c, r, armed) {
     const item = R.rack[slot];
@@ -556,8 +589,7 @@ const Input = {
       HUD.toast(res.reason === 'merge-level' ? '需要两个同字同级的单位才能合成，可拖到空格摆放' : '这里不能摆放');
       if (armed) return;   // 点选模式保留 armed，等待下一次点格
     } else {
-      R.armedSlot = -1;
-      if (res.unit) RackUI.showSel(res.unit);
+      R.armedSlot = -1;    // 放置成功不弹详情，避免遮挡（点塔仍可查看）
     }
     RackUI.refresh();
     HUD.refresh();
@@ -568,7 +600,6 @@ const Input = {
     if (unit.col === c && unit.row === r) { RackUI.showSel(unit); return; }
     const res = Merge.placeOnto({ board: unit }, c, r);
     if (res.action === 'fail') HUD.toast('这里不能摆放');
-    else if (res.unit) RackUI.showSel(res.unit);
     RackUI.refresh();
     HUD.refresh();
   },
@@ -631,9 +662,13 @@ Bus.on('enemyKilled', e => {
   if (R.kills % 3 === 0) SFX.play('coin');
   FX.float('+' + e.def.reward + ' 桃', e.x, e.y - Grid.tile * 0.2, '#ffd867', 15);
   const src = e.lastHitBy;
-  if (src && src.isGeneral) src.gainExp(1);
+  if (src && src.isGeneral) src.gainExp(e.def.exp || 1);
   if (src && src.key === 'wukong') { Save.data.wukongKills++; Save.write(); }
-  const dropChance = e.type === 'boss' ? CONFIG.drops.bossChance : CONFIG.drops.chance;
+  let dropChance = e.type === 'boss' ? CONFIG.drops.bossChance : CONFIG.drops.chance;
+  // 无尽征战掉率衰减：第 10 波后每波 ×0.85，掉落运气不再是续命主力
+  if (R.endless && R.wave > CONFIG.waveCount) {
+    dropChance *= Math.pow(CONFIG.drops.endlessDecay, R.wave - CONFIG.waveCount);
+  }
   if (RNG.next() < dropChance) Game.applyDrop(e);
   HUD.refresh();
 });
@@ -661,9 +696,14 @@ Bus.on('waveStart', n => {
 Bus.on('waveClear', n => {
   const reward = CONFIG.economy.waveRewardBase + n;
   R.peaches += reward;
+  // 息钱：持桃生息（每 10 桃 +1，单波上限），神将每波保底 +1 经验
+  const interest = Math.min(CONFIG.economy.interestCap, Math.floor(R.peaches / CONFIG.economy.interestEvery));
+  if (interest > 0) R.peaches += interest;
+  // 神将保底经验仅限前十波（无尽里靠击杀强度吃饭，配合随级递增的经验线）
+  if (!R.endless) for (const t of R.towers) if (t.isGeneral) t.gainExp(1);
   HUD.refresh();
   SFX.play('waveclear');
-  HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃`);
+  HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃${interest ? `，息钱 +${interest} 桃` : ''}`);
   if (n < CONFIG.waveCount) return;
   if (R.endless) {
     // 无尽补给：每 shovelEvery 波产出 1 把铲子
@@ -776,6 +816,7 @@ requestAnimationFrame(frame);
 window.GAME = {
   R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input,
   startRun: () => Game.startRun(),
+  startDaily: () => Game.startDaily(),
   offerEndless: () => Game.offerEndless(),
   enterEndless: () => Game.enterEndless(),
   place: (c, r, key) => {

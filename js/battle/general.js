@@ -8,12 +8,17 @@ class General extends Tower {
     this.zoneT = 0; this.zoneTick = 0;   // 李靖宝塔
   }
 
-  /* 击杀经验：满 10 升级，最高 maxLevel */
+  /* 升级所需经验：随等级线性增长（8/12/16/20…），压住无尽里的指数成长 */
+  get expNeed() { return 8 + (this.level - 1) * 4; }
+
+  /* 击杀经验：满升级线升 1 级，最高 maxLevel */
   gainExp(n) {
     if (this.level >= this.maxLevel) return;
     this.exp += n;
-    while (this.exp >= 10 && this.level < this.maxLevel) {
-      this.exp -= 10;
+    while (this.level < this.maxLevel) {
+      const need = this.expNeed;
+      if (this.exp < need) break;
+      this.exp -= need;
       this.level++;
       this.skillT = Math.min(this.skillT, 2);   // 升级奖励：技能快转 2s
       FX.ring(this.x, this.y, Grid.tile * 0.9, CONFIG.rarityColors[this.def.rarity] || '#e8933c');

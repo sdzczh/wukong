@@ -30,12 +30,14 @@ class Tower {
     return (Math.max(this.def.range, floor) + this.levelMul.range * (this.level - 1)) * Grid.tile;
   }
 
-  /* 营的战鼓加成 */
+  /* 营的战鼓加成：半径随等级扩圈，每级攻速额外 +5% */
   auraMul() {
     let m = 1;
     for (const t of R.towers) {
       if (t === this || t.def.kind !== 'aura') continue;
-      if (Math.hypot(t.x - this.x, t.y - this.y) <= t.def.range * Grid.tile + 1) m += t.def.auraRate;
+      if (Math.hypot(t.x - this.x, t.y - this.y) <= t.rangePx + 1) {
+        m += t.def.auraRate + (t.def.auraLvStep || 0) * (t.level - 1);
+      }
     }
     return m;
   }

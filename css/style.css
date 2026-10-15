@@ -24,7 +24,12 @@ html, body {
   -webkit-touch-callout: none;
 }
 
-body { display: flex; align-items: center; justify-content: center; }
+body {
+  display: flex; align-items: center; justify-content: center;
+  /* 刘海/Home 指示条安全区：舞台在安全区内居中缩放 */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+           env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
 
 #stage {
   position: relative;
@@ -220,8 +225,15 @@ body { display: flex; align-items: center; justify-content: center; }
   font-size: 20px; font-weight: 900; color: #ffd867; margin-bottom: 8px;
 }
 #draft-bar .draft-tip { font-size: 14px; font-weight: 400; color: #b8a8d0; }
-#draft-bar .draft-x {
+#draft-bar .draft-refresh {
   margin-left: auto; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  font-size: 15px; font-weight: 900; color: #5a3a10;
+  background: linear-gradient(#ffd867, #e8a63c); border: 2px solid #a97e22;
+  box-shadow: 0 2px 0 #7a5410;
+}
+#draft-bar .draft-refresh.disabled { filter: grayscale(1) opacity(.55); cursor: not-allowed; }
+#draft-bar .draft-x {
+  padding: 4px 14px; border-radius: 999px; cursor: pointer;
   font-size: 15px; font-weight: 900; color: #cfc2e4;
   background: #2e2440; border: 2px solid #5a4872;
 }
@@ -277,6 +289,37 @@ body { display: flex; align-items: center; justify-content: center; }
   box-shadow: 0 3px 0 #7a5410;
 }
 #sel-panel .sel-sell:active { transform: translateY(2px); box-shadow: none; }
+
+/* ---------- 架子字卡面板（长按架子格） ---------- */
+#item-panel {
+  position: absolute; left: 18px; right: 18px; bottom: 164px; z-index: 7;
+  background: #241b33f2; border: 3px solid #5a4872; border-radius: 16px;
+  padding: 14px 18px; color: #f3ead6;
+  box-shadow: 0 10px 30px #000a;
+}
+#item-panel .sel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+#item-panel .sel-char {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 40px; font-weight: 900; line-height: 1;
+}
+#item-panel .sel-name { font-size: 24px; font-weight: 900; }
+#item-panel .sel-lv { font-size: 18px; font-weight: 700; color: #ffd867; }
+#item-panel .sel-close {
+  margin-left: auto; width: 40px; height: 40px; border-radius: 10px;
+  background: #2e2440; border: 2px solid #5a4872; color: #cfc2e4;
+  font-size: 22px; font-weight: 900; cursor: pointer;
+}
+#item-panel .sel-body { font-size: 19px; line-height: 1.65; color: #d9cdb4; }
+#item-panel .item-sell, #item-panel .item-feed {
+  margin-top: 10px; margin-right: 10px; padding: 8px 26px; border-radius: 999px; cursor: pointer;
+  font-size: 20px; font-weight: 900; letter-spacing: 2px;
+  border: 3px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#item-panel .item-feed {
+  border-color: #6a4fa0; background: linear-gradient(#c9a2ff, #8a6fd0); color: #2e1f4a;
+  box-shadow: 0 3px 0 #4a3670;
+}
 
 /* ---------- 修炼天赋树 ---------- */
 .talent-tree { display: flex; gap: 16px; justify-content: center; }
