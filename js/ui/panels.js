@@ -25,16 +25,35 @@ const Panels = {
 
   hide() { this.overlay.classList.add('hidden'); },
 
+  /* 名号录入（首次启动 / 菜单改名） */
+  showNameEntry(cb) {
+    this.title.textContent = '道 友 名 号';
+    this.sub.textContent = '名号会留在本地存档中';
+    this.stats.innerHTML = '<input id="name-input" maxlength="8" placeholder="如：齐天大圣" autocomplete="off">';
+    this.btns.innerHTML = '';
+    const input = this.stats.querySelector('#name-input');
+    const done = () => { User.set(input.value); SFX.play('click'); cb(); };
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') done(); });
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = '确 定';
+    btn.addEventListener('click', done);
+    this.btns.appendChild(btn);
+    this.overlay.classList.remove('hidden');
+    setTimeout(() => input.focus(), 60);
+  },
+
   showMenu() {
     const s = Save.data;
     this._fill(
       '无敌悟空',
-      '文字合成塔防 · 地府篇',
+      `道友「${s.username || '无名氏'}」· 文字合成塔防 · 地府篇`,
       `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}`,
       [
         { text: '开 始 战 斗', fn: () => Game.startRun() },
         { text: '修 炼', fn: () => TalentUI.show('menu'), ghost: true },
         { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
+        { text: '改 名 号', fn: () => this.showNameEntry(() => this.showMenu()), ghost: true },
       ]
     );
   },

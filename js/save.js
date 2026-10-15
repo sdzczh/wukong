@@ -4,6 +4,7 @@ const Save = {
   data: null,
   defaults() {
     return {
+      username: '',                       // 道友名号（本地用户模块，无账号体系）
       bestWave: 0, totalKills: 0, crystals: 0,
       sound: true,
       codex: {},                          // 神将图鉴点亮（M3）

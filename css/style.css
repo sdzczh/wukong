@@ -270,6 +270,16 @@ body { display: flex; align-items: center; justify-content: center; }
 
 .settle-break { font-size: 15px; color: #8a7f9e; }
 
+/* ---------- 名号录入 ---------- */
+#name-input {
+  width: 100%; padding: 14px 20px; border-radius: 14px;
+  border: 3px solid #5a4872; background: #17111f; color: #f3ead6;
+  font-size: 28px; font-weight: 700; text-align: center; letter-spacing: 2px;
+  outline: none; user-select: text; -webkit-user-select: text;
+}
+#name-input:focus { border-color: #e8b64c; box-shadow: 0 0 14px #e8b64c44; }
+#name-input::placeholder { color: #5a4f6e; }
+
 /* ---------- 图鉴 ---------- */
 .codex-tabs { display: flex; gap: 14px; justify-content: center; margin-top: 4px; }
 .codex-tab {

@@ -666,14 +666,16 @@ HUD.init();
 RackUI.init();
 Panels.init();
 resize();
-Game.toMenu();
+// 首次启动先录名号，之后回主菜单
+if (User.has()) Game.toMenu();
+else Panels.showNameEntry(() => Game.toMenu());
 // 预加载展示字体（canvas 逐帧重绘，就绪后自然生效）
 document.fonts.load('64px "Ma Shan Zheng"').catch(() => {});
 requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
 window.GAME = {
-  R, CONFIG, Grid, Director, Bus, Merge, RackUI,
+  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User,
   startRun: () => Game.startRun(),
   place: (c, r, key) => {
     if (!Grid.placeable(c, r) || R.towers.length >= CONFIG.towerCap) return false;
