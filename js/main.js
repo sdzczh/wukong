@@ -222,17 +222,22 @@ function drawTiles() {
       const t = Grid.tiles[r][c];
       const x = Grid.ox + c * tile, y = Grid.oy + r * tile;
       if (t.type === 'path') {
-        // 黄泉路：暖石路面，与砖块同三段式语法
-        const alt = (c + r) % 2 === 0;
-        ctx.fillStyle = alt ? '#8d7c66' : '#857361';
-        roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
-        ctx.fill();
-        ctx.fillStyle = alt ? '#756652' : '#6e6050';
-        roundRect(ctx, x + 2, y + tile * 0.55, tile - 4, tile * 0.43 - 2, 7);
-        ctx.fill();
-        ctx.fillStyle = alt ? '#a5947c' : '#9c8b74';
-        roundRect(ctx, x + 4, y + 3, tile - 8, tile * 0.2, 6);
-        ctx.fill();
+        // 黄泉路：满格连续路面（刻意与圆角砖的独立圆角砖区分形状语言），微色差防呆板
+        ctx.fillStyle = ((c + r) % 2 === 0) ? '#b29460' : '#ab8d5a';
+        ctx.fillRect(x, y, tile, tile);
+        // 车道虚线：朝每个路径邻格方向画一段，全图连通成引导线
+        const T = Grid.tiles;
+        const up = T[r - 1] && T[r - 1][c].type === 'path';
+        const dn = T[r + 1] && T[r + 1][c].type === 'path';
+        const lf = T[r][c - 1] && T[r][c - 1].type === 'path';
+        const rt = T[r][c + 1] && T[r][c + 1].type === 'path';
+        const cx = x + tile / 2, cy = y + tile / 2;
+        const dw = tile * 0.09, dl = tile * 0.3, dOff = tile * 0.1;
+        ctx.fillStyle = '#e8d5a5';
+        if (up) { roundRect(ctx, cx - dw / 2, cy - dOff - dl, dw, dl, dw / 2); ctx.fill(); }
+        if (dn) { roundRect(ctx, cx - dw / 2, cy + dOff, dw, dl, dw / 2); ctx.fill(); }
+        if (lf) { roundRect(ctx, cx - dOff - dl, cy - dw / 2, dl, dw, dw / 2); ctx.fill(); }
+        if (rt) { roundRect(ctx, cx + dOff, cy - dw / 2, dl, dw, dw / 2); ctx.fill(); }
         continue;
       }
       // 锁定地块：暗色石板 + 「封」字
