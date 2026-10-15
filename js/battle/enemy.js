@@ -12,7 +12,7 @@ class Enemy {
     this.pos();
   }
 
-  get speedPx() { return this.def.speed * Grid.tile; }
+  get speedPx() { return this.def.speed * Grid.tile * Talents.enemySpeedMul(); }
 
   pos() {
     const p = Grid.posAt(this.s);

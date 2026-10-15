@@ -21,10 +21,14 @@ const RackUI = {
   },
 
   /* ---------- 召唤 ---------- */
-  summonCost() { return CONFIG.summon.base + CONFIG.summon.step * R.summonsDone; },
+  summonCost() {
+    return Math.max(5, CONFIG.summon.base + CONFIG.summon.step * R.summonsDone - Talents.summonDiscount());
+  },
 
   rollChar() {
-    const isGod = R.pityMiss >= CONFIG.summon.pityAfter ? true : RNG.next() < CONFIG.summon.godChance;
+    const godChance = CONFIG.summon.godChance + Talents.godChanceBonus();
+    const pityAfter = CONFIG.summon.pityAfter - Talents.pityDelta();
+    const isGod = R.pityMiss >= pityAfter ? true : RNG.next() < godChance;
     let ch;
     if (isGod) {
       ch = RNG.pickWeighted(Object.entries(CONFIG.godCharWeights));

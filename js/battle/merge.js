@@ -148,6 +148,7 @@ const Merge = {
     if (!Save.data.codex.generals[key]) {
       Save.data.codex.generals[key] = true;
       R.crystalsEarned += 20;
+      R.codexBonus += 20;
       HUD.toast(`图鉴解锁 · ${def.name}（+20 魂晶）`);
       Save.write();
     }

@@ -33,6 +33,7 @@ const Panels = {
       `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}`,
       [
         { text: '开 始 战 斗', fn: () => Game.startRun() },
+        { text: '修 炼', fn: () => TalentUI.show('menu'), ghost: true },
         { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
       ]
     );
@@ -43,6 +44,7 @@ const Panels = {
       '暂 停', '黄泉为路，幽冥作甲', '',
       [
         { text: '继 续', fn: () => Game.resume() },
+        { text: '修 炼', fn: () => TalentUI.show('pause'), ghost: true },
         { text: '图 鉴', fn: () => Codex.show('pause'), ghost: true },
         { text: '重新开始', fn: () => Game.startRun(), ghost: true },
         { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
@@ -57,9 +59,11 @@ const Panels = {
     const stats =
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
-      `<br>历史最高波次　${Save.data.bestWave}`;
+      `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
+      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}`;
     this._fill(title, sub, stats, [
       { text: '再 来 一 局', fn: () => Game.startRun() },
+      { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
       { text: '图 鉴', fn: () => Codex.show('settle'), ghost: true },
       { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
     ]);

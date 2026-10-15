@@ -17,7 +17,8 @@ class Tower {
 
   get atk() {
     const might = R.mightT > 0 ? CONFIG.drops.mightMul : 1;
-    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might);
+    const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
+    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent);
   }
   get rangePx() { return (this.def.range + this.levelMul.range * (this.level - 1)) * Grid.tile; }
 

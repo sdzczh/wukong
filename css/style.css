@@ -216,6 +216,41 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 #sel-panel .sel-sell:active { transform: translateY(2px); box-shadow: none; }
 
+/* ---------- 修炼天赋树 ---------- */
+.talent-tree { display: flex; gap: 16px; justify-content: center; }
+.talent-branch { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.talent-bname {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 30px; color: #e8b64c; text-align: center;
+}
+.talent-bname span { font-size: 16px; color: #b9a8d4; margin-left: 8px; font-family: sans-serif; }
+.talent-node {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer; text-align: left;
+  border: 2px solid #5a4872; background: #2e2440; color: #cfc2e4;
+  font-size: 17px; font-weight: 700;
+  transition: transform .08s;
+}
+.talent-node .tn-cost { font-size: 15px; font-weight: 900; color: #9fd8ff; white-space: nowrap; }
+.talent-node.owned { border-color: #6fae5f; background: #24402a; color: #d6ecc8; }
+.talent-node.owned .tn-cost { color: #8fd67f; }
+.talent-node.next { border-color: #e8b64c; background: #40351c; color: #ffe9a8; }
+.talent-node.next:active { transform: translateY(2px); }
+.talent-node.next.poor { border-color: #8a795c; background: #2e2440; color: #8a7f9e; cursor: not-allowed; }
+.talent-node.next.poor .tn-cost { color: #6f6a8a; }
+.talent-node.locked { opacity: .45; cursor: default; }
+
+.talent-glory {
+  margin-top: 18px; padding: 14px 18px; border-radius: 14px;
+  border: 2px dashed #5a4872; background: #241d33; color: #8a7f9e;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.talent-glory.on { border: 2px solid #e8b64c; background: #40351c; color: #ffe9a8; }
+.talent-glory .tg-name { font-size: 22px; font-weight: 900; white-space: nowrap; }
+.talent-glory .tg-desc { font-size: 16px; }
+
+.settle-break { font-size: 15px; color: #8a7f9e; }
+
 /* ---------- 图鉴 ---------- */
 .codex-tabs { display: flex; gap: 14px; justify-content: center; margin-top: 4px; }
 .codex-tab {

@@ -60,7 +60,7 @@ const Game = {
       R.mightT = D.mightDur;
       FX.float('灵宝·兵符 全体攻击+20%', e.x, e.y - Grid.tile * 0.3, '#ffb84c', 16);
     } else {
-      R.hearts = Math.min(CONFIG.base.hearts, R.hearts + 1);
+      R.hearts = Math.min(R.heartsMax, R.hearts + 1);
       FX.float('灵宝·轮回符 +1心', e.x, e.y - Grid.tile * 0.3, '#ff8fa0', 16);
     }
     SFX.play('coin');
@@ -696,6 +696,9 @@ window.GAME = {
     return false;
   },
   drop: () => Game.applyDrop({ x: Grid.center(4, 3).x, y: Grid.center(4, 3).y }),
+  buy: (b, i) => Talents.buy(b, i),
+  setCrystals: n => { Save.data.crystals = n; Save.write(); },
+  setWukongKills: n => { Save.data.wukongKills = n; Save.write(); },
   killAll: () => R.enemies.forEach(e => e.takeDamage(999999)),
   setTimeScale: x => { R.timeScale = x; },
   step: seconds => { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) tick(STEP); },

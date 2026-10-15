@@ -11,6 +11,7 @@ const Bus = {
 const R = {
   state: 'menu',      // menu | battle | paused | over
   hearts: 10,
+  heartsMax: 10,
   peaches: 0,
   wave: 0,
   kills: 0,
@@ -32,11 +33,13 @@ const R = {
 
 function resetRun() {
   R.state = 'battle';
-  R.hearts = 10;
-  R.peaches = 10;
+  R.heartsMax = Talents.heartsCap();
+  R.hearts = Math.min(R.heartsMax, CONFIG.base.hearts + Talents.heartsBonus());
+  R.peaches = CONFIG.economy.startPeaches + Talents.startPeachBonus();
   R.wave = 0;
   R.kills = 0;
   R.crystalsEarned = 0;
+  R.codexBonus = 0;   // 本局图鉴解锁奖励魂晶
   R.summonsDone = 0;
   R.rack = new Array(CONFIG.summon.rackSize).fill(null);
   R.pityMiss = 0;

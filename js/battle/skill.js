@@ -7,7 +7,7 @@ const Skills = {
   cast(g) {
     const fn = this[g.key];
     if (fn) fn(g);
-    g.skillT = g.def.skill.cd;
+    g.skillT = g.def.skill.cd * (g.key === 'wukong' ? Talents.gloryCdMul() : 1);
     const tile = Grid.tile;
     FX.float('✦ ' + g.def.skill.name, g.x, g.y - tile * 0.95, CONFIG.rarityColors[g.def.rarity] || '#ffd867', 16);
     FX.ring(g.x, g.y, tile * 1.1, CONFIG.rarityColors[g.def.rarity] || '#ffd867');
@@ -85,7 +85,7 @@ const Skills = {
 
   /* 王母娘娘：蟠桃盛会 —— 轮回殿 +2 心（不超过上限），周围友塔攻速 +25% 5s */
   wangmu(g) {
-    R.hearts = Math.min(CONFIG.base.hearts, R.hearts + CONFIG.drops.mightHeart + 1);
+    R.hearts = Math.min(R.heartsMax, R.hearts + CONFIG.drops.mightHeart + 1);
     for (const t of R.towers) {
       if (t === g || t.def.kind === 'aura') continue;
       if (Math.hypot(t.x - g.x, t.y - g.y) <= Grid.tile * 2.5) { t.hasteDur = 5; t.hasteMul = 1.25; }
