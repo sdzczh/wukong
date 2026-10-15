@@ -48,7 +48,7 @@ const HUD = {
     } else {
       this.waveLabel.textContent = '备战中';
     }
-    if (window.RackUI) RackUI.refresh();
+    RackUI.refresh();
   },
 
   showBanner(main, sub) {

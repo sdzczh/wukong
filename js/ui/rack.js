@@ -8,6 +8,7 @@ const RackUI = {
     this.shovelBtn = document.getElementById('btn-shovel');
     this.selPanel = document.getElementById('sel-panel');
     this.ghost = document.getElementById('drag-ghost');
+    this.stageEl = document.getElementById('stage');
 
     this.summonBtn.addEventListener('click', () => { SFX.ensure(); this.doSummon(); });
     this.shovelBtn.addEventListener('click', () => {
@@ -144,9 +145,12 @@ const RackUI = {
     this.ghost.className = isGod ? 'god' : '';
     this.ghost.classList.remove('hidden');
   },
+  /* 幽灵在缩放舞台内，需把屏幕坐标换算回舞台逻辑坐标 */
   moveGhost(x, y) {
-    this.ghost.style.left = x + 'px';
-    this.ghost.style.top = y + 'px';
+    const rect = this.stageEl.getBoundingClientRect();
+    const k = rect.width / CONFIG.logicalW;
+    this.ghost.style.left = ((x - rect.left) / k) + 'px';
+    this.ghost.style.top = ((y - rect.top) / k) + 'px';
   },
   hideGhost() { this.ghost.classList.add('hidden'); },
 

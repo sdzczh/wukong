@@ -56,7 +56,7 @@ const Merge = {
     if (Grid.inBounds(u.col, u.row) && Grid.tiles[u.row][u.col].tower === u) {
       Grid.tiles[u.row][u.col].tower = null;
     }
-    if (R.selected === u) { R.selected = null; if (window.RackUI) RackUI.hideSel(); }
+    if (R.selected === u) { R.selected = null; RackUI.hideSel(); }
   },
 
   /* 判定 aChar/aLevel（拖动方的字/单位）放到 b 上的结果。
