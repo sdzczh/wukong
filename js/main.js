@@ -67,21 +67,22 @@ const Game = {
   },
 };
 
-/* ---------- 尺寸适配 ---------- */
+/* ---------- 尺寸适配（整体等比缩放，手机/桌面通用） ---------- */
 const view = { k: 1, ox: 0, oy: 0 };
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = window.innerWidth, vh = window.innerHeight;
-  const scale = Math.min(vw / CONFIG.logicalW, vh / CONFIG.logicalH);
-  const cssW = Math.round(CONFIG.logicalW * scale), cssH = Math.round(CONFIG.logicalH * scale);
+  const k = Math.min(vw / CONFIG.logicalW, vh / CONFIG.logicalH);
   const stage = document.getElementById('stage');
-  stage.style.width = cssW + 'px';
-  stage.style.height = cssH + 'px';
-  stage.style.transform = '';
+  // 舞台保持 720×1280 逻辑像素，整体 transform 缩放：
+  // DOM HUD 与 canvas 一起缩放，输入换算走 getBoundingClientRect（变换后矩形），天然一致。
+  stage.style.transform = 'scale(' + k + ')';
 
-  canvas.width = Math.round(cssW * dpr);
-  canvas.height = Math.round(cssH * dpr);
+  // 背缓冲密度：显示所需密度为 k*dpr，取 min(dpr, k*dpr) 并夹到 [1, 2]，兼顾清晰与性能
+  const density = Math.min(2, Math.max(1, Math.min(dpr, k * dpr)));
+  canvas.width = Math.round(CONFIG.logicalW * density);
+  canvas.height = Math.round(CONFIG.logicalH * density);
 
   view.k = canvas.width / CONFIG.logicalW;
   view.ox = 0; view.oy = 0;
@@ -570,8 +571,10 @@ RackUI.rackElContains = el => RackUI.rackEl && RackUI.rackEl.contains(el);
 canvas.addEventListener('pointerdown', e => Input.canvasDown(e));
 window.addEventListener('pointermove', e => Input.move(e));
 window.addEventListener('pointerup', e => Input.up(e));
+// 移动端：系统手势（下拉通知/来电打断）触发 pointercancel，按抬起处理，避免手势悬死
+window.addEventListener('pointercancel', e => Input.up(e));
 canvas.addEventListener('pointerleave', () => { R.hover = null; });
-canvas.addEventListener('contextmenu', e => {
+document.getElementById('stage').addEventListener('contextmenu', e => {
   e.preventDefault();
   R.tool = null; R.armedSlot = -1;
   RackUI.hideSel();

@@ -8,12 +8,20 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* 移动端：按钮禁双击缩放延迟，但不拦截舞台级手势 */
+button { touch-action: manipulation; }
+
 html, body {
   width: 100%; height: 100%;
   background: #0d0913;
   overflow: hidden;
+  /* 移动端：fixed 防 iOS 橡皮筋滚动；overscroll 防下拉刷新/上拉导航 */
+  position: fixed; inset: 0;
+  overscroll-behavior: none;
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body { display: flex; align-items: center; justify-content: center; }
@@ -21,13 +29,16 @@ body { display: flex; align-items: center; justify-content: center; }
 #stage {
   position: relative;
   width: 720px; height: 1280px;
+  flex-shrink: 0;
   transform-origin: center center;
+  touch-action: none;              /* 整舞台接管手势，杜绝滚动/缩放手势打断拖拽 */
   box-shadow: 0 0 60px #000;
 }
 
 #game {
   position: absolute; inset: 0;
   width: 720px; height: 1280px;
+  touch-action: none;
   border-radius: 6px;
 }
 
@@ -67,6 +78,7 @@ body { display: flex; align-items: center; justify-content: center; }
   width: 56px; height: 56px; border-radius: 14px;
   background: #1d1628e0; border: 2px solid #4a3b5e;
   color: #e8b64c; font-size: 24px; font-weight: 900; cursor: pointer;
+  touch-action: manipulation;
 }
 .hud-btn:active { transform: scale(0.94); }
 .hud-btn.off { color: #5a4f6e; }
