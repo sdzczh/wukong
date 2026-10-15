@@ -56,6 +56,7 @@ const Panels = {
         { text: '开 始 战 斗', fn: () => Game.startRun() },
         { text: '每 日 轮 回', fn: () => Game.startDaily(), ghost: true },
         { text: '修 炼', fn: () => TalentUI.show('menu'), ghost: true },
+        { text: '装 备 库', fn: () => GearUI.show('menu'), ghost: true },
         { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
         { text: '改 名 号', fn: () => this.showNameEntry(() => this.showMenu()), ghost: true },
       ]
@@ -94,14 +95,16 @@ const Panels = {
     const dailyLine = R.daily
       ? `<br>今日轮回最佳　${(Save.data.daily && Save.data.daily.key === R.daily) ? Save.data.daily.best : R.wave}　波`
       : '';
+    const sigLine = R.sigRun > 0 ? `<br>本局专属碎片　+${R.sigRun}　（已入库，主菜单「装备库」合成）` : '';
     const stats =
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
       `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine;
+      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + sigLine;
     this._fill(title, sub, stats, [
       { text: '再 来 一 局', fn: () => Game.startRun() },
       { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
+      { text: '装 备 库', fn: () => GearUI.show('settle'), ghost: true },
       { text: '图 鉴', fn: () => Codex.show('settle'), ghost: true },
       { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
     ]);

@@ -321,6 +321,79 @@ body {
   box-shadow: 0 3px 0 #4a3670;
 }
 
+/* ---------- 装备栏（局内，悬浮底栏之上） ---------- */
+#gear-bar {
+  position: absolute; left: 12px; right: 12px; bottom: 156px; z-index: 5;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 10px; border-radius: 14px;
+  background: #17111fb8; border: 2px solid #3a2e50;
+}
+#gear-bar .gp-title {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 22px; color: #b9a8d4; margin-right: 2px;
+}
+#gear-bar .gp-sep { width: 2px; height: 34px; background: #3a2e50; margin: 0 2px; }
+#gear-bar .gp-part, #gear-bar .gp-inv {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 10px; cursor: pointer;
+  border: 2px solid #3a2e50; background: #241b33; color: #cfc2e4;
+  transition: transform .08s;
+}
+#gear-bar .gp-part .gp-char, #gear-bar .gp-inv .gp-char {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 26px; font-weight: 900; color: var(--gc, #cfc2e4); line-height: 1;
+}
+#gear-bar .gp-part .gp-name { font-size: 15px; font-weight: 700; }
+#gear-bar .gp-part .gp-n { font-size: 15px; font-weight: 900; color: #8a7f9e; }
+#gear-bar .gp-part.can {
+  border-color: var(--gc, #e8b64c);
+  box-shadow: 0 0 10px var(--gc, #e8b64c);
+}
+#gear-bar .gp-part.can:active { transform: translateY(2px); }
+#gear-bar .gp-inv .gp-lv { font-size: 15px; font-weight: 900; color: #ffd867; }
+#gear-bar .gp-inv.can {
+  border-color: var(--gc, #e8b64c);
+  box-shadow: 0 0 10px var(--gc, #e8b64c);
+}
+#gear-bar .gp-inv.armed {
+  border-color: #e8b64c; background: #40351c;
+  box-shadow: 0 0 12px #e8b64c88;
+}
+#gear-bar .gp-tip { font-size: 15px; font-weight: 900; color: #ffd867; margin-left: auto; }
+
+/* 塔详情：卸下装备按钮（紫色系，与献祭一致） */
+#sel-panel .sel-gear-off {
+  margin-top: 10px; margin-right: 10px; padding: 8px 26px; border-radius: 999px; cursor: pointer;
+  font-size: 20px; font-weight: 900; letter-spacing: 2px;
+  border: 3px solid #6a4fa0; background: linear-gradient(#c9a2ff, #8a6fd0); color: #2e1f4a;
+  box-shadow: 0 3px 0 #4a3670;
+}
+
+/* ---------- 装备库（局外专属列表） ---------- */
+.sig-list { display: flex; flex-direction: column; gap: 10px; }
+.sig-row {
+  display: grid; grid-template-columns: 96px 110px 52px 1fr 78px; gap: 10px;
+  align-items: center; text-align: left;
+  padding: 10px 14px; border-radius: 12px;
+  border: 2px solid #3a2e50; background: #241b33; color: #cfc2e4;
+  border-left: 5px solid var(--gc, #5a4872);
+}
+.sig-row.locked { opacity: .5; filter: grayscale(.7); }
+.sig-gname { font-size: 18px; font-weight: 900; }
+.sig-name { font-size: 18px; font-weight: 900; color: #ffe9a8; }
+.sig-lv { font-size: 16px; font-weight: 900; color: #ffd867; }
+.sig-desc { font-size: 15px; line-height: 1.45; color: #b9a8d4; }
+.sig-shards { font-size: 15px; font-weight: 900; color: #9fd8ff; }
+.sig-btn {
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  font-size: 15px; font-weight: 900; white-space: nowrap;
+  border: 2px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
+  box-shadow: 0 3px 0 #7a5410;
+}
+.sig-btn:active { transform: translateY(2px); box-shadow: none; }
+.sig-btn.poor { border-color: #5a4872; background: #2e2440; color: #8a7f9e; box-shadow: none; cursor: not-allowed; }
+.sig-btn.max { border-color: #6fae5f; background: #24402a; color: #8fd67f; box-shadow: none; cursor: default; }
+
 /* ---------- 修炼天赋树 ---------- */
 .talent-tree { display: flex; gap: 16px; justify-content: center; }
 .talent-branch { flex: 1; display: flex; flex-direction: column; gap: 10px; }

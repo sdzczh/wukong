@@ -26,6 +26,7 @@ const Game = {
     RackUI.discardDraft();
     RackUI.dealStartChars();
     HUD.refresh();
+    GearUI.refresh();
     HUD.toast(R.daily ? '每日轮回：今日全场同图，比谁走得更远' : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
   },
 
@@ -487,6 +488,22 @@ const Input = {
       return;
     }
 
+    // 佩戴装备：点塔戴上，点空地取消
+    if (R.gearArm >= 0) {
+      const idx = R.gearArm;
+      R.gearArm = -1;
+      if (cell) {
+        const t = Grid.tiles[cell.r][cell.c].tower;
+        if (t) {
+          const err = Gear.equipTo(t, idx);
+          if (err) { HUD.toast(err); SFX.play('click'); }
+        }
+      }
+      GearUI.refresh();
+      RackUI.refresh();
+      return;
+    }
+
     // 已点选架子字 → 放置
     if (R.armedSlot >= 0) {
       if (!cell) return;
@@ -635,13 +652,14 @@ window.addEventListener('pointercancel', e => Input.up(e));
 canvas.addEventListener('pointerleave', () => { R.hover = null; });
 document.getElementById('stage').addEventListener('contextmenu', e => {
   e.preventDefault();
-  R.tool = null; R.armedSlot = -1;
+  R.tool = null; R.armedSlot = -1; R.gearArm = -1;
   RackUI.hideSel();
+  GearUI.refresh();
   RackUI.refresh();
 });
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (R.armedSlot >= 0 || R.tool) { R.armedSlot = -1; R.tool = null; RackUI.refresh(); }
+    if (R.armedSlot >= 0 || R.tool || R.gearArm >= 0) { R.armedSlot = -1; R.tool = null; R.gearArm = -1; RackUI.refresh(); GearUI.refresh(); }
     else if (R.state === 'battle') Game.pause();
     else if (R.state === 'paused') Game.resume();
   }
@@ -670,6 +688,7 @@ Bus.on('enemyKilled', e => {
     dropChance *= Math.pow(CONFIG.drops.endlessDecay, R.wave - CONFIG.waveCount);
   }
   if (RNG.next() < dropChance) Game.applyDrop(e);
+  Gear.onKill(e);   // 装备部件 / boss 专属碎片
   HUD.refresh();
 });
 
@@ -745,6 +764,7 @@ Bus.on('shovelAt', cell => {
     R.rack[slot] = { type: 'unit', unit: t };
     HUD.toast('已铲回架子');
   } else {
+    if (t.gear) { R.equips.push(t.gear); GearUI.refresh(); }   // 架满铲除，装备回库
     HUD.toast('架子已满，单位已铲除');
   }
   R.shovelLeft--;
@@ -803,6 +823,7 @@ RNG.seed((Math.random() * 1e9) | 0);
 Grid.init();
 HUD.init();
 RackUI.init();
+GearUI.init();
 Panels.init();
 resize();
 // 首次启动先录名号，之后回主菜单
@@ -852,6 +873,20 @@ window.GAME = {
   buy: (b, i) => Talents.buy(b, i),
   setCrystals: n => { Save.data.crystals = n; Save.write(); },
   setWukongKills: n => { Save.data.wukongKills = n; Save.write(); },
+  giveParts: (fam, n) => { R.parts[fam] = (R.parts[fam] || 0) + (n || 1); GearUI.refresh(); },
+  giveEquip: (fam, lv) => { R.equips.push({ fam, lv: lv || 1 }); GearUI.refresh(); },
+  giveShard: (key, n) => {
+    Save.data.shards = Save.data.shards || {};
+    Save.data.shards[key] = (Save.data.shards[key] || 0) + (n || 1);
+    Save.write();
+  },
+  gearArm: i => { R.gearArm = i; GearUI.refresh(); },
+  forgeSig: k => Gear.forgeSig(k),
+  upgradeSig: k => Gear.upgradeSig(k),
+  bossKill: () => {   // 模拟一次 boss 击杀的专属碎片掉落
+    const e = { x: Grid.center(4, 3).x, y: Grid.center(4, 3).y, type: 'boss' };
+    Gear.dropSigShard(e);
+  },
   killAll: () => R.enemies.forEach(e => e.takeDamage(999999)),
   setTimeScale: x => { R.timeScale = x; },
   step: seconds => { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) tick(STEP); },

@@ -7,6 +7,7 @@ class Tower {
     this.x = p.x; this.y = p.y;
     this.level = 1;
     this.cd = 0; this.animT = 0;
+    this.gear = null;   // 佩戴的装备 {fam,lv}（专属经 Save 自动生效，不占此槽）
   }
 
   get isGeneral() { return !!this.def.general; }
@@ -19,15 +20,17 @@ class Tower {
 
   get levelMul() { return this.def.levelMul || CONFIG.towerLevelMul; }
 
+  get gearMods() { return Gear.modsOf(this); }
+
   get atk() {
     const might = R.mightT > 0 ? CONFIG.drops.mightMul : 1;
     const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
-    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent);
+    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * (1 + this.gearMods.atkMul));
   }
   get rangePx() {
     // 非光环单位享受当局射程地板：任何已开放格都摸得到路径
     const floor = this.def.kind === 'aura' ? 0 : (R.rangeFloor || 0);
-    return (Math.max(this.def.range, floor) + this.levelMul.range * (this.level - 1)) * Grid.tile;
+    return (Math.max(this.def.range, floor) + this.levelMul.range * (this.level - 1)) * (1 + this.gearMods.rangeMul) * Grid.tile;
   }
 
   /* 营的战鼓加成：半径随等级扩圈，每级攻速额外 +5% */
@@ -63,7 +66,7 @@ class Tower {
     const target = this.pickTarget(enemies);
     if (!target) return;
     const haste = this.hasteDur > 0 ? (this.hasteMul || 1.3) : 1;
-    this.cd = 1 / (this.def.rate * this.auraMul() * haste);
+    this.cd = 1 / (this.def.rate * this.auraMul() * haste * (1 + this.gearMods.rateMul));
     this.animT = 0.14;
     this.fire(target, enemies);
   }

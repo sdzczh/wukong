@@ -10,6 +10,8 @@ const Save = {
       daily: { key: 0, best: 0 },         // 每日轮回当日最佳（key=yyyymmdd）
       codex: {},                          // 神将图鉴点亮（M3）
       talents: { po: 0, zs: 0, cs: 0 },   // 三系已点层数（M4）
+      shards: {},                         // 专属装备碎片（boss 掉落，带出对局）
+      sigGear: {},                        // 专属装备等级（局外合成升级，永久）
       wukongKills: 0,
     };
   },

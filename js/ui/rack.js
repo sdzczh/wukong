@@ -187,6 +187,7 @@ const RackUI = {
     const rf = this.draftBar.querySelector('.draft-refresh');
     rf.textContent = `刷新 ${CONFIG.summon.refreshCost}桃`;
     rf.classList.toggle('disabled', R.peaches < CONFIG.summon.refreshCost);
+    GearUI.refresh();   // 选牌条开合时装备栏让位/恢复
   },
 
   /* 神将字的配对字（如 悟 → 空） */
@@ -362,6 +363,16 @@ const RackUI = {
       rows.push(`经验 ${t.exp}/${t.expNeed}${t.level >= t.maxLevel ? '（已满级）' : ''}`);
       rows.push(`技能 · ${d.skill.name}（${st}）：${d.skill.desc}`);
     }
+    if (t.gear) {
+      const f = CONFIG.gear.families[t.gear.fam];
+      const v = Math.round(f.per[t.gear.lv - 1] * 100);
+      const txt = f.stat === 'cdMul' ? `技冷却 -${v}%` : `${GearUI.statLabel[f.stat]} +${v}%`;
+      rows.push(`装备 · ${f.name} Lv${t.gear.lv}（${txt}）`);
+    }
+    if (t.isGeneral && t.sigLv > 0) {
+      const sg = CONFIG.sigGear[t.key];
+      rows.push(`专属 · ${sg.name} Lv${t.sigLv}：${sg.desc.replace('{v}', Gear.sigStatPct(t.key, t.sigLv))}`);
+    }
     if (d.pairHint) rows.push(`与「${d.pairHint.with}」合成 ${d.pairHint.general}`);
     if (d.desc) rows.push(d.desc);
 
@@ -371,9 +382,12 @@ const RackUI = {
       (d.rarity ? `<span class="sel-rarity" style="background:${CONFIG.rarityColors[d.rarity]}">${d.rarity}</span>` : '') +
       `<button class="sel-close">×</button></div>` +
       `<div class="sel-body">${rows.map(s => `<div>${s}</div>`).join('')}</div>` +
+      (t.gear ? `<button class="sel-gear-off">卸下 ${Gear.equipName(t.gear)}</button>` : '') +
       `<button class="sel-sell">出售 +${Merge.sellValue(t)} 桃</button>`;
     this.selPanel.classList.remove('hidden');
     this.selPanel.querySelector('.sel-close').addEventListener('click', () => { SFX.play('click'); this.hideSel(); });
+    const offBtn = this.selPanel.querySelector('.sel-gear-off');
+    if (offBtn) offBtn.addEventListener('click', () => { Gear.unequip(t); this.showSel(t); });
     this.selPanel.querySelector('.sel-sell').addEventListener('click', () => this.sellSelected());
   },
 
@@ -388,6 +402,7 @@ const RackUI = {
     if (!t) { this.hideSel(); return; }
     const v = Merge.sellValue(t);
     R.peaches += v;
+    if (t.gear) { R.equips.push(t.gear); t.gear = null; GearUI.refresh(); }   // 装备回库不丢失
     FX.float('+' + v + ' 桃', t.x, t.y - Grid.tile * 0.4, '#ffd867', 15);
     Merge.removeUnit(t);
     SFX.play('sell');

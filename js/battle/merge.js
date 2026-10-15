@@ -47,6 +47,7 @@ const Merge = {
     }
     Grid.tiles[row][col].tower = u;
     R.towers.push(u);
+    if (u.isGeneral) Gear.onGeneralBorn(u);   // 局外专属随身提示
     return u;
   },
 

@@ -11,6 +11,9 @@ class General extends Tower {
   /* 升级所需经验：随等级线性增长（8/12/16/20…），压住无尽里的指数成长 */
   get expNeed() { return 8 + (this.level - 1) * 4; }
 
+  /* 专属装备等级（局外装备库合成升级，唤醒时自动随身） */
+  get sigLv() { return Gear.sigLvOf(this.key); }
+
   /* 击杀经验：满升级线升 1 级，最高 maxLevel */
   gainExp(n) {
     if (this.level >= this.maxLevel) return;

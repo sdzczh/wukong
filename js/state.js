@@ -31,6 +31,10 @@ const R = {
   hover: null,
   shovelLeft: 0,
   timeScale: 1,
+  parts: null,        // 装备部件计数 {feng,ji,yuan,ling}（resetRun 初始化）
+  equips: null,       // 未佩戴装备库存 [{fam,lv}]
+  gearArm: -1,        // 待佩戴的库存装备索引（-1 无）：点塔即佩戴
+  sigRun: 0,          // 本局专属碎片收获数（结算展示）
 };
 
 function resetRun() {
@@ -61,4 +65,8 @@ function resetRun() {
   R.rangeFloor = 0;    // 当局射程地板（startRun 时按最远离径开放格校准）
   R.endless = false;   // 无尽征战模式（通关第 10 波后可选择进入）
   R.lastWin = false;   // 本局结算结果（图鉴/修炼返回结算页用）
+  R.parts = { feng: 0, ji: 0, yuan: 0, ling: 0 };
+  R.equips = [];
+  R.gearArm = -1;
+  R.sigRun = 0;
 }

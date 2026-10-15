@@ -134,6 +134,56 @@ const CONFIG = {
 
   rarityColors: { '蓝': '#5b8fd6', '紫': '#9a6fd0', '橙': '#e8933c', '红': '#d64545' },
 
+  /* ============================================================
+   * 装备系统（M6）：怪物掉部件 → 3 合 1 装备 → 3 合 1 升级；
+   * boss 掉神将专属碎片，带出对局、局外合成升级（永久）
+   * ============================================================ */
+  gear: {
+    partChance: 0.06,             // 普通击杀掉部件概率
+    bruteBonus: 0.20,             // 厉魂额外掉率（皮糙肉厚揣着料）
+    endlessDecay: 0.85,           // 无尽第 10 波后每波 ×0.85（与灵宝一致）
+    forgeNeed: 3,                 // 3 部件 → Lv1 装备；3 件同系同级 → 下一级
+    maxLv: 3,
+    // 四系：stat ∈ atkMul 攻击 / rateMul 攻速 / rangeMul 射程 / cdMul 技冷却（仅神将）
+    families: {
+      feng: { char: '锋', name: '兵锋', color: '#c05a4a', stat: 'atkMul',   per: [0.15, 0.30, 0.50] },
+      ji:   { char: '疾', name: '疾风', color: '#4a8fc0', stat: 'rateMul',  per: [0.12, 0.24, 0.40] },
+      yuan: { char: '远', name: '望远', color: '#5fa86f', stat: 'rangeMul', per: [0.12, 0.24, 0.40] },
+      ling: { char: '灵', name: '灵犀', color: '#9a6fd0', stat: 'cdMul',    per: [0.10, 0.20, 0.32], generalOnly: true },
+    },
+    sigForge: 3,                  // 专属合成：3 碎片 → Lv1
+    sigUpgrade: 2,                // 专属升级：2 碎片/级
+    sigMaxLv: 5,
+  },
+
+  /* 神将专属装备：stat 为主属性（base 每级 +per），unique 为专属强化（skill.js 实现） */
+  sigGear: {
+    wukong:  { name: '如意金箍棒', color: '#c98a2e', stat: 'atkMul',  base: 0.20, per: 0.08,
+               desc: '攻击 +{v}%；棍卷风云持续 +0.5s/级' },
+    wuneng:  { name: '九齿钉耙',   color: '#8f7bb8', stat: 'atkMul',  base: 0.15, per: 0.06,
+               desc: '攻击 +{v}%；倒打一耙定身 +0.2s/级' },
+    wujing:  { name: '降妖宝杖',   color: '#6f86b8', stat: 'atkMul',  base: 0.12, per: 0.05,
+               desc: '攻击 +{v}%；流沙河减速 +3%/级' },
+    nezha:   { name: '风火轮',     color: '#d66a4a', stat: 'rateMul', base: 0.15, per: 0.06,
+               desc: '攻速 +{v}%；乾坤圈多弹 1 个目标/级' },
+    jinzha:  { name: '降魔杵',     color: '#5b8fd6', stat: 'atkMul',  base: 0.20, per: 0.08,
+               desc: '攻击 +{v}%；蓄力一击 +20%/级' },
+    muzha:   { name: '吴钩剑',     color: '#5fa86f', stat: 'rateMul', base: 0.12, per: 0.05,
+               desc: '攻速 +{v}%；双剑加速 +3%/级' },
+    yangjian:{ name: '三尖两刃刀', color: '#7a6fd0', stat: 'atkMul',  base: 0.22, per: 0.09,
+               desc: '攻击 +{v}%；天眼伤害 +15%/级' },
+    wangmu:  { name: '蟠桃枝',     color: '#d0a0b8', stat: 'cdMul',   base: 0.12, per: 0.05,
+               desc: '技冷却 -{v}%；3 级起蟠桃盛会再 +1 心' },
+    yudi:    { name: '昊天镜',     color: '#d6b24a', stat: 'cdMul',   base: 0.15, per: 0.06,
+               desc: '技冷却 -{v}%；昊天威压眩晕 +0.15s/级' },
+    yanwang: { name: '判官笔',     color: '#4a4a58', stat: 'cdMul',   base: 0.12, per: 0.05,
+               desc: '技冷却 -{v}%；生死簿提前 0.2s/级' },
+    change:  { name: '玉兔杵',     color: '#d0709a', stat: 'atkMul',  base: 0.15, per: 0.06,
+               desc: '攻击 +{v}%；万箭齐发 +10%/级' },
+    lijing:  { name: '玲珑金塔',   color: '#8a9a6a', stat: 'cdMul',   base: 0.12, per: 0.05,
+               desc: '技冷却 -{v}%；玲珑宝塔 +0.5s/级' },
+  },
+
   // 敌人（魂系）
   enemies: {
     ghost:  { char: '魂', name: '幽魂', hp: 20,  speed: 0.9, reward: 1,  exp: 1, dmg: 1, size: 0.62, color: '#8d97b8' },
