@@ -11,7 +11,11 @@ class Tower {
 
   get isGeneral() { return !!this.def.general; }
 
-  get maxLevel() { return this.def.maxLevel || 5; }
+  /* 无尽征战：神将等级不设上限 */
+  get maxLevel() {
+    if (this.isGeneral && R.endless) return Infinity;
+    return this.def.maxLevel || 5;
+  }
 
   get levelMul() { return this.def.levelMul || CONFIG.towerLevelMul; }
 

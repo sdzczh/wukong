@@ -20,13 +20,16 @@ const CONFIG = {
     sellRefund: 4,                   // 出售字塔返还（神将另加 4×等级）
   },
 
-  // 召唤（抽字）
+  // 召唤（抽字）：一次召唤弹出 draftSize 张卡，点选入架，未选的再召唤时消失
   summon: {
     base: 9, step: 1,                // 费用 = base + step × 已召唤次数
-    godChance: 0.24,                 // 神将字概率
-    pityAfter: 4,                    // 连续 N 抽普通字后必出神将字
+    godChance: 0.24,                 // 单张神将字概率
+    pityAfter: 4,                    // 连续 N 轮 draft 无神将字后，该轮必出一张
     startChars: 4,                   // 开局免费发字
     rackSize: 5,
+    draftSize: 5,
+    // 自走棋式卡片分级：普通字卡随波次出现 Lv2/Lv3（神将字恒为 Lv1）
+    cardLv: { lv2From: 2, lv2Step: 0.05, lv2Cap: 0.35, lv3From: 6, lv3Step: 0.04, lv3Cap: 0.20, maxCardLv: 3 },
   },
 
   shovelUses: 10,
@@ -70,8 +73,8 @@ const CONFIG = {
              desc: '穿刺：攻击贯穿直线上至多 3 个敌人' },
     staff: { char: '棍', name: '铁棍', atk: 12, rate: 1.2, range: 1.6, kind: 'cleave', cleave: 3,
              desc: '横扫：攻击目标及相邻 2 个敌人' },
-    camp:  { char: '营', name: '战营', atk: 0, rate: 0, range: 1.5, kind: 'aura', auraRate: 0.15,
-             desc: '战鼓：周围 1 格友塔攻速 +15%（自身不攻击）' },
+    camp:  { char: '营', name: '战营', atk: 0, rate: 0, range: 2.2, kind: 'aura', auraRate: 0.15,
+             desc: '战鼓：周围 2 格友塔攻速 +15%（自身不攻击）' },
 
     /* ---------- 神将（两字合成；Lv1 基准，每级攻击×1.6；技能 M3 启用） ---------- */
     wukong:  { char: '悟空', name: '孙悟空', general: true, rarity: '橙', pair: ['悟', '空'], color: '#c98a2e',

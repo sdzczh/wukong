@@ -122,18 +122,18 @@ body { display: flex; align-items: center; justify-content: center; }
 /* ---------- 底栏 ---------- */
 #hud-bottom {
   position: absolute; bottom: 0; left: 0; right: 0; height: 152px;
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-  padding: 14px 18px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 14px;
   background: linear-gradient(#17111f00, #17111f88 30%, #17111fd9);
   pointer-events: none;
 }
 #hud-bottom > * { pointer-events: auto; }
 
 /* ---------- 底栏：召唤架 + 召唤 + 铲子 ---------- */
-#rack { display: flex; gap: 12px; }
+#rack { display: flex; gap: 10px; }
 
 .slot {
-  width: 96px; height: 116px; border-radius: 14px;
+  width: 80px; height: 116px; border-radius: 14px;
   background: #241b33cc; border: 3px dashed #5a4872;
   display: flex; align-items: center; justify-content: center;
   position: relative; cursor: grab; touch-action: none;
@@ -166,7 +166,7 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 
 #btn-summon {
-  width: 132px; height: 116px; border-radius: 16px; cursor: pointer;
+  width: 126px; height: 116px; border-radius: 16px; cursor: pointer;
   background: linear-gradient(#ffd867, #e8a63c); border: 3px solid #a97e22;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   box-shadow: 0 4px 0 #7a5410, 0 6px 12px #0008;
@@ -200,6 +200,49 @@ body { display: flex; align-items: center; justify-content: center; }
   transform: translateY(-4px);
 }
 .tool-btn.disabled { filter: grayscale(1) opacity(.55); cursor: not-allowed; }
+
+/* 铲子：底栏唯一的工具键，放大 + 独立配色，避免误触召唤 */
+#btn-shovel { width: 100px; background: linear-gradient(#dff0dd, #a9cfa2); border-color: #5f8a58; box-shadow: 0 4px 0 #3f6038, 0 6px 10px #0007; }
+#btn-shovel:active { box-shadow: 0 1px 0 #3f6038; }
+#btn-shovel .tchar { font-size: 52px; color: #2e5231; }
+#btn-shovel .tname { color: #56704f; }
+
+/* ---------- 召唤选牌条 ---------- */
+#draft-bar {
+  position: absolute; left: 14px; right: 14px; bottom: 158px; z-index: 6;
+  background: #241b33f2; border: 3px solid #5a4872; border-radius: 16px;
+  padding: 10px 14px 12px; color: #f3ead6;
+  box-shadow: 0 10px 30px #000a;
+  pointer-events: auto;
+}
+#draft-bar .draft-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 20px; font-weight: 900; color: #ffd867; margin-bottom: 8px;
+}
+#draft-bar .draft-tip { font-size: 14px; font-weight: 400; color: #b8a8d0; }
+#draft-bar .draft-x {
+  margin-left: auto; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  font-size: 15px; font-weight: 900; color: #cfc2e4;
+  background: #2e2440; border: 2px solid #5a4872;
+}
+#draft-bar .draft-cards { display: flex; gap: 10px; }
+#draft-bar .draft-card {
+  flex: 1; min-width: 0; height: 104px; border-radius: 12px; cursor: pointer;
+  background: #f6efdf; border: 3px solid #cbb37e;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: 0 4px 0 #9c8657; transition: transform .08s;
+}
+#draft-bar .draft-card:active { transform: translateY(3px); box-shadow: 0 1px 0 #9c8657; }
+#draft-bar .draft-card.god {
+  background: #efe6f6; border-color: #9a6fd0;
+  box-shadow: 0 4px 0 #5a4872, 0 0 14px #9a6fd066;
+}
+#draft-bar .dchar {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 44px; font-weight: 900; line-height: 1;
+}
+#draft-bar .dlv { font-size: 15px; font-weight: 900; color: #b8452e; }
+#draft-bar .dpair { font-size: 13px; font-weight: 700; color: #8a6fd0; }
 
 /* ---------- 选中单位面板 ---------- */
 #sel-panel {

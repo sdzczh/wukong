@@ -7,6 +7,7 @@ const RackUI = {
     this.summonBtn = document.getElementById('btn-summon');
     this.shovelBtn = document.getElementById('btn-shovel');
     this.selPanel = document.getElementById('sel-panel');
+    this.draftBar = document.getElementById('draft-bar');
     this.ghost = document.getElementById('drag-ghost');
     this.stageEl = document.getElementById('stage');
 
@@ -18,12 +19,48 @@ const RackUI = {
       this.refresh();
     });
 
+    // 选牌条：点卡入架，✕ 放弃整轮
+    this.draftBar.addEventListener('click', e => {
+      const card = e.target.closest('.draft-card');
+      if (card) { SFX.ensure(); this.pickDraft(+card.dataset.i); }
+    });
+    this.draftBar.querySelector('.draft-x').addEventListener('click', () => { SFX.play('click'); this.discardDraft(); });
+
     this.buildSlots();
   },
 
   /* ---------- 召唤 ---------- */
   summonCost() {
     return Math.max(5, CONFIG.summon.base + CONFIG.summon.step * R.summonsDone - Talents.summonDiscount());
+  },
+
+  /* 神将字集合（两两配对） */
+  _godSet() {
+    if (!this.__godSet) {
+      const s = new Set();
+      for (const two in CONFIG.pairs) { s.add(two[0]); s.add(two[1]); }
+      this.__godSet = s;
+    }
+    return this.__godSet;
+  },
+
+  /* 单张卡：神将字恒 Lv1；普通字随波次概率出 Lv2/Lv3（自走棋式） */
+  _rollDraftCard(godSet) {
+    const godChance = CONFIG.summon.godChance + Talents.godChanceBonus();
+    const ch = RNG.next() < godChance
+      ? RNG.pickWeighted(this._godWeights())
+      : RNG.pickWeighted(Object.entries(CONFIG.normalCharWeights));
+    let lv = 1;
+    if (!godSet.has(ch)) {
+      const cl = CONFIG.summon.cardLv;
+      const w3 = Math.min(cl.lv3Cap, Math.max(0, (R.wave - cl.lv3From) * cl.lv3Step));
+      const w2 = Math.min(cl.lv2Cap, Math.max(0, (R.wave - cl.lv2From) * cl.lv2Step));
+      const roll = RNG.next();
+      if (roll < w3) lv = 3;
+      else if (roll < w3 + w2) lv = 2;
+      lv = Math.min(lv, cl.maxCardLv);
+    }
+    return { ch, lv };
   },
 
   rollChar() {
@@ -58,6 +95,7 @@ const RackUI = {
     return Object.entries(CONFIG.godCharWeights).map(([ch, w]) => [ch, w * (boost[ch] || 1)]);
   },
 
+  /* 一次召唤：弹出 draftSize 张卡供点选，未选的再召唤时作废 */
   doSummon() {
     if (R.state !== 'battle') return;
     const slot = R.rack.findIndex(x => !x);
@@ -66,14 +104,77 @@ const RackUI = {
     if (R.peaches < cost) { HUD.toast('蟠桃不足'); SFX.play('click'); return; }
     R.peaches -= cost;
     R.summonsDone++;
-    const ch = this.rollChar();
-    const isGod = !CONFIG.charToTower[ch];
-    R.rack[slot] = { type: 'char', ch };
-    Merge.unlockChar(ch);
-    SFX.play(isGod ? 'god' : 'summon');
-    if (isGod) HUD.toast(`抽到神将字「${ch}」！`);
+
+    const godSet = this._godSet();
+    const cards = [];
+    for (let i = 0; i < CONFIG.summon.draftSize; i++) cards.push(this._rollDraftCard(godSet));
+    // 整轮保底：本轮全无神将字记一次 miss，达阈值强制替换一张
+    const pityAfter = CONFIG.summon.pityAfter - Talents.pityDelta();
+    if (cards.some(c => godSet.has(c.ch))) {
+      R.pityMiss = 0;
+    } else {
+      R.pityMiss++;
+      if (R.pityMiss >= pityAfter) {
+        cards[RNG.int(cards.length)] = { ch: RNG.pickWeighted(this._godWeights()), lv: 1 };
+        R.pityMiss = 0;
+        HUD.toast('缘分天定 · 必出神将字');
+      }
+    }
+    R.draft = cards;   // 直接覆盖旧一轮，未领取的自动作废
+
+    SFX.play(cards.some(c => godSet.has(c.ch)) ? 'god' : 'summon');
+    this.hideSel();
     this.refresh();
+    this.renderDraft();
     HUD.refresh();
+  },
+
+  /* 点选第 i 张卡入架；架满则本轮剩余自动作废 */
+  pickDraft(i) {
+    if (!R.draft || !R.draft[i]) return;
+    const slot = R.rack.findIndex(x => !x);
+    if (slot < 0) { HUD.toast('架子满了'); return; }
+    const d = R.draft.splice(i, 1)[0];
+    R.rack[slot] = { type: 'char', ch: d.ch, lv: d.lv };
+    Merge.unlockChar(d.ch);
+    SFX.play('place');
+    if (R.rack.every(x => x)) {
+      R.draft = null;
+      HUD.toast('召唤架已满，剩余卡牌已散');
+    }
+    this.refresh();
+    this.renderDraft();
+    HUD.refresh();
+  },
+
+  discardDraft() {
+    R.draft = null;
+    this.renderDraft();
+  },
+
+  renderDraft() {
+    if (!this.draftBar) return;
+    if (!R.draft || R.draft.length === 0 || R.state !== 'battle') {
+      this.draftBar.classList.add('hidden');
+      return;
+    }
+    this.draftBar.classList.remove('hidden');
+    const godSet = this._godSet();
+    this.draftBar.querySelector('.draft-cards').innerHTML = R.draft.map((d, i) => {
+      const isGod = godSet.has(d.ch);
+      const lvTxt = d.lv > 1 ? `<span class="dlv">Lv${d.lv}</span>` : '';
+      const hint = isGod ? this._pairHintText(d.ch) : '';
+      return `<div class="draft-card${isGod ? ' god' : ''}" data-i="${i}">` +
+        `<span class="dchar" style="color:${isGod ? '#7a6fd0' : '#4a3b52'}">${d.ch}</span>${lvTxt}${hint}</div>`;
+    }).join('');
+  },
+
+  /* 神将字的配对提示（如 悟 → 配「空」） */
+  _pairHintText(ch) {
+    for (const two in CONFIG.pairs) {
+      if (two.includes(ch)) return `<span class="dpair">配「${two.replace(ch, '')}」</span>`;
+    }
+    return '';
   },
 
   /* 开局免费发字 */
@@ -124,6 +225,8 @@ const RackUI = {
       if (item.type === 'unit') {
         const u = item.unit;
         if (u.level > 1) badge = `<span class="lv">${u.level}</span>`;
+      } else if (item.lv > 1) {
+        badge = `<span class="lv">${item.lv}</span>`;
       }
       el.innerHTML = `<span class="ch">${this.itemLabel(item)}</span>${badge}`;
     }

@@ -78,7 +78,7 @@ const Merge = {
     const b = Grid.inBounds(col, row) ? Grid.tiles[row][col].tower : null;
     const aUnit = a.board || null;
     const aChar = aUnit ? aUnit.def.char : a.ch;
-    const aLevel = aUnit ? aUnit.level : 1;
+    const aLevel = aUnit ? aUnit.level : (a.lv || 1);
 
     // 空格：直放
     if (!b) {
@@ -86,6 +86,7 @@ const Merge = {
       if (aUnit) { Merge.removeUnit(aUnit); }
       const u = Merge.makeUnit(aUnit || Merge.towerKeyOfChar(aChar), col, row);
       if (aUnit) u.cd = 0.1;
+      else if (a.lv > 1) u.level = Math.min(u.maxLevel, a.lv);   // 自走棋式高级字卡：直接落为对应等级
       SFX.play('place');
       return { action: 'move', unit: u };
     }

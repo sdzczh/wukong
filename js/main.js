@@ -20,6 +20,7 @@ const Game = {
     R.state = 'battle';
     Panels.hide();
     RackUI.hideSel();
+    RackUI.discardDraft();
     RackUI.dealStartChars();
     HUD.refresh();
     HUD.toast('点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
@@ -38,6 +39,7 @@ const Game = {
     if (R.state === 'over') return;
     R.state = 'over';
     R.lastWin = win;
+    if (RackUI.draftBar) RackUI.discardDraft();
     R.crystalsEarned += R.wave * 10 + R.kills;
     const s = Save.data;
     s.crystals += R.crystalsEarned;
@@ -330,7 +332,7 @@ function heldItem() {
     const it = R.rack[slot];
     if (!it) return null;
     return it.type === 'char'
-      ? { src: 'rack', ch: it.ch, lv: 1 }
+      ? { src: 'rack', ch: it.ch, lv: it.lv || 1 }
       : { src: 'rack', ch: it.unit.def.char, lv: it.unit.level };
   }
   return null;
@@ -546,7 +548,7 @@ const Input = {
       res = Merge.placeOnto({ board: item.unit }, c, r);
       if (res.action !== 'fail') R.rack[slot] = null;
     } else {
-      res = Merge.placeOnto({ ch: item.ch, slot }, c, r);
+      res = Merge.placeOnto({ ch: item.ch, slot, lv: item.lv || 1 }, c, r);
       if (res.action !== 'fail' && res.action !== 'swap') R.rack[slot] = null;
       // swap：placeOnto 已把棋盘单位换回架子
     }
@@ -781,14 +783,16 @@ window.GAME = {
     Merge.makeUnit(key, c, r);
     return true;
   },
-  give: ch => {
+  give: (ch, lv) => {
     const slot = R.rack.findIndex(x => !x);
     if (slot < 0) return -1;
-    R.rack[slot] = { type: 'char', ch };
+    R.rack[slot] = { type: 'char', ch, lv: lv || 1 };
     RackUI.refresh();
     return slot;
   },
   summon: () => RackUI.doSummon(),
+  draft: () => R.draft,
+  pick: i => RackUI.pickDraft(i),
   dropRack: (slot, c, r) => Input.dropRack(slot, c, r, false),
   dropBoard: (c0, r0, c1, r1) => {
     const t = Grid.tiles[r0][c0].tower;
