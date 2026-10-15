@@ -6,9 +6,37 @@ const Panels = {
     this.sub = document.getElementById('overlay-sub');
     this.stats = document.getElementById('overlay-stats');
     this.btns = document.getElementById('overlay-btns');
+
+    // 双击「封」字地块：开垦确认
+    this.ulPanel = document.getElementById('unlock-panel');
+    this.ulCount = document.getElementById('ul-count');
+    document.getElementById('ul-yes').addEventListener('click', () => {
+      const cell = this.ulCell;
+      this.hideUnlock();
+      if (cell) { SFX.play('click'); Bus.emit('shovelAt', cell); }
+    });
+    document.getElementById('ul-no').addEventListener('click', () => {
+      SFX.play('click');
+      this.hideUnlock();
+    });
+  },
+
+  /* 双击「封」字地块弹出：确认后走铲子开垦（消耗 1 把） */
+  showUnlock(cell) {
+    this.ulCell = cell;
+    this.ulCount.textContent = R.shovelLeft;
+    this.ulPanel.classList.remove('hidden');
+    const p = Grid.center(cell.c, cell.r);
+    FX.ring(p.x, p.y, Grid.tile * 0.6, '#d9cdb4', { life: 0.5, width: 4 });
+  },
+
+  hideUnlock() {
+    if (this.ulPanel) this.ulPanel.classList.add('hidden');
+    this.ulCell = null;
   },
 
   _fill(title, sub, statsHtml, buttons) {
+    this.hideUnlock();   // 任何弹层出现时收起开垦确认
     this.title.textContent = title;
     this.sub.textContent = sub || '';
     this.stats.innerHTML = statsHtml || '';

@@ -321,6 +321,36 @@ body {
   box-shadow: 0 3px 0 #4a3670;
 }
 
+/* ---------- 双击「封」字地块的开垦确认 ---------- */
+#unlock-panel {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  z-index: 8; padding: 24px 34px 22px; text-align: center;
+  background: #241b33f7; border: 3px solid #5a4872; border-radius: 18px;
+  box-shadow: 0 14px 44px #000c;
+}
+#unlock-panel .ul-title {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 46px; color: #e8b64c; letter-spacing: 10px; line-height: 1;
+  text-shadow: 0 3px 0 #6b3f14;
+}
+#unlock-panel .ul-body { margin-top: 12px; font-size: 20px; color: #d9cdb4; }
+#unlock-panel .ul-left { margin-top: 6px; font-size: 16px; color: #b9a8d4; }
+#unlock-panel .ul-left span { color: #ffd867; font-weight: 900; }
+#unlock-panel .ul-btns {
+  margin-top: 18px; display: flex; gap: 16px; justify-content: center;
+}
+#unlock-panel .ul-btns button {
+  padding: 10px 32px; border-radius: 999px; cursor: pointer;
+  font-size: 21px; font-weight: 900; letter-spacing: 4px;
+  border: 3px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#unlock-panel .ul-btns button:active { transform: translateY(2px); box-shadow: none; }
+#unlock-panel .ul-btns button.ghost {
+  border-color: #5a4872; background: #2e2440; color: #cfc2e4;
+  box-shadow: 0 3px 0 #1a1428;
+}
+
 /* ---------- 装备栏（局内，悬浮底栏之上） ---------- */
 #gear-bar {
   position: absolute; left: 12px; right: 12px; bottom: 156px; z-index: 5;

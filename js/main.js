@@ -479,17 +479,20 @@ const Input = {
     SFX.ensure();
     if (R.state !== 'battle') return;
     this.hideItemPanel();
+    Panels.hideUnlock();
     const p = toLogical(e.clientX, e.clientY);
     const cell = Grid.cellAt(p.x, p.y);
 
     // 铲子工具
     if (R.tool === 'shovel') {
+      this._lastTap = null;
       if (cell) Bus.emit('shovelAt', cell);
       return;
     }
 
     // 佩戴装备：点塔戴上，点空地取消
     if (R.gearArm >= 0) {
+      this._lastTap = null;
       const idx = R.gearArm;
       R.gearArm = -1;
       if (cell) {
@@ -506,13 +509,37 @@ const Input = {
 
     // 已点选架子字 → 放置
     if (R.armedSlot >= 0) {
+      this._lastTap = null;
       if (!cell) return;
       this.dropRack(R.armedSlot, cell.c, cell.r, true);
       return;
     }
 
-    if (!cell) { RackUI.hideSel(); return; }
-    const t = Grid.tiles[cell.r][cell.c].tower;
+    if (!cell) { this._lastTap = null; RackUI.hideSel(); return; }
+    const tile = Grid.tiles[cell.r][cell.c];
+
+    /* 双击「封」字地块 → 弹开垦确认（消耗 1 把铲子） */
+    if (tile.locked) {
+      if (R.draft && R.draft.length) { this._lastTap = null; return; }
+      const now = performance.now();
+      const lt = this._lastTap;
+      const dbl = lt && lt.c === cell.c && lt.r === cell.r && now - lt.t < 400;
+      this._lastTap = dbl ? null : { t: now, c: cell.c, r: cell.r };
+      if (R.shovelLeft <= 0) {
+        HUD.toast('铲子已用完（无尽征战每 5 波补给 1 把）');
+        RackUI.hideSel();
+        return;
+      }
+      if (dbl) { Panels.showUnlock(cell); SFX.play('click'); }
+      else {
+        HUD.toast(`双击开垦「封」字地块（铲子剩 ${R.shovelLeft} 把）`);
+        RackUI.hideSel();
+      }
+      return;
+    }
+    this._lastTap = null;
+
+    const t = tile.tower;
     if (t) {
       this.gesture = { src: { type: 'board', unit: t }, x0: e.clientX, y0: e.clientY, dragging: false };
     } else {
