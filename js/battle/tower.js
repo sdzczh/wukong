@@ -74,8 +74,14 @@ class Tower {
   fire(target, enemies) {
     const dmg = Math.round(this.atk * (this.nextMul || 1));
     this.nextMul = 0;
+    const af = this.def.atkfx || null;
     if (this.def.kind === 'arrow') {
-      R.projectiles.push(new Projectile(this.x, this.y - Grid.tile * 0.2, target, dmg, { src: this }));
+      const opts = { src: this };
+      if (af) {
+        opts.color = af.color; opts.size = af.size; opts.shape = af.shape;
+        opts.glow = af.glow; opts.trail = af.trail; opts.impact = af.impact;
+      }
+      R.projectiles.push(new Projectile(this.x, this.y - Grid.tile * 0.2, target, dmg, opts));
       SFX.play('shoot');
     } else if (this.def.kind === 'pierce') {
       const ang = Math.atan2(target.y - this.y, target.x - this.x);
@@ -84,7 +90,7 @@ class Tower {
         .sort((a, b) => Math.hypot(a.x - this.x, a.y - this.y) - Math.hypot(b.x - this.x, b.y - this.y))
         .slice(0, this.def.pierce);
       hits.forEach(e => e.takeDamage(dmg, this));
-      FX.tracer(this.x, this.y, ang, this.rangePx, '#e0905c');
+      FX.beam(this.x, this.y, ang, this.rangePx, af || { color: '#e0905c' });
       SFX.play('shoot');
     } else if (this.def.kind === 'cleave') {
       const ang = Math.atan2(target.y - this.y, target.x - this.x);
@@ -93,7 +99,7 @@ class Tower {
         .sort((a, b) => Math.hypot(a.x - target.x, a.y - target.y) - Math.hypot(b.x - target.x, b.y - target.y))
         .slice(0, this.def.cleave);
       near.forEach(e => e.takeDamage(dmg, this));
-      FX.arc(this.x, this.y, Grid.tile * 1.15, ang - 0.55, ang + 0.55, '#b98bc4');
+      FX.sweep(this.x, this.y, ang, Grid.tile, af, target);
       SFX.play('hit');
     }
   }

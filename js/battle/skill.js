@@ -124,7 +124,8 @@ const Skills = {
   change(g) {
     const targets = Skills.enemiesAround(g, 1.1);
     for (const e of targets) {
-      R.projectiles.push(new Projectile(g.x, g.y - Grid.tile * 0.2, e, Math.round(g.atk * (1.2 + 0.1 * g.sigLv)), { src: g, color: '#d0709a' }));
+      R.projectiles.push(new Projectile(g.x, g.y - Grid.tile * 0.2, e, Math.round(g.atk * (1.2 + 0.1 * g.sigLv)),
+        { src: g, color: '#e0d0ff', size: 6, shape: 'moon', glow: 12, trail: '#b8a8e8', impact: true }));
     }
     if (targets.length) SFX.play('shoot');
   },
