@@ -139,8 +139,9 @@ const RackUI = {
       rows.push(`攻击 ${t.atk}　攻速 ${d.rate}/s　射程 ${(t.rangePx / Grid.tile).toFixed(1)} 格`);
     }
     if (t.isGeneral) {
+      const st = t.skillT <= 0 ? '✦ 就绪' : `冷却 ${Math.max(0, t.skillT).toFixed(1)}s`;
       rows.push(`经验 ${t.exp}/10${t.level >= t.maxLevel ? '（已满级）' : ''}`);
-      rows.push(`技能 · ${d.skill.name}：${d.skill.desc}`);
+      rows.push(`技能 · ${d.skill.name}（${st}）：${d.skill.desc}`);
     }
     if (d.pairHint) rows.push(`与「${d.pairHint.with}」合成 ${d.pairHint.general}`);
     if (d.desc) rows.push(d.desc);

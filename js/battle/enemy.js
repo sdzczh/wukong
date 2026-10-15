@@ -22,6 +22,16 @@ class Enemy {
   update(dt) {
     if (!this.alive) return;
     if (this.flash > 0) this.flash -= dt;
+    // 生死簿：3 秒后斩杀
+    if (this.deathMark) {
+      this.deathMark.t -= dt;
+      if (this.deathMark.t <= 0) {
+        const src = this.deathMark.src;
+        this.deathMark = null;
+        this.takeDamage(99999, src);
+        return;
+      }
+    }
     if (this.stun > 0) { this.stun -= dt; return; }
     if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slowF = 1; }
     this.s += this.speedPx * this.slowF * dt;
@@ -67,6 +77,11 @@ class Enemy {
     ctx.fillText(this.def.char, this.x, this.y + bob);
 
     // 状态标记
+    if (this.deathMark) {
+      ctx.font = `900 ${Math.round(size * 0.42)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
+      ctx.fillStyle = '#3a3a48';
+      ctx.fillText('簿', this.x, this.y - size * 0.66);
+    }
     if (this.stun > 0) {
       ctx.font = `900 ${Math.round(size * 0.4)}px sans-serif`;
       ctx.fillStyle = '#ffd867';

@@ -50,4 +50,5 @@ function resetRun() {
   R.hover = null;
   R.shovelLeft = CONFIG.shovelUses;
   R.timeScale = 1;
+  R.mightT = 0;        // 兵符全局加攻剩余秒数
 }

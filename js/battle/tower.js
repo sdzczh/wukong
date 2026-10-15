@@ -15,7 +15,10 @@ class Tower {
 
   get levelMul() { return this.def.levelMul || CONFIG.towerLevelMul; }
 
-  get atk() { return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1))); }
+  get atk() {
+    const might = R.mightT > 0 ? CONFIG.drops.mightMul : 1;
+    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might);
+  }
   get rangePx() { return (this.def.range + this.levelMul.range * (this.level - 1)) * Grid.tile; }
 
   /* 营的战鼓加成 */
@@ -42,18 +45,21 @@ class Tower {
 
   update(dt, enemies) {
     if (this.animT > 0) this.animT -= dt;
+    if (this.hasteDur > 0) this.hasteDur -= dt;
     if (this.def.kind === 'aura') return;
     this.cd -= dt;
     if (this.cd > 0) return;
     const target = this.pickTarget(enemies);
     if (!target) return;
-    this.cd = 1 / (this.def.rate * this.auraMul());
+    const haste = this.hasteDur > 0 ? (this.hasteMul || 1.3) : 1;
+    this.cd = 1 / (this.def.rate * this.auraMul() * haste);
     this.animT = 0.14;
     this.fire(target, enemies);
   }
 
   fire(target, enemies) {
-    const dmg = this.atk;
+    const dmg = Math.round(this.atk * (this.nextMul || 1));
+    this.nextMul = 0;
     if (this.def.kind === 'arrow') {
       R.projectiles.push(new Projectile(this.x, this.y - Grid.tile * 0.2, target, dmg, { src: this }));
       SFX.play('shoot');

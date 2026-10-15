@@ -53,6 +53,7 @@ const SFX = {
       case 'levelup': [523, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.12, 'triangle', 0.11), i * 80)); break;
       case 'sell':  this.tone(880, 0.07, 'sine', 0.08);
                     setTimeout(() => this.tone(660, 0.09, 'sine', 0.07), 60); break;
+      case 'skill': [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => this.tone(f, 0.1, 'triangle', 0.1), i * 50)); break;
     }
   },
 };

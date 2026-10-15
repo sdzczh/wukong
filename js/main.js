@@ -43,6 +43,28 @@ const Game = {
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
   },
+
+  /* 灵宝掉落（自动拾取） */
+  applyDrop(e) {
+    const D = CONFIG.drops;
+    let kind;
+    if (R.hearts >= CONFIG.base.hearts) kind = RNG.next() < 0.5 ? 'peach' : 'might';
+    else {
+      const r = RNG.next();
+      kind = r < 0.45 ? 'peach' : r < 0.8 ? 'might' : 'heart';
+    }
+    if (kind === 'peach') {
+      R.peaches += D.mightPeach;
+      FX.float(`灵宝·桃袋 +${D.mightPeach}桃`, e.x, e.y - Grid.tile * 0.3, '#ffd867', 16);
+    } else if (kind === 'might') {
+      R.mightT = D.mightDur;
+      FX.float('灵宝·兵符 全体攻击+20%', e.x, e.y - Grid.tile * 0.3, '#ffb84c', 16);
+    } else {
+      R.hearts = Math.min(CONFIG.base.hearts, R.hearts + 1);
+      FX.float('灵宝·轮回符 +1心', e.x, e.y - Grid.tile * 0.3, '#ff8fa0', 16);
+    }
+    SFX.play('coin');
+  },
 };
 
 /* ---------- 尺寸适配 ---------- */
@@ -109,6 +131,7 @@ function frame(now) {
 
 function tick(dt) {
   if (R.state !== 'battle') return;
+  if (R.mightT > 0) R.mightT -= dt;
   Director.update(dt);
   for (const e of R.enemies) e.update(dt);
   for (const t of R.towers) t.update(dt, R.enemies);
@@ -116,6 +139,11 @@ function tick(dt) {
   R.projectiles = R.projectiles.filter(p => !p.dead);
   R.enemies = R.enemies.filter(e => e.alive);
   FX.update(dt);
+  // 波间倒计时每秒刷新
+  if (!Director.cur && R.wave > 0 && R.wave < CONFIG.waveCount) {
+    const sec = Math.ceil(Director.intermission);
+    if (sec !== tick._lastSec) { tick._lastSec = sec; HUD.refresh(); }
+  }
 }
 
 /* ---------- 渲染 ---------- */
@@ -574,6 +602,8 @@ Bus.on('enemyKilled', e => {
   const src = e.lastHitBy;
   if (src && src.isGeneral) src.gainExp(1);
   if (src && src.key === 'wukong') { Save.data.wukongKills++; Save.write(); }
+  const dropChance = e.type === 'boss' ? CONFIG.drops.bossChance : CONFIG.drops.chance;
+  if (RNG.next() < dropChance) Game.applyDrop(e);
   HUD.refresh();
 });
 
@@ -660,6 +690,12 @@ window.GAME = {
   },
   sell: () => RackUI.sellSelected(),
   shovel: (c, r) => Bus.emit('shovelAt', { c, r }),
+  cast: key => {
+    const g = R.towers.find(t => t.isGeneral && t.key === key);
+    if (g) { Skills.cast(g); return true; }
+    return false;
+  },
+  drop: () => Game.applyDrop({ x: Grid.center(4, 3).x, y: Grid.center(4, 3).y }),
   killAll: () => R.enemies.forEach(e => e.takeDamage(999999)),
   setTimeScale: x => { R.timeScale = x; },
   step: seconds => { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) tick(STEP); },

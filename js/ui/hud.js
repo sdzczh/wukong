@@ -21,6 +21,11 @@ const HUD = {
       this.refreshSound();
       SFX.play('click');
     });
+    document.getElementById('btn-fast').addEventListener('click', () => {
+      SFX.ensure(); SFX.play('click');
+      R.timeScale = R.timeScale === 1 ? 2 : 1;
+      this.refresh();
+    });
 
     this.refreshSound();
     this.refresh();
@@ -33,7 +38,16 @@ const HUD = {
   refresh() {
     this.peachNum.textContent = R.peaches;
     this.heartNum.textContent = R.hearts;
-    this.waveLabel.textContent = R.wave > 0 ? `第 ${R.wave} / ${CONFIG.waveCount} 波` : '备战中';
+    const fastBtn = document.getElementById('btn-fast');
+    fastBtn.textContent = R.timeScale + '×';
+    fastBtn.classList.toggle('off', R.timeScale === 1);
+    if (Director.cur) {
+      this.waveLabel.textContent = `第 ${R.wave} / ${CONFIG.waveCount} 波`;
+    } else if (R.wave > 0 && R.wave < CONFIG.waveCount && Director.intermission > 0) {
+      this.waveLabel.textContent = `第 ${R.wave + 1} 波 · ${Math.ceil(Director.intermission)}s`;
+    } else {
+      this.waveLabel.textContent = '备战中';
+    }
     if (window.RackUI) RackUI.refresh();
   },
 

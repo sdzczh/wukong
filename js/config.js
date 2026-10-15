@@ -29,6 +29,14 @@ const CONFIG = {
   shovelUses: 2,
   towerCap: 24,
 
+  /* 灵宝掉落（击杀概率掉落，自动拾取） */
+  drops: {
+    chance: 0.03, bossChance: 1,
+    mightMul: 1.2, mightDur: 15,   // 兵符：全体攻击 +
+    mightPeach: 8,                 // 桃袋
+    mightHeart: 1,                 // 轮回符
+  },
+
   // 普通字 → 塔 key
   charToTower: { '枪': 'spear', '棍': 'staff', '弓': 'bow', '营': 'camp' },
   // 抽字权重（普通字合计 76，神将字合计权重 42）

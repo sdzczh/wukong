@@ -31,7 +31,10 @@ const Panels = {
       '无敌悟空',
       '文字合成塔防 · 地府篇',
       `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}`,
-      [{ text: '开 始 战 斗', fn: () => Game.startRun() }]
+      [
+        { text: '开 始 战 斗', fn: () => Game.startRun() },
+        { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
+      ]
     );
   },
 
@@ -40,6 +43,7 @@ const Panels = {
       '暂 停', '黄泉为路，幽冥作甲', '',
       [
         { text: '继 续', fn: () => Game.resume() },
+        { text: '图 鉴', fn: () => Codex.show('pause'), ghost: true },
         { text: '重新开始', fn: () => Game.startRun(), ghost: true },
         { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
       ]
@@ -56,6 +60,7 @@ const Panels = {
       `<br>历史最高波次　${Save.data.bestWave}`;
     this._fill(title, sub, stats, [
       { text: '再 来 一 局', fn: () => Game.startRun() },
+      { text: '图 鉴', fn: () => Codex.show('settle'), ghost: true },
       { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
     ]);
   },

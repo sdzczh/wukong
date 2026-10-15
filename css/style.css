@@ -216,6 +216,35 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 #sel-panel .sel-sell:active { transform: translateY(2px); box-shadow: none; }
 
+/* ---------- 图鉴 ---------- */
+.codex-tabs { display: flex; gap: 14px; justify-content: center; margin-top: 4px; }
+.codex-tab {
+  padding: 8px 34px; border-radius: 999px; cursor: pointer;
+  font-size: 22px; font-weight: 900; letter-spacing: 4px;
+  border: 2px solid #5a4872; background: #2e2440; color: #cfc2e4;
+}
+.codex-tab.on { border-color: #e8b64c; background: #4a3a1a; color: #ffd867; }
+
+.codex-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 6px 2px; text-align: center;
+}
+.codex-cell {
+  background: #2e2440; border: 2px solid #5a4872; border-radius: 12px;
+  padding: 12px 6px 10px; display: flex; flex-direction: column; gap: 4px;
+  align-items: center; min-height: 108px; justify-content: center;
+}
+.codex-cell.god { border-color: #6b5a9e; background: #332a4e; }
+.codex-cell.general { min-height: 172px; }
+.codex-cell.locked { filter: grayscale(1); opacity: .55; }
+.codex-cell .codex-ch {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 44px; font-weight: 900; line-height: 1; color: #f3ead6;
+}
+.codex-cell .codex-nm { font-size: 17px; font-weight: 700; color: #e8dcc0; }
+.codex-cell .codex-sub { font-size: 14px; color: #b9a8d4; }
+.codex-cell .codex-skill { font-size: 13px; color: #9a8bb8; line-height: 1.4; }
+
 /* ---------- 拖拽幽灵 ---------- */
 #drag-ghost {
   position: fixed; z-index: 99; pointer-events: none;
