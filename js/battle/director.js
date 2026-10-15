@@ -8,7 +8,7 @@ const Director = {
   },
 
   startWave(n) {
-    this.cur = this.waves[n - 1];
+    this.cur = this.waves[n - 1] || buildEndlessWave(n);
     this.spawnIdx = 0; this.timer = 0;
     R.wave = n;
     Bus.emit('waveStart', n);
@@ -19,7 +19,7 @@ const Director = {
 
     if (!this.cur) {
       if (R.wave === 0) { this.startWave(1); return; }
-      if (R.wave >= CONFIG.waveCount) return;   // 已通关（由 waveClear 触发胜利）
+      if (R.wave >= CONFIG.waveCount && !R.endless) return;   // 已通关（由 waveClear 触发结算）
       this.intermission -= dt;
       if (this.intermission <= 0) this.startWave(R.wave + 1);
       return;

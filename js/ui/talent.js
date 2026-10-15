@@ -12,7 +12,7 @@ const TalentUI = {
   hide() {
     this.overlay.classList.add('hidden');
     if (this.from === 'pause') Panels.showPause();
-    else if (this.from === 'settle') Panels.showSettle(R.wave >= CONFIG.waveCount);
+    else if (this.from === 'settle') Panels.showSettle(R.lastWin);
     else Panels.showMenu();
   },
 

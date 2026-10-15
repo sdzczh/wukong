@@ -42,9 +42,10 @@ const HUD = {
     fastBtn.textContent = R.timeScale + '×';
     fastBtn.classList.toggle('off', R.timeScale === 1);
     if (Director.cur) {
-      this.waveLabel.textContent = `第 ${R.wave} / ${CONFIG.waveCount} 波`;
-    } else if (R.wave > 0 && R.wave < CONFIG.waveCount && Director.intermission > 0) {
-      this.waveLabel.textContent = `第 ${R.wave + 1} 波 · ${Math.ceil(Director.intermission)}s`;
+      this.waveLabel.textContent = R.endless ? `无尽 · 第 ${R.wave} 波` : `第 ${R.wave} / ${CONFIG.waveCount} 波`;
+    } else if (R.wave > 0 && (R.wave < CONFIG.waveCount || R.endless) && Director.intermission > 0) {
+      const pre = R.endless ? '无尽 · ' : '';
+      this.waveLabel.textContent = `${pre}第 ${R.wave + 1} 波 · ${Math.ceil(Director.intermission)}s`;
     } else {
       this.waveLabel.textContent = '备战中';
     }

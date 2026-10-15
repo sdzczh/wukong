@@ -71,10 +71,22 @@ const Panels = {
     );
   },
 
+  /* 通关第 10 波后的选择：无尽征战 / 功成身退 */
+  showEndlessOffer() {
+    this._fill(
+      '十 波 尽 破', '轮回殿暂安，幽魂潮未歇',
+      '无尽征战：波次不设上限，敌人逐波增强<br>每过 5 波奖励 1 把铲子，可继续开垦「封」字地块',
+      [
+        { text: '无 尽 征 战', fn: () => Game.enterEndless() },
+        { text: '功 成 身 退', fn: () => Game.gameOver(true), ghost: true },
+      ]
+    );
+  },
+
   showSettle(win) {
     const reward = R.crystalsEarned;
-    const title = win ? '大 捷' : '殿 破';
-    const sub = win ? '幽魂尽散，轮回重明' : '魂过奈何，殿陷敌手';
+    const title = win ? '大 捷' : (R.endless ? '壮 烈 战 殁' : '殿 破');
+    const sub = win ? '幽魂尽散，轮回重明' : (R.endless ? `无尽征战止步于第 ${R.wave} 波` : '魂过奈何，殿陷敌手');
     const stats =
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +

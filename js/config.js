@@ -141,6 +141,9 @@ const CONFIG = {
   earlyWaveHpEase: 0.85,
   waveIntermission: 6,   // 波间备战秒数
 
+  /* 无尽模式（通关第 10 波后可选择进入）：波次无限，每 shovelEvery 波奖励 1 把铲子 */
+  endless: { shovelEvery: 5 },
+
   /* 局外成长：修炼天赋（魂晶购买，永久生效） */
   talents: {
     costs: [15, 25, 40, 60, 90],
@@ -177,6 +180,23 @@ const CONFIG = {
     },
   },
 };
+
+/* 无尽波次生成：n>10；公式延续前十波的节奏并逐波加压 */
+function buildEndlessWave(n) {
+  const list = [];
+  const isBoss = n % 5 === 0;
+  const count = 5 + 3 * n;
+  for (let i = 0; i < count; i++) {
+    let type = 'ghost';
+    const r = RNG.next();
+    if (r < 0.22) type = 'swarm';
+    else if (r < 0.45) type = 'brute';
+    else if (r < 0.68) type = 'wraith';
+    list.push({ t: 2 + i * 1.0, type });
+  }
+  if (isBoss) list.push({ t: 2 + count * 1.0 + 2, type: 'boss' });
+  return { n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1), spawns: list };
+}
 
 /* 波次表：n=波次；刷怪事件 {t, type}；hpMul 血量倍率 */
 function buildWaves() {

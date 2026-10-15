@@ -37,6 +37,7 @@ const Game = {
   gameOver(win) {
     if (R.state === 'over') return;
     R.state = 'over';
+    R.lastWin = win;
     R.crystalsEarned += R.wave * 10 + R.kills;
     const s = Save.data;
     s.crystals += R.crystalsEarned;
@@ -45,6 +46,19 @@ const Game = {
     Save.write();
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
+  },
+
+  /* 通关第 10 波后：暂停并询问是否进入无尽征战 */
+  offerEndless() {
+    if (R.state !== 'battle') return;
+    R.state = 'paused';
+    Panels.showEndlessOffer();
+  },
+  enterEndless() {
+    R.endless = true;
+    this.resume();
+    HUD.toast(`无尽征战开始！每 ${CONFIG.endless.shovelEvery} 波奖励 1 把铲子`);
+    HUD.refresh();
   },
 
   /* 灵宝掉落（自动拾取） */
@@ -143,8 +157,8 @@ function tick(dt) {
   R.projectiles = R.projectiles.filter(p => !p.dead);
   R.enemies = R.enemies.filter(e => e.alive);
   FX.update(dt);
-  // 波间倒计时每秒刷新
-  if (!Director.cur && R.wave > 0 && R.wave < CONFIG.waveCount) {
+  // 波间倒计时每秒刷新（无尽模式同样适用）
+  if (!Director.cur && R.wave > 0 && (R.wave < CONFIG.waveCount || R.endless)) {
     const sec = Math.ceil(Director.intermission);
     if (sec !== tick._lastSec) { tick._lastSec = sec; HUD.refresh(); }
   }
@@ -685,7 +699,9 @@ Bus.on('leak', e => {
 });
 
 Bus.on('waveStart', n => {
-  const sub = n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '跨过奈何，忘却轮回，杀！');
+  const sub = R.endless
+    ? (n % 5 === 0 ? '无尽征战，鬼将亲至！' : '无尽征战，敌势无穷！')
+    : (n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '跨过奈何，忘却轮回，杀！'));
   HUD.showBanner('第 ' + n + ' 波', sub);
   SFX.play('horn');
   HUD.refresh();
@@ -695,9 +711,19 @@ Bus.on('waveClear', n => {
   const reward = CONFIG.economy.waveRewardBase + n;
   R.peaches += reward;
   HUD.refresh();
-  HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃`);
   SFX.play('waveclear');
-  if (n >= CONFIG.waveCount) Game.gameOver(true);
+  HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃`);
+  if (n < CONFIG.waveCount) return;
+  if (R.endless) {
+    // 无尽补给：每 shovelEvery 波产出 1 把铲子
+    if (n % CONFIG.endless.shovelEvery === 0) {
+      R.shovelLeft++;
+      setTimeout(() => { HUD.toast(`无尽补给：铲子 +1（现有 ${R.shovelLeft}）`); SFX.play('coin'); }, 1600);
+      HUD.refresh();
+    }
+  } else {
+    Game.offerEndless();
+  }
 });
 
 /* 铲子：开垦「封」字地块；点单位则铲回架子（架满则铲除） */
@@ -800,6 +826,8 @@ requestAnimationFrame(frame);
 window.GAME = {
   R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input,
   startRun: () => Game.startRun(),
+  offerEndless: () => Game.offerEndless(),
+  enterEndless: () => Game.enterEndless(),
   place: (c, r, key) => {
     if (!Grid.placeable(c, r) || R.towers.length >= CONFIG.towerCap) return false;
     Merge.makeUnit(key, c, r);

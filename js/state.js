@@ -55,4 +55,6 @@ function resetRun() {
   R.timeScale = 1;
   R.mightT = 0;        // 兵符全局加攻剩余秒数
   R.rangeFloor = 0;    // 当局射程地板（startRun 时按最远离径开放格校准）
+  R.endless = false;   // 无尽征战模式（通关第 10 波后可选择进入）
+  R.lastWin = false;   // 本局结算结果（图鉴/修炼返回结算页用）
 }
