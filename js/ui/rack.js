@@ -31,13 +31,30 @@ const RackUI = {
     const isGod = R.pityMiss >= pityAfter ? true : RNG.next() < godChance;
     let ch;
     if (isGod) {
-      ch = RNG.pickWeighted(Object.entries(CONFIG.godCharWeights));
+      ch = RNG.pickWeighted(this._godWeights());
       R.pityMiss = 0;
     } else {
       ch = RNG.pickWeighted(Object.entries(CONFIG.normalCharWeights));
       R.pityMiss++;
     }
     return ch;
+  },
+
+  /* 缘引：已持某对字的一半时，另一半权重 ×4，避免神将字久合不成 */
+  _godWeights() {
+    const owned = new Set();
+    for (const it of R.rack) if (it && it.type === 'char' && !CONFIG.charToTower[it.ch]) owned.add(it.ch);
+    for (const t of R.towers) {
+      if (t.key.startsWith('ling:')) owned.add(t.def.char);
+      else if (t.isGeneral) for (const c of t.def.char) owned.add(c);
+    }
+    const boost = {};
+    for (const pair in CONFIG.pairs) {
+      const [a, b] = [pair[0], pair[1]];
+      if (owned.has(a) && !owned.has(b)) boost[b] = (boost[b] || 1) * 4;
+      if (owned.has(b) && !owned.has(a)) boost[a] = (boost[a] || 1) * 4;
+    }
+    return Object.entries(CONFIG.godCharWeights).map(([ch, w]) => [ch, w * (boost[ch] || 1)]);
   },
 
   doSummon() {
@@ -49,10 +66,11 @@ const RackUI = {
     R.peaches -= cost;
     R.summonsDone++;
     const ch = this.rollChar();
+    const isGod = !CONFIG.charToTower[ch];
     R.rack[slot] = { type: 'char', ch };
     Merge.unlockChar(ch);
-    SFX.play('summon');
-    if (!CONFIG.charToTower[ch]) HUD.toast(`抽到神将字「${ch}」！`);
+    SFX.play(isGod ? 'god' : 'summon');
+    if (isGod) HUD.toast(`抽到神将字「${ch}」！`);
     this.refresh();
     HUD.refresh();
   },

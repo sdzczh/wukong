@@ -62,7 +62,7 @@ const TalentUI = {
       el.addEventListener('click', () => {
         const msg = Talents.buy(el.dataset.b, Number(el.dataset.i));
         if (msg) { HUD.toast(msg); SFX.play('click'); }
-        else { SFX.play('levelup'); }
+        else { SFX.play('talent'); }
         this.render();
         // 魂晶数变化同步主菜单统计
         if (this.from === 'menu') Save.write();

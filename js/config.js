@@ -13,13 +13,13 @@ const CONFIG = {
   economy: {
     startPeaches: 10,
     killRewardBase: 1,
-    waveRewardBase: 5,               // 过波奖 = base + 波次
+    waveRewardBase: 6,               // 过波奖 = base + 波次
     sellRefund: 4,                   // 出售字塔返还（神将另加 4×等级）
   },
 
   // 召唤（抽字）
   summon: {
-    base: 12, step: 2,               // 费用 = base + step × 已召唤次数
+    base: 9, step: 1,                // 费用 = base + step × 已召唤次数
     godChance: 0.24,                 // 神将字概率
     pityAfter: 4,                    // 连续 N 抽普通字后必出神将字
     startChars: 3,                   // 开局免费发字
@@ -129,10 +129,10 @@ const CONFIG = {
     wraith: { char: '怨', name: '怨魂', hp: 14,  speed: 1.6, reward: 1,  dmg: 1, size: 0.56, color: '#5cc0a8' },
     brute:  { char: '厉', name: '厉魂', hp: 70,  speed: 0.7, reward: 2,  dmg: 1, size: 0.70, color: '#c05a72', armor: 3 },
     swarm:  { char: '游', name: '游魂', hp: 8,   speed: 1.3, reward: 1,  dmg: 1, size: 0.46, color: '#9aa3b8' },
-    boss:   { char: '鬼', name: '鬼将', hp: 600, speed: 0.5, reward: 15, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
+    boss:   { char: '鬼', name: '鬼将', hp: 600, speed: 0.5, reward: 20, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
   },
   waveCount: 10,
-  waveHpGrowth: 1.12,
+  waveHpGrowth: 1.14,
   waveIntermission: 6,   // 波间备战秒数
 
   /* 局外成长：修炼天赋（魂晶购买，永久生效） */

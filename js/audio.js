@@ -54,6 +54,12 @@ const SFX = {
       case 'sell':  this.tone(880, 0.07, 'sine', 0.08);
                     setTimeout(() => this.tone(660, 0.09, 'sine', 0.07), 60); break;
       case 'skill': [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => this.tone(f, 0.1, 'triangle', 0.1), i * 50)); break;
+      case 'waveclear': [659, 784].forEach((f, i) => setTimeout(() => this.tone(f, 0.12, 'triangle', 0.09), i * 90)); break;
+      case 'god':   [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => this.tone(f, 0.14, 'sine', 0.10), i * 70)); break;
+      case 'talent': this.tone(987, 0.08, 'sine', 0.09);
+                    setTimeout(() => this.tone(1480, 0.12, 'sine', 0.09), 70); break;
+      case 'danger': this.tone(196, 0.1, 'square', 0.07);
+                    setTimeout(() => this.tone(196, 0.1, 'square', 0.06), 160); break;
     }
   },
 };

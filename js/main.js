@@ -613,6 +613,7 @@ Bus.on('leak', e => {
   FX.ring(base.x, base.y, Grid.tile * 0.5, '#ff6b81');
   FX.float('-' + e.def.dmg + ' 心', base.x, base.y - Grid.tile * 0.8, '#ff6b81', 19);
   SFX.play('leak');
+  if (R.hearts > 0 && R.hearts <= 3) SFX.play('danger');
   HUD.refresh();
   if (R.hearts <= 0) Game.gameOver(false);
 });
@@ -629,6 +630,7 @@ Bus.on('waveClear', n => {
   R.peaches += reward;
   HUD.refresh();
   HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃`);
+  SFX.play('waveclear');
   if (n >= CONFIG.waveCount) Game.gameOver(true);
 });
 
@@ -662,6 +664,8 @@ RackUI.init();
 Panels.init();
 resize();
 Game.toMenu();
+// 预加载展示字体（canvas 逐帧重绘，就绪后自然生效）
+document.fonts.load('64px "Ma Shan Zheng"').catch(() => {});
 requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
