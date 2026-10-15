@@ -15,6 +15,12 @@ const Save = {
     try {
       this.data = Object.assign(this.defaults(), JSON.parse(localStorage.getItem(this.KEY)) || {});
     } catch (e) { this.data = this.defaults(); }
+    // 图鉴结构归一：{ chars: {}, generals: {} }（兼容早期扁平结构）
+    const raw = this.data.codex || {};
+    this.data.codex = {
+      chars: raw.chars || {},
+      generals: raw.generals || (raw.chars ? {} : raw),
+    };
   },
   write() {
     try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {}

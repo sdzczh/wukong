@@ -1,4 +1,4 @@
-/* 主入口：画布、渲染、输入、主循环、状态流转 */
+/* 主入口：画布、渲染、输入（拖拽/点选）、主循环、状态流转 */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
@@ -8,12 +8,18 @@ const Game = {
     resetRun();
     R.state = 'menu';
     Panels.showMenu();
+    HUD.refresh();
   },
   startRun() {
     resetRun();
+    Director.reset();
+    Grid.resetTowers();
     R.state = 'battle';
     Panels.hide();
-    HUD.showBanner('第 1 波', '黄泉为路，幽冥作甲，众魂出击！');
+    RackUI.hideSel();
+    RackUI.dealStartChars();
+    HUD.refresh();
+    HUD.toast('点击架子上的字放到棋盘；两个相同的字叠放可升级');
   },
   pause() {
     if (R.state !== 'battle') return;
@@ -28,7 +34,7 @@ const Game = {
   gameOver(win) {
     if (R.state === 'over') return;
     R.state = 'over';
-    R.crystalsEarned = R.wave * 10 + R.kills;
+    R.crystalsEarned += R.wave * 10 + R.kills;
     const s = Save.data;
     s.crystals += R.crystalsEarned;
     s.totalKills += R.kills;
@@ -122,7 +128,7 @@ function render(now) {
   drawRiver(now);
   drawTiles();
   drawBridgeAndDecor(now);
-  drawPlacementHints();
+  drawDropHints();
 
   for (const t of R.towers) t.draw(ctx);
   for (const e of R.enemies) e.draw(ctx, now);
@@ -302,57 +308,40 @@ function drawBridgeAndDecor(now) {
   ctx.restore();
 }
 
-function drawPlacementHints() {
+/* 放置/合成预览染色 + 选中信息 */
+function drawDropHints() {
   const tile = Grid.tile;
   const h = R.hover;
-  if (!h) { drawSelectedRange(); return; }
 
-  if (R.tool) {
-    const ok = Grid.placeable(h.c, h.r) && R.towers.length < CONFIG.towerCap;
+  // 预览：拖拽中或已点选架子字 → 显示落点可行性
+  const preview = Input.activeDrag() || (R.armedSlot >= 0 && R.rack[R.armedSlot]);
+  if (preview && h) {
+    const t = Grid.tiles[h.r][h.c];
+    const occupied = !!t.tower;
+    let ok;
+    if (occupied) ok = true;                                   // 有单位必可（合成/换位）
+    else ok = Grid.placeable(h.c, h.r) && R.towers.length < CONFIG.towerCap;
     const p = Grid.center(h.c, h.r);
-    const def = CONFIG.towers[R.tool];
     ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = ok ? '#f3ead6' : '#c05a5a';
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = ok ? '#7fe08a' : '#c05a5a';
     roundRect(ctx, p.x - tile * 0.42, p.y - tile * 0.42, tile * 0.84, tile * 0.84, 9);
     ctx.fill();
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = ok ? '#e8b64c' : '#ff5f6b';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 5]);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, def.range * tile, 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
-  } else {
-    // 悬停已有塔 → 显示射程
-    const t = Grid.tiles[h.r][h.c].tower;
-    if (t && !R.selected) drawRangeCircle(t, 0.35);
   }
-  drawSelectedRange();
+
+  // 悬停已有塔 → 显示射程
+  if (h && !R.selected) {
+    const t = Grid.tiles[h.r][h.c].tower;
+    if (t) drawRangeCircle(t, 0.3);
+  }
+  if (R.selected) drawSelectedInfo();
 }
 
-function drawSelectedRange() {
-  if (!R.selected) return;
+function drawSelectedInfo() {
   const t = R.selected;
+  if (!t || !R.towers.includes(t)) return;
   drawRangeCircle(t, 0.6);
-  // 信息条
-  const tile = Grid.tile;
-  const lines = [`${t.def.char} · ${t.def.name}　Lv.${t.level}`];
-  if (t.def.kind === 'aura') lines.push(`战鼓：周围友塔攻速 +${Math.round(t.def.auraRate * 100)}%`);
-  else lines.push(`攻击 ${t.atk}　攻速 ${t.def.rate}/s　射程 ${t.def.range.toFixed(1)} 格`);
-  ctx.save();
-  ctx.font = `700 ${Math.round(tile * 0.26)}px "PingFang SC","Microsoft YaHei",sans-serif`;
-  const w = Math.max(...lines.map(s => ctx.measureText(s).width)) + 28;
-  const hpx = lines.length * (tile * 0.34) + 16;
-  const x = Math.min(Math.max(t.x - w / 2, 10), CONFIG.logicalW - w - 10);
-  const y = Math.max(t.y - tile * 1.15 - hpx, CONFIG.hudTopH + 4);
-  ctx.fillStyle = '#1d1628ee';
-  roundRect(ctx, x, y, w, hpx, 10); ctx.fill();
-  ctx.strokeStyle = '#5a4872'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#f3ead6'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  lines.forEach((s, i) => ctx.fillText(s, x + 14, y + 10 + i * tile * 0.34));
-  ctx.restore();
 }
 
 function drawRangeCircle(t, alpha) {
@@ -375,54 +364,198 @@ function drawVignette() {
   ctx.fillRect(0, 0, CONFIG.logicalW, CONFIG.logicalH);
 }
 
-/* ---------- 输入 ---------- */
-function toLogical(e) {
+/* ---------- 输入：点选 + 拖拽（架子↔棋盘） ---------- */
+function toLogical(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: (e.clientX - rect.left) * (CONFIG.logicalW / rect.width),
-    y: (e.clientY - rect.top) * (CONFIG.logicalH / rect.height),
+    x: (clientX - rect.left) * (CONFIG.logicalW / rect.width),
+    y: (clientY - rect.top) * (CONFIG.logicalH / rect.height),
   };
 }
 
-function onPointerMove(e) {
-  const p = toLogical(e);
-  const cell = Grid.cellAt(p.x, p.y);
-  R.hover = cell ? { c: cell.c, r: cell.r } : null;
-}
+const Input = {
+  gesture: null,   // {src:{type:'rack',slot}|{type:'board',unit}, x0, y0, dragging}
 
-function onPointerDown(e) {
-  SFX.ensure();
-  if (R.state !== 'battle') return;
-  const p = toLogical(e);
-  const cell = Grid.cellAt(p.x, p.y);
-  if (!cell) { R.selected = null; return; }
+  activeDrag() { return this.gesture && this.gesture.dragging; },
 
-  if (R.tool === 'shovel') { Bus.emit('shovelAt', cell); return; }
+  /* 架子按下（RackUI 槽位 pointerdown 调这里） */
+  slotDown(slot, e) {
+    SFX.ensure();
+    if (R.state !== 'battle') return;
+    const item = R.rack[slot];
+    if (!item) return;
+    e.preventDefault();
+    this.gesture = { src: { type: 'rack', slot }, x0: e.clientX, y0: e.clientY, dragging: false };
+  },
 
-  if (R.tool) {
-    if (Game.place(cell.c, cell.r, R.tool)) {
-      SFX.play('place');
-    } else {
-      HUD.toast(Grid.inBounds(cell.c, cell.r) && !Grid.placeable(cell.c, cell.r) ? '这里不能摆放' : '塔数量已达上限');
+  /* 画布按下 */
+  canvasDown(e) {
+    SFX.ensure();
+    if (R.state !== 'battle') return;
+    const p = toLogical(e.clientX, e.clientY);
+    const cell = Grid.cellAt(p.x, p.y);
+
+    // 铲子工具
+    if (R.tool === 'shovel') {
+      if (cell) Bus.emit('shovelAt', cell);
+      return;
     }
-    return;
-  }
 
-  const t = Grid.tiles[cell.r][cell.c].tower;
-  R.selected = t || null;
-  if (t) SFX.play('click');
-}
+    // 已点选架子字 → 放置
+    if (R.armedSlot >= 0) {
+      if (!cell) return;
+      this.dropRack(R.armedSlot, cell.c, cell.r, true);
+      return;
+    }
 
-canvas.addEventListener('pointermove', onPointerMove);
-canvas.addEventListener('pointerdown', onPointerDown);
+    if (!cell) { RackUI.hideSel(); return; }
+    const t = Grid.tiles[cell.r][cell.c].tower;
+    if (t) {
+      this.gesture = { src: { type: 'board', unit: t }, x0: e.clientX, y0: e.clientY, dragging: false };
+    } else {
+      RackUI.hideSel();
+    }
+  },
+
+  move(e) {
+    // 悬停（始终更新，给预览染色用）
+    const p = toLogical(e.clientX, e.clientY);
+    const cell = Grid.cellAt(p.x, p.y);
+    R.hover = cell ? { c: cell.c, r: cell.r } : null;
+
+    const g = this.gesture;
+    if (!g) return;
+    if (!g.dragging) {
+      if (Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 10) return;
+      g.dragging = true;
+      R.drag = { src: g.src };
+      const label = g.src.type === 'rack' ? RackUI.itemLabel(R.rack[g.src.slot]) : g.src.unit.def.char;
+      const isGod = g.src.type === 'rack' ? RackUI.itemIsGod(R.rack[g.src.slot]) : g.src.unit.isGeneral;
+      RackUI.showGhost(label, isGod);
+    }
+    RackUI.moveGhost(e.clientX, e.clientY);
+  },
+
+  up(e) {
+    const g = this.gesture;
+    this.gesture = null;
+    R.drag = null;
+    RackUI.hideGhost();
+    if (!g) return;
+    if (R.state !== 'battle') return;
+
+    if (!g.dragging) {
+      // 点选：架子→arm；棋盘单位→选中
+      if (g.src.type === 'rack') {
+        R.armedSlot = R.armedSlot === g.src.slot ? -1 : g.src.slot;
+        RackUI.hideSel();
+        SFX.play('click');
+      } else {
+        RackUI.showSel(g.src.unit);
+        SFX.play('click');
+      }
+      RackUI.refresh();
+      return;
+    }
+
+    // 拖拽落下：先查架子槽，再查棋盘
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const slotEl = el && el.closest ? el.closest('.slot') : null;
+    if (slotEl && this.rackElContains(slotEl)) {
+      const j = Number(slotEl.dataset.slot);
+      if (g.src.type === 'rack') {
+        // 架内交换
+        const i = g.src.slot;
+        if (i !== j) { const tmp = R.rack[i]; R.rack[i] = R.rack[j]; R.rack[j] = tmp; SFX.play('place'); }
+      } else {
+        this.dropBoardOnRack(g.src.unit, j);
+      }
+      RackUI.refresh();
+      return;
+    }
+    const p = toLogical(e.clientX, e.clientY);
+    const cell = Grid.cellAt(p.x, p.y);
+    if (!cell) return;
+    if (g.src.type === 'rack') this.dropRack(g.src.slot, cell.c, cell.r, false);
+    else this.dropBoard(g.src.unit, cell.c, cell.r);
+  },
+
+  rackElContains(el) { return RackUI.rackEl && RackUI.rackEl.contains(el); },
+
+  /* 架子字落棋盘（armed=true 时点选路径，失败保留 armed） */
+  dropRack(slot, c, r, armed) {
+    const item = R.rack[slot];
+    if (!item) { R.armedSlot = -1; RackUI.refresh(); return; }
+    let res;
+    if (item.type === 'unit') {
+      res = Merge.placeOnto({ board: item.unit }, c, r);
+      if (res.action !== 'fail') R.rack[slot] = null;
+    } else {
+      res = Merge.placeOnto({ ch: item.ch, slot }, c, r);
+      if (res.action !== 'fail' && res.action !== 'swap') R.rack[slot] = null;
+      // swap：placeOnto 已把棋盘单位换回架子
+    }
+    if (res.action === 'fail') {
+      HUD.toast('这里不能摆放');
+      if (armed) return;   // 点选模式保留 armed，等待下一次点格
+    } else {
+      R.armedSlot = -1;
+      if (res.unit) RackUI.showSel(res.unit);
+    }
+    RackUI.refresh();
+    HUD.refresh();
+  },
+
+  /* 棋盘单位落到另一格 */
+  dropBoard(unit, c, r) {
+    if (unit.col === c && unit.row === r) { RackUI.showSel(unit); return; }
+    const res = Merge.placeOnto({ board: unit }, c, r);
+    if (res.action === 'fail') HUD.toast('这里不能摆放');
+    else if (res.unit) RackUI.showSel(res.unit);
+    RackUI.refresh();
+    HUD.refresh();
+  },
+
+  /* 棋盘单位拖回架子 */
+  dropBoardOnRack(unit, slotIdx) {
+    const item = R.rack[slotIdx];
+    if (!item) {
+      Merge.removeUnit(unit);
+      R.rack[slotIdx] = { type: 'unit', unit };
+      SFX.play('place');
+      return;
+    }
+    if (item.type === 'char') {
+      // 字上棋盘（占该单位格），单位回架
+      const c = unit.col, r = unit.row;
+      Merge.removeUnit(unit);
+      Merge.makeUnit(Merge.towerKeyOfChar(item.ch), c, r);
+      R.rack[slotIdx] = { type: 'unit', unit };
+      SFX.play('place');
+    }
+    // 架上已是单位：不处理（无空间交换意义）
+  },
+};
+
+RackUI.rackElContains = el => RackUI.rackEl && RackUI.rackEl.contains(el);
+
+canvas.addEventListener('pointerdown', e => Input.canvasDown(e));
+window.addEventListener('pointermove', e => Input.move(e));
+window.addEventListener('pointerup', e => Input.up(e));
 canvas.addEventListener('pointerleave', () => { R.hover = null; });
 canvas.addEventListener('contextmenu', e => {
   e.preventDefault();
-  R.tool = null; R.selected = null;
-  HUD.refreshToolbar();
+  R.tool = null; R.armedSlot = -1;
+  RackUI.hideSel();
+  RackUI.refresh();
 });
 window.addEventListener('keydown', e => {
-  if (e.key === 'Escape' || e.key === 'p') {
+  if (e.key === 'Escape') {
+    if (R.armedSlot >= 0 || R.tool) { R.armedSlot = -1; R.tool = null; RackUI.refresh(); }
+    else if (R.state === 'battle') Game.pause();
+    else if (R.state === 'paused') Game.resume();
+  }
+  if (e.key === 'p') {
     if (R.state === 'battle') Game.pause();
     else if (R.state === 'paused') Game.resume();
   }
@@ -438,6 +571,9 @@ Bus.on('enemyKilled', e => {
   SFX.play('die');
   if (R.kills % 3 === 0) SFX.play('coin');
   FX.float('+' + e.def.reward + ' 桃', e.x, e.y - Grid.tile * 0.2, '#ffd867', 15);
+  const src = e.lastHitBy;
+  if (src && src.isGeneral) src.gainExp(1);
+  if (src && src.key === 'wukong') { Save.data.wukongKills++; Save.write(); }
   HUD.refresh();
 });
 
@@ -466,21 +602,33 @@ Bus.on('waveClear', n => {
   if (n >= CONFIG.waveCount) Game.gameOver(true);
 });
 
-/* ---------- 摆塔（含调试复用） ---------- */
-Game.place = function (c, r, key) {
-  if (!Grid.placeable(c, r)) return false;
-  if (R.towers.length >= CONFIG.towerCap) return false;
-  const t = new Tower(key, c, r);
-  Grid.tiles[r][c].tower = t;
-  R.towers.push(t);
-  return true;
-};
+/* 铲子：把单位铲回架子（架满则铲除） */
+Bus.on('shovelAt', cell => {
+  const t = Grid.tiles[cell.r][cell.c].tower;
+  if (!t) { HUD.toast('这里没有单位'); return; }
+  if (R.shovelLeft <= 0) { R.tool = null; RackUI.refresh(); return; }
+  const slot = R.rack.findIndex(x => !x);
+  Merge.removeUnit(t);
+  if (slot >= 0) {
+    R.rack[slot] = { type: 'unit', unit: t };
+    HUD.toast('已铲回架子');
+  } else {
+    HUD.toast('架子已满，单位已铲除');
+  }
+  R.shovelLeft--;
+  R.tool = null;
+  SFX.play('place');
+  FX.float('铲', t.x, t.y - Grid.tile * 0.3, '#d9cdb4', 16);
+  RackUI.refresh();
+  HUD.refresh();
+});
 
 /* ---------- 启动 ---------- */
 Save.load();
 RNG.seed((Math.random() * 1e9) | 0);
 Grid.init();
 HUD.init();
+RackUI.init();
 Panels.init();
 resize();
 Game.toMenu();
@@ -488,9 +636,30 @@ requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
 window.GAME = {
-  R, CONFIG, Grid, Director, Bus,
+  R, CONFIG, Grid, Director, Bus, Merge, RackUI,
   startRun: () => Game.startRun(),
-  place: (c, r, key) => Game.place(c, r, key),
+  place: (c, r, key) => {
+    if (!Grid.placeable(c, r) || R.towers.length >= CONFIG.towerCap) return false;
+    Merge.makeUnit(key, c, r);
+    return true;
+  },
+  give: ch => {
+    const slot = R.rack.findIndex(x => !x);
+    if (slot < 0) return -1;
+    R.rack[slot] = { type: 'char', ch };
+    RackUI.refresh();
+    return slot;
+  },
+  summon: () => RackUI.doSummon(),
+  dropRack: (slot, c, r) => Input.dropRack(slot, c, r, false),
+  dropBoard: (c0, r0, c1, r1) => {
+    const t = Grid.tiles[r0][c0].tower;
+    if (!t) return null;
+    Input.dropBoard(t, c1, r1);
+    return Grid.tiles[r1] && Grid.tiles[r1][c1].tower;
+  },
+  sell: () => RackUI.sellSelected(),
+  shovel: (c, r) => Bus.emit('shovelAt', { c, r }),
   killAll: () => R.enemies.forEach(e => e.takeDamage(999999)),
   setTimeScale: x => { R.timeScale = x; },
   step: seconds => { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) tick(STEP); },
@@ -498,6 +667,8 @@ window.GAME = {
   snapshot: () => ({
     state: R.state, wave: R.wave, hearts: R.hearts, peaches: R.peaches,
     kills: R.kills, enemies: R.enemies.filter(e => e.alive).length,
-    towers: R.towers.length, save: { ...Save.data },
+    towers: R.towers.length, rack: R.rack.map(x => x ? (x.type === 'char' ? x.ch : x.unit.def.char + ':' + x.unit.level) : null),
+    pityMiss: R.pityMiss, shovelLeft: R.shovelLeft, crystalsEarned: R.crystalsEarned,
+    save: { ...Save.data },
   }),
 };

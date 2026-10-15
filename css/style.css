@@ -110,11 +110,61 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 #hud-bottom > * { pointer-events: auto; }
 
-#toolbar { display: flex; gap: 14px; }
+/* ---------- 底栏：召唤架 + 召唤 + 铲子 ---------- */
+#rack { display: flex; gap: 12px; }
+
+.slot {
+  width: 96px; height: 116px; border-radius: 14px;
+  background: #241b33cc; border: 3px dashed #5a4872;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; cursor: grab; touch-action: none;
+  transition: transform .08s, border-color .08s;
+}
+.slot.filled {
+  background: #f3ead6; border: 3px solid #b8a67e;
+  box-shadow: 0 4px 0 #85744f, 0 6px 10px #0007;
+}
+.slot.filled:active { cursor: grabbing; }
+.slot.god.filled {
+  background: #efe6f6; border-color: #9a6fd0;
+  box-shadow: 0 4px 0 #5a4872, 0 0 16px #9a6fd066;
+}
+.slot.armed {
+  border-color: #e8b64c; transform: translateY(-6px);
+  box-shadow: 0 6px 0 #a97e22, 0 0 18px #e8b64c88;
+}
+.slot .ch {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 48px; font-weight: 900; color: #4a3b52; line-height: 1;
+}
+.slot.god .ch { color: #7a4e86; }
+.slot .lv {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 22px; height: 22px; border-radius: 999px;
+  background: #b8452e; color: #fff; font-size: 14px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #f3ead6;
+}
+
+#btn-summon {
+  width: 132px; height: 116px; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(#ffd867, #e8a63c); border: 3px solid #a97e22;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  box-shadow: 0 4px 0 #7a5410, 0 6px 12px #0008;
+  color: #5a3a10;
+  transition: transform .08s;
+}
+#btn-summon:active { transform: translateY(3px); box-shadow: 0 1px 0 #7a5410; }
+#btn-summon .sum-label {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 40px; font-weight: 900; letter-spacing: 4px; line-height: 1;
+}
+#btn-summon .sum-cost { font-size: 18px; font-weight: 700; }
+#btn-summon.disabled { filter: grayscale(.8) opacity(.6); cursor: not-allowed; }
 
 .tool-btn {
-  width: 108px; height: 116px; border-radius: 16px; cursor: pointer;
-  background: #f3ead6; border: 3px solid #b8a67e;
+  width: 96px; height: 116px; border-radius: 16px; cursor: pointer;
+  background: #e6ddcf; border: 3px solid #b8a67e;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   box-shadow: 0 4px 0 #85744f, 0 6px 10px #0007;
   transition: transform .08s;
@@ -122,7 +172,7 @@ body { display: flex; align-items: center; justify-content: center; }
 .tool-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #85744f; }
 .tool-btn .tchar {
   font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
-  font-size: 52px; font-weight: 900; line-height: 1; color: #4a3b52;
+  font-size: 44px; font-weight: 900; line-height: 1; color: #5a5248;
 }
 .tool-btn .tname { font-size: 17px; font-weight: 700; color: #8a795c; }
 .tool-btn.active {
@@ -130,14 +180,54 @@ body { display: flex; align-items: center; justify-content: center; }
   box-shadow: 0 4px 0 #a97e22, 0 0 18px #e8b64c88;
   transform: translateY(-4px);
 }
-.tool-btn[data-key="bow"]   .tchar { color: #8a5a2e; }
-.tool-btn[data-key="spear"] .tchar { color: #a84a3e; }
-.tool-btn[data-key="staff"] .tchar { color: #7a4e86; }
-.tool-btn[data-key="camp"]  .tchar { color: #4e7a52; }
+.tool-btn.disabled { filter: grayscale(1) opacity(.55); cursor: not-allowed; }
 
-.tool-shovel { background: #e6ddcf; }
-.tool-shovel .tchar { font-size: 44px; color: #5a5248; }
-.tool-shovel.disabled { filter: grayscale(1) opacity(.55); cursor: not-allowed; }
+/* ---------- 选中单位面板 ---------- */
+#sel-panel {
+  position: absolute; left: 18px; right: 18px; bottom: 164px; z-index: 7;
+  background: #241b33f2; border: 3px solid #5a4872; border-radius: 16px;
+  padding: 14px 18px; color: #f3ead6;
+  box-shadow: 0 10px 30px #000a;
+}
+#sel-panel .sel-head {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+}
+#sel-panel .sel-char {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 40px; font-weight: 900; line-height: 1;
+}
+#sel-panel .sel-name { font-size: 24px; font-weight: 900; }
+#sel-panel .sel-lv { font-size: 18px; font-weight: 700; color: #ffd867; }
+#sel-panel .sel-rarity {
+  font-size: 15px; font-weight: 900; color: #fff;
+  padding: 2px 10px; border-radius: 999px;
+}
+#sel-panel .sel-close {
+  margin-left: auto; width: 40px; height: 40px; border-radius: 10px;
+  background: #2e2440; border: 2px solid #5a4872; color: #cfc2e4;
+  font-size: 22px; font-weight: 900; cursor: pointer;
+}
+#sel-panel .sel-body { font-size: 19px; line-height: 1.65; color: #d9cdb4; }
+#sel-panel .sel-sell {
+  margin-top: 10px; padding: 8px 26px; border-radius: 999px; cursor: pointer;
+  font-size: 20px; font-weight: 900; letter-spacing: 2px;
+  border: 3px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#sel-panel .sel-sell:active { transform: translateY(2px); box-shadow: none; }
+
+/* ---------- 拖拽幽灵 ---------- */
+#drag-ghost {
+  position: fixed; z-index: 99; pointer-events: none;
+  width: 72px; height: 72px; border-radius: 12px;
+  background: #f3ead6ee; border: 3px solid #b8a67e;
+  display: flex; align-items: center; justify-content: center;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  box-shadow: 0 8px 20px #000a;
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 38px; font-weight: 900; color: #4a3b52;
+}
+#drag-ghost.god { background: #efe6f6ee; border-color: #9a6fd0; color: #7a4e86; }
 
 /* ---------- 弹层 ---------- */
 #overlay {

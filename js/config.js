@@ -12,15 +12,46 @@ const CONFIG = {
 
   economy: {
     startPeaches: 10,
-    summonBase: 12, summonStep: 2,   // M2 启用：召唤费 = base + step×已召唤次数
     killRewardBase: 1,
     waveRewardBase: 5,               // 过波奖 = base + 波次
-    sellRefund: 4,
+    sellRefund: 4,                   // 出售字塔返还（神将另加 4×等级）
   },
+
+  // 召唤（抽字）
+  summon: {
+    base: 12, step: 2,               // 费用 = base + step × 已召唤次数
+    godChance: 0.24,                 // 神将字概率
+    pityAfter: 4,                    // 连续 N 抽普通字后必出神将字
+    startChars: 3,                   // 开局免费发字
+    rackSize: 5,
+  },
+
   shovelUses: 2,
   towerCap: 24,
 
-  // 普通字塔（Lv1 基准；每级攻击 +40%、射程 +0.15 格）
+  // 普通字 → 塔 key
+  charToTower: { '枪': 'spear', '棍': 'staff', '弓': 'bow', '营': 'camp' },
+  // 抽字权重（普通字合计 76，神将字合计权重 42）
+  normalCharWeights: { '枪': 20, '棍': 16, '弓': 20, '营': 20 },
+  godCharWeights: {
+    '悟': 3, '空': 2, '能': 3, '净': 3, '哪': 2, '吒': 3,
+    '金': 3, '木': 3, '杨': 2, '戬': 2, '王': 3, '母': 2,
+    '阎': 1, '玉': 1, '帝': 1, '嫦': 2, '娥': 2, '李': 2, '靖': 2,
+  },
+  // 神将字对 → 神将 key（key 为 CONFIG.towers 中的神将名）
+  pairs: {
+    '悟空': 'wukong', '悟能': 'wuneng', '悟净': 'wujing', '哪吒': 'nezha',
+    '金吒': 'jinzha', '木吒': 'muzha', '杨戬': 'yangjian', '王母': 'wangmu',
+    '玉帝': 'yudi', '阎王': 'yanwang', '嫦娥': 'change', '李靖': 'lijing',
+  },
+
+  // 未合成神将字摆上棋盘时的灵字塔（可升级、可与配对字合成）
+  godCharBase: { atk: 6, rate: 0.8, range: 2.5, kind: 'arrow', maxLevel: 5, levelMul: { atk: 0.4, range: 0.15 } },
+
+  towerMaxLevel: 5,
+  towerLevelMul: { atk: 0.4, range: 0.15 },
+
+  // 普通字塔（Lv1 基准）
   towers: {
     bow:   { char: '弓', name: '木弓', atk: 10, rate: 1.1, range: 3.5, kind: 'arrow',
              desc: '远程点杀，优先攻击最接近基地的敌人' },
@@ -30,9 +61,59 @@ const CONFIG = {
              desc: '横扫：攻击目标及相邻 2 个敌人' },
     camp:  { char: '营', name: '战营', atk: 0, rate: 0, range: 1.5, kind: 'aura', auraRate: 0.15,
              desc: '战鼓：周围 1 格友塔攻速 +15%（自身不攻击）' },
+
+    /* ---------- 神将（两字合成；Lv1 基准，每级攻击×1.6；技能 M3 启用） ---------- */
+    wukong:  { char: '悟空', name: '孙悟空', general: true, rarity: '橙', pair: ['悟', '空'], color: '#c98a2e',
+               atk: 16, rate: 1.0, range: 1.8, kind: 'cleave', cleave: 3, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '棍卷风云', desc: '旋转棍棒 3 秒，多次范围伤害并眩晕', cd: 12 },
+               desc: '近战群伤 · 技能：棍卷风云' },
+    wuneng:  { char: '悟能', name: '猪八戒', general: true, rarity: '紫', pair: ['悟', '能'], color: '#8f7bb8',
+               atk: 14, rate: 0.8, range: 1.6, kind: 'cleave', cleave: 3, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '倒打一耙', desc: '嘲讽周围敌人并减伤回血', cd: 15 },
+               desc: '前排肉盾 · 技能：倒打一耙' },
+    wujing:  { char: '悟净', name: '沙悟净', general: true, rarity: '紫', pair: ['悟', '净'], color: '#6f86b8',
+               atk: 12, rate: 0.9, range: 3.0, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '流沙河', desc: '范围内敌人减速 40%，持续 4 秒', cd: 12 },
+               desc: '减速控制 · 技能：流沙河' },
+    nezha:   { char: '哪吒', name: '哪吒', general: true, rarity: '橙', pair: ['哪', '吒'], color: '#d66a4a',
+               atk: 15, rate: 1.1, range: 3.2, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '乾坤圈', desc: '攻击在至多 3 个敌人间弹射', cd: 10 },
+               desc: '弹射输出 · 技能：乾坤圈' },
+    jinzha:  { char: '金吒', name: '金吒', general: true, rarity: '蓝', pair: ['金', '吒'], color: '#5b8fd6',
+               atk: 20, rate: 0.6, range: 2.8, kind: 'pierce', pierce: 3, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '降魔杵', desc: '蓄力后下一击 300% 伤害', cd: 8 },
+               desc: '单体爆发 · 技能：降魔杵' },
+    muzha:   { char: '木吒', name: '木吒', general: true, rarity: '蓝', pair: ['木', '吒'], color: '#5fa86f',
+               atk: 10, rate: 1.3, range: 2.5, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '吴钩双剑', desc: '为周围友塔 +30% 攻速 5 秒', cd: 14 },
+               desc: '攻速辅助 · 技能：吴钩双剑' },
+    yangjian:{ char: '杨戬', name: '杨戬', general: true, rarity: '橙', pair: ['杨', '戬'], color: '#7a6fd0',
+               atk: 24, rate: 0.5, range: 4.0, kind: 'pierce', pierce: 5, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '天眼', desc: '贯穿激光，直线上敌人 200% 伤害', cd: 12 },
+               desc: '直线狙杀 · 技能：天眼' },
+    wangmu:  { char: '王母', name: '王母娘娘', general: true, rarity: '橙', pair: ['王', '母'], color: '#d0a0b8',
+               atk: 9, rate: 0.9, range: 2.5, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '蟠桃盛会', desc: '治疗周围友塔并 +25% 攻速 5 秒', cd: 18 },
+               desc: '治疗辅助 · 技能：蟠桃盛会' },
+    yudi:    { char: '玉帝', name: '玉皇大帝', general: true, rarity: '红', pair: ['玉', '帝'], color: '#d6b24a',
+               atk: 30, rate: 0.5, range: 3.5, kind: 'cleave', cleave: 5, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '昊天威压', desc: '全屏 150% 伤害并眩晕 2 秒', cd: 30 },
+               desc: '全屏压制 · 技能：昊天威压' },
+    yanwang: { char: '阎王', name: '阎罗王', general: true, rarity: '红', pair: ['阎', '王'], color: '#4a4a58',
+               atk: 18, rate: 0.7, range: 3.0, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '生死簿', desc: '标记血量最低敌人，3 秒后斩杀', cd: 18 },
+               desc: '斩杀 · 技能：生死簿' },
+    change:  { char: '嫦娥', name: '嫦娥', general: true, rarity: '橙', pair: ['嫦', '娥'], color: '#d0709a',
+               atk: 14, rate: 1.25, range: 3.5, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '万箭齐发', desc: '向范围内每个敌人各射一箭（120% 伤害）', cd: 10 },
+               desc: '远程散射 · 技能：万箭齐发' },
+    lijing:  { char: '李靖', name: '李靖', general: true, rarity: '橙', pair: ['李', '靖'], color: '#8a9a6a',
+               atk: 16, rate: 0.8, range: 3.0, kind: 'pierce', pierce: 3, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '玲珑宝塔', desc: '塔影罩范围 4 秒：减速 30% 受伤 +50%', cd: 16 },
+               desc: '范围控制 · 技能：玲珑宝塔' },
   },
-  towerLevelMul: { atk: 0.4, range: 0.15 },
-  towerMaxLevel: 5,
+
+  rarityColors: { '蓝': '#5b8fd6', '紫': '#9a6fd0', '橙': '#e8933c', '红': '#d64545' },
 
   // 敌人（魂系）
   enemies: {

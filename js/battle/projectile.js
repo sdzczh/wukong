@@ -4,6 +4,7 @@ class Projectile {
     opts = opts || {};
     this.x = x; this.y = y;
     this.target = target; this.dmg = dmg;
+    this.src = opts.src || null;          // 伤害归属（神将经验）
     this.speed = (opts.speed || 9) * Grid.tile;
     this.color = opts.color || '#e8c268';
     this.size = opts.size || 4;
@@ -18,7 +19,7 @@ class Projectile {
     const step = this.speed * dt;
     if (d <= Math.max(step, 7)) {
       if (this.target && this.target.alive) {
-        this.target.takeDamage(this.dmg);
+        this.target.takeDamage(this.dmg, this.src);
         SFX.play('hit');
       }
       this.dead = true;

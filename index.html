@@ -23,13 +23,27 @@
   <div id="wave-banner" class="hidden"><div id="wave-banner-main"></div><div id="wave-banner-sub"></div></div>
   <div id="toast" class="hidden"></div>
 
-  <!-- 底栏 -->
+  <!-- 底栏：召唤架 + 召唤 + 铲子 -->
   <div id="hud-bottom">
-    <div id="toolbar"></div>
-    <button id="btn-shovel" class="tool-btn tool-shovel" title="拆塔（后续开放）">
+    <div id="rack">
+      <div class="slot empty"></div>
+      <div class="slot empty"></div>
+      <div class="slot empty"></div>
+      <div class="slot empty"></div>
+      <div class="slot empty"></div>
+    </div>
+    <button id="btn-summon">
+      <span class="sum-label">召 唤</span>
+      <span class="sum-cost">12 桃</span>
+    </button>
+    <button id="btn-shovel" title="铲子：把棋盘上单位铲回架子">
       <span class="tchar">铲</span><span class="tname">×2</span>
     </button>
   </div>
+
+  <!-- 选中单位面板 / 拖拽幽灵 -->
+  <div id="sel-panel" class="hidden"></div>
+  <div id="drag-ghost" class="hidden"></div>
 
   <!-- 弹层 -->
   <div id="overlay">
@@ -52,8 +66,11 @@
 <script src="js/battle/enemy.js"></script>
 <script src="js/battle/projectile.js"></script>
 <script src="js/battle/tower.js"></script>
+<script src="js/battle/general.js"></script>
+<script src="js/battle/merge.js"></script>
 <script src="js/battle/director.js"></script>
 <script src="js/ui/hud.js"></script>
+<script src="js/ui/rack.js"></script>
 <script src="js/ui/panels.js"></script>
 <script src="js/main.js"></script>
 </body>

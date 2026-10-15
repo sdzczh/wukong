@@ -1,4 +1,4 @@
-/* 字塔：普通字单位（弓/枪/棍/营） */
+/* 字塔：普通字单位（弓/枪/棍/营/灵字）与神将共用基类 */
 class Tower {
   constructor(key, col, row) {
     this.key = key; this.def = CONFIG.towers[key];
@@ -9,8 +9,14 @@ class Tower {
     this.cd = 0; this.animT = 0;
   }
 
-  get atk() { return Math.round(this.def.atk * (1 + CONFIG.towerLevelMul.atk * (this.level - 1))); }
-  get rangePx() { return (this.def.range + CONFIG.towerLevelMul.range * (this.level - 1)) * Grid.tile; }
+  get isGeneral() { return !!this.def.general; }
+
+  get maxLevel() { return this.def.maxLevel || 5; }
+
+  get levelMul() { return this.def.levelMul || CONFIG.towerLevelMul; }
+
+  get atk() { return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1))); }
+  get rangePx() { return (this.def.range + this.levelMul.range * (this.level - 1)) * Grid.tile; }
 
   /* 营的战鼓加成 */
   auraMul() {
@@ -49,7 +55,7 @@ class Tower {
   fire(target, enemies) {
     const dmg = this.atk;
     if (this.def.kind === 'arrow') {
-      R.projectiles.push(new Projectile(this.x, this.y - Grid.tile * 0.2, target, dmg));
+      R.projectiles.push(new Projectile(this.x, this.y - Grid.tile * 0.2, target, dmg, { src: this }));
       SFX.play('shoot');
     } else if (this.def.kind === 'pierce') {
       const ang = Math.atan2(target.y - this.y, target.x - this.x);
@@ -57,7 +63,7 @@ class Tower {
         .filter(e => e.alive && this.lineHit(ang, e))
         .sort((a, b) => Math.hypot(a.x - this.x, a.y - this.y) - Math.hypot(b.x - this.x, b.y - this.y))
         .slice(0, this.def.pierce);
-      hits.forEach(e => e.takeDamage(dmg));
+      hits.forEach(e => e.takeDamage(dmg, this));
       FX.tracer(this.x, this.y, ang, this.rangePx, '#e0905c');
       SFX.play('shoot');
     } else if (this.def.kind === 'cleave') {
@@ -66,7 +72,7 @@ class Tower {
         .filter(e => e.alive && Math.hypot(e.x - target.x, e.y - target.y) <= Grid.tile * 1.1)
         .sort((a, b) => Math.hypot(a.x - target.x, a.y - target.y) - Math.hypot(b.x - target.x, b.y - target.y))
         .slice(0, this.def.cleave);
-      near.forEach(e => e.takeDamage(dmg));
+      near.forEach(e => e.takeDamage(dmg, this));
       FX.arc(this.x, this.y, Grid.tile * 1.15, ang - 0.55, ang + 0.55, '#b98bc4');
       SFX.play('hit');
     }
@@ -91,27 +97,29 @@ class Tower {
     ctx.translate(this.x, this.y);
     ctx.scale(pop, pop);
 
-    // 米白字牌
-    ctx.fillStyle = '#f3ead6';
-    ctx.strokeStyle = '#c3b18a';
-    ctx.lineWidth = 2.5;
+    // 字牌底色
+    ctx.fillStyle = this.def.cardBg || '#f3ead6';
+    ctx.strokeStyle = this.isGeneral ? (CONFIG.rarityColors[this.def.rarity] || '#e8933c') : '#c3b18a';
+    ctx.lineWidth = this.isGeneral ? 3.5 : 2.5;
     roundRect(ctx, -half, -half, half * 2, half * 2, 9);
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#00000012';
     roundRect(ctx, -half + 4, half * 0.35, half * 2 - 8, half * 0.5, 6);
     ctx.fill();
 
-    // 字
-    ctx.font = `900 ${Math.round(tile * 0.5)}px "Ma Shan Zheng","Kaiti SC","STKaiti","KaiTi",serif`;
+    // 字（单字大、双字略小）
+    const ch = this.def.char;
+    const fs = ch.length > 1 ? tile * 0.34 : tile * 0.5;
+    ctx.font = `900 ${Math.round(fs)}px "Ma Shan Zheng","Kaiti SC","STKaiti","KaiTi",serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = Tower.colors[this.key] || '#4a3b52';
-    ctx.fillText(this.def.char, 0, 2);
+    ctx.fillStyle = this.def.color || Tower.colors[this.key] || '#4a3b52';
+    ctx.fillText(ch, 0, 2);
     ctx.restore();
 
-    // 等级角标
-    if (this.level > 1) {
+    // 等级角标（神将常显，普通塔 2 级起显示）
+    if (this.isGeneral || this.level > 1) {
       const bx = this.x + half - 4, by = this.y - half + 4;
-      ctx.fillStyle = '#b8452e';
+      ctx.fillStyle = this.isGeneral ? (CONFIG.rarityColors[this.def.rarity] || '#e8933c') : '#b8452e';
       ctx.beginPath(); ctx.arc(bx, by, tile * 0.16, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#f3ead6'; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = '#fff';

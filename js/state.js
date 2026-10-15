@@ -1,33 +1,53 @@
-/* 事件总线 + 一局运行的全局状态 */
+/* 全局运行态 + 事件总线 */
+'use strict';
+
 const Bus = {
-  map: {},
-  on(ev, fn) { (this.map[ev] = this.map[ev] || []).push(fn); },
-  emit(ev, a, b) { (this.map[ev] || []).forEach(fn => fn(a, b)); },
+  _e: {},
+  on(ev, fn) { (this._e[ev] = this._e[ev] || []).push(fn); return this; },
+  emit(ev, a, b) { const l = this._e[ev]; if (l) l.slice().forEach(f => f(a, b)); },
 };
 
+/* 当前局数据（save.js 只管跨局持久化） */
 const R = {
-  state: 'menu',            // menu | battle | paused | over
-  hearts: CONFIG.base.hearts,
-  peaches: CONFIG.economy.startPeaches,
+  state: 'menu',      // menu | battle | paused | over
+  hearts: 10,
+  peaches: 0,
   wave: 0,
   kills: 0,
-  crystalsEarned: 0,
-  summonsDone: 0,           // M2
-  enemies: [], towers: [], projectiles: [],
-  tool: null,               // 当前摆放工具（塔 key）
-  selected: null,           // 选中的塔
-  hover: null,              // 指针悬停的格子 {c, r, x, y}
-  shovelLeft: CONFIG.shovelUses,
+  crystalsEarned: 0,  // 本局结算魂晶
+  summonsDone: 0,     // 累计召唤次数（召唤价递增）
+  rack: [],           // 召唤架 5 格，元素 null | {type:'char'|'tower', ch?, key?, id?}
+  pityMiss: 0,        // 距上次神字的普通抽数
+  armedSlot: -1,      // 点选后待放置的格子索引（-1 无）
+  drag: null,         // {from:'rack'|'board', slot?, unit?} 拖拽中的来源
+  enemies: [],
+  towers: [],
+  projectiles: [],
+  tool: null,         // 当前工具（M2 起仅 'shovel'）
+  selected: null,     // 选中的棋盘单位（Tower）
+  hover: null,
+  shovelLeft: 0,
   timeScale: 1,
 };
 
 function resetRun() {
-  R.hearts = CONFIG.base.hearts;
-  R.peaches = CONFIG.economy.startPeaches;
-  R.wave = 0; R.kills = 0; R.crystalsEarned = 0; R.summonsDone = 0;
-  R.enemies = []; R.towers = []; R.projectiles = [];
-  R.tool = null; R.selected = null; R.shovelLeft = CONFIG.shovelUses;
-  Grid.resetTowers();
-  Director.reset();
-  HUD.refresh();
+  R.state = 'battle';
+  R.hearts = 10;
+  R.peaches = 10;
+  R.wave = 0;
+  R.kills = 0;
+  R.crystalsEarned = 0;
+  R.summonsDone = 0;
+  R.rack = new Array(CONFIG.summon.rackSize).fill(null);
+  R.pityMiss = 0;
+  R.armedSlot = -1;
+  R.drag = null;
+  R.enemies = [];
+  R.towers = [];
+  R.projectiles = [];
+  R.tool = null;
+  R.selected = null;
+  R.hover = null;
+  R.shovelLeft = CONFIG.shovelUses;
+  R.timeScale = 1;
 }

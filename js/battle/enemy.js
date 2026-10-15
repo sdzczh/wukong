@@ -34,10 +34,11 @@ class Enemy {
     Bus.emit('leak', this);
   }
 
-  takeDamage(dmg) {
+  takeDamage(dmg, src) {
     if (!this.alive) return;
     const eff = Math.max(1, dmg - (this.def.armor || 0));
     this.hp -= eff; this.flash = 0.12;
+    if (src) this.lastHitBy = src;   // 记录伤害归属（神将吃经验）
     FX.float(String(eff), this.x, this.y - Grid.tile * 0.5, '#ffe9a8', 15);
     if (this.hp <= 0) { this.alive = false; Bus.emit('enemyKilled', this); }
   }

@@ -47,6 +47,12 @@ const SFX = {
       case 'leak':  this.tone(160, 0.28, 'square', 0.10, -60); break;
       case 'lose':  this.tone(220, 0.6, 'sawtooth', 0.12, -140); break;
       case 'win':   [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.18, 'triangle', 0.11), i * 120)); break;
+      case 'summon': this.tone(720, 0.08, 'sine', 0.10, 240);
+                    setTimeout(() => this.tone(1080, 0.1, 'sine', 0.08), 70); break;
+      case 'merge': [392, 523, 659].forEach((f, i) => setTimeout(() => this.tone(f, 0.1, 'triangle', 0.10), i * 60)); break;
+      case 'levelup': [523, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.12, 'triangle', 0.11), i * 80)); break;
+      case 'sell':  this.tone(880, 0.07, 'sine', 0.08);
+                    setTimeout(() => this.tone(660, 0.09, 'sine', 0.07), 60); break;
     }
   },
 };

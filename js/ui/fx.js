@@ -14,6 +14,13 @@ const FX = {
   ring(x, y, r, color) {
     this.rings.push({ x, y, r, life: 0.4, color: color || '#ff6b81' });
   },
+  burst(x, y, color) {
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      this.tracers.push({ x, y, ang: a, len: 26 + (i % 3) * 10, life: 0.28, color: color || '#e8933c' });
+    }
+    this.ring(x, y, 20, color || '#e8933c');
+  },
 
   update(dt) {
     for (const f of this.floats) { f.life -= dt; f.y -= 36 * dt; }

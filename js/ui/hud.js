@@ -1,4 +1,4 @@
-/* HUD：顶栏、底栏工具、横幅、提示 */
+/* HUD：顶栏、底栏（召唤/架子/铲子）、横幅、提示 */
 const HUD = {
   init() {
     this.peachNum = document.getElementById('peach-num');
@@ -22,37 +22,8 @@ const HUD = {
       SFX.play('click');
     });
 
-    this.buildToolbar();
     this.refreshSound();
     this.refresh();
-  },
-
-  buildToolbar() {
-    const bar = document.getElementById('toolbar');
-    bar.innerHTML = '';
-    for (const key of ['bow', 'spear', 'staff', 'camp']) {
-      const d = CONFIG.towers[key];
-      const b = document.createElement('button');
-      b.className = 'tool-btn';
-      b.dataset.key = key;
-      b.title = d.desc;
-      b.innerHTML = `<span class="tchar">${d.char}</span><span class="tname">${d.name}</span>`;
-      b.addEventListener('click', () => {
-        SFX.ensure(); SFX.play('click');
-        R.tool = R.tool === key ? null : key;
-        if (R.selected && R.tool) R.selected = null;
-        this.refreshToolbar();
-      });
-      bar.appendChild(b);
-    }
-    const shovel = document.getElementById('btn-shovel');
-    shovel.classList.add('disabled');
-  },
-
-  refreshToolbar() {
-    document.querySelectorAll('#toolbar .tool-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.key === R.tool);
-    });
   },
 
   refreshSound() {
@@ -63,7 +34,7 @@ const HUD = {
     this.peachNum.textContent = R.peaches;
     this.heartNum.textContent = R.hearts;
     this.waveLabel.textContent = R.wave > 0 ? `第 ${R.wave} / ${CONFIG.waveCount} 波` : '备战中';
-    this.refreshToolbar();
+    if (window.RackUI) RackUI.refresh();
   },
 
   showBanner(main, sub) {
