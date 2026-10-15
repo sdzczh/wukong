@@ -5,11 +5,11 @@ const CONFIG = {
   logicalW: 720, logicalH: 1280,
   hudTopH: 92, hudBottomH: 152,
 
-  board: { cols: 9, rows: 13, riverRows: [5, 6, 7], bridgeRow: 6 },
+  board: { cols: 9, rows: 13, crossRow: 6 },
   // 地块开垦：开局随机开放 startOpen 格（其中 nearOpen 格贴近路径），
   // 其余「封」字地块需用铲子开垦；铲子也可铲塔回架
   field: { startOpen: 16, nearOpen: 10 },
-  // 路径拐点（格坐标）：鬼门关 → 左廊至冥河 → 踏石横渡 → 右廊至轮回殿
+  // 路径拐点（格坐标）：鬼门关 → 左廊直下 → 横穿黄泉路 → 右廊至轮回殿
   pathCells: [[0, 0], [0, 6], [8, 6], [8, 12]],
   base: { col: 8, row: 12, hearts: 10 },
 

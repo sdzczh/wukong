@@ -171,7 +171,6 @@ function render(now) {
   ctx.setTransform(view.k, 0, 0, view.k, view.ox, view.oy);
 
   drawBackground(now);
-  drawRiver(now);
   drawTiles();
   drawDecor(now);
 
@@ -216,75 +215,24 @@ function drawBackground(now) {
   }
 }
 
-function drawRiver(now) {
-  const tile = Grid.tile;
-  const y0 = Grid.oy + 5 * tile, h = 3 * tile;
-  const x0 = Grid.ox - 8, w = tile * Grid.cols + 16;
-
-  ctx.save();
-  const g = ctx.createLinearGradient(0, y0, 0, y0 + h);
-  g.addColorStop(0, '#ff9040');
-  g.addColorStop(0.5, '#f0601e');
-  g.addColorStop(1, '#c23a12');
-  ctx.fillStyle = g;
-  ctx.fillRect(x0, y0, w, h);
-
-  // 流动高光
-  for (let i = 0; i < 4; i++) {
-    const yy = y0 + (i + 0.5) * h / 4 + Math.sin(now * 1.6 + i * 1.7) * 6;
-    const xx = x0 + ((now * 40 + i * 197) % (w + 240)) - 120;
-    const rg = ctx.createRadialGradient(xx, yy, 0, xx, yy, 90);
-    rg.addColorStop(0, '#ffd98a55');
-    rg.addColorStop(1, '#ffd98a00');
-    ctx.fillStyle = rg;
-    ctx.beginPath(); ctx.arc(xx, yy, 90, 0, Math.PI * 2); ctx.fill();
-  }
-  // 气泡
-  for (let i = 0; i < 10; i++) {
-    const px = x0 + ((i * 173 + Math.floor(now * 2) * 61) % w);
-    const py = y0 + ((i * 97 + Math.floor(now * 3) * 43) % h);
-    ctx.fillStyle = '#ffd98a66';
-    ctx.beginPath(); ctx.arc(px, py, 2.5 + (i % 3), 0, Math.PI * 2); ctx.fill();
-  }
-  // 河岸
-  ctx.fillStyle = '#3a3344';
-  ctx.fillRect(x0, y0 - 4, w, 5);
-  ctx.fillRect(x0, y0 + h - 1, w, 5);
-  ctx.restore();
-}
-
 function drawTiles() {
   const tile = Grid.tile;
   for (let r = 0; r < Grid.rows; r++) {
     for (let c = 0; c < Grid.cols; c++) {
       const t = Grid.tiles[r][c];
       const x = Grid.ox + c * tile, y = Grid.oy + r * tile;
-      if (t.type === 'river') continue;
       if (t.type === 'path') {
+        // 黄泉路：暖石路面，与砖块同三段式语法
         const alt = (c + r) % 2 === 0;
-        if (CONFIG.board.riverRows.includes(r)) {
-          // 冥河横渡：踏石（缩格留出岩浆缝隙，幽魂踩石而过）
-          ctx.fillStyle = alt ? '#bcae97' : '#b3a68f';
-          roundRect(ctx, x + 4, y + 5, tile - 8, tile - 10, 9);
-          ctx.fill();
-          ctx.fillStyle = alt ? '#a3977f' : '#9a8e77';
-          roundRect(ctx, x + 4, y + tile * 0.55, tile - 8, tile * 0.4 - 5, 8);
-          ctx.fill();
-          ctx.fillStyle = alt ? '#d3c7b1' : '#c9bda7';
-          roundRect(ctx, x + 6, y + 6, tile - 12, tile * 0.18, 6);
-          ctx.fill();
-        } else {
-          // 黄泉路：暖石路面，与砖块同三段式语法
-          ctx.fillStyle = alt ? '#8d7c66' : '#857361';
-          roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
-          ctx.fill();
-          ctx.fillStyle = alt ? '#756652' : '#6e6050';
-          roundRect(ctx, x + 2, y + tile * 0.55, tile - 4, tile * 0.43 - 2, 7);
-          ctx.fill();
-          ctx.fillStyle = alt ? '#a5947c' : '#9c8b74';
-          roundRect(ctx, x + 4, y + 3, tile - 8, tile * 0.2, 6);
-          ctx.fill();
-        }
+        ctx.fillStyle = alt ? '#8d7c66' : '#857361';
+        roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
+        ctx.fill();
+        ctx.fillStyle = alt ? '#756652' : '#6e6050';
+        roundRect(ctx, x + 2, y + tile * 0.55, tile - 4, tile * 0.43 - 2, 7);
+        ctx.fill();
+        ctx.fillStyle = alt ? '#a5947c' : '#9c8b74';
+        roundRect(ctx, x + 4, y + 3, tile - 8, tile * 0.2, 6);
+        ctx.fill();
         continue;
       }
       // 锁定地块：暗色石板 + 「封」字
@@ -697,7 +645,7 @@ Bus.on('leak', e => {
 Bus.on('waveStart', n => {
   const sub = R.endless
     ? (n % 5 === 0 ? '无尽征战，鬼将亲至！' : '无尽征战，敌势无穷！')
-    : (n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '踏石渡冥河，忘却轮回，杀！'));
+    : (n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '魂行黄泉，忘却轮回，杀！'));
   HUD.showBanner('第 ' + n + ' 波', sub);
   SFX.play('horn');
   HUD.refresh();
@@ -761,16 +709,15 @@ Bus.on('shovelAt', cell => {
 });
 
 /* ---------- 每局随机路线 ---------- */
-/* 入口列 ∈ {0,1,2}、桥行 ∈ 冥河行、出口列 ∈ {6,7,8}，27 种走法；
-   同步改写 CONFIG.pathCells / bridgeRow / base.col，下游全部自动跟随 */
+/* 入口列 ∈ {0,1,2}、横穿行 ∈ {5,6,7}、出口列 ∈ {6,7,8}，27 种走法；
+   同步改写 CONFIG.pathCells / crossRow / base.col，下游全部自动跟随 */
 function rollRoute() {
-  const river = CONFIG.board.riverRows;
-  const bridgeRow = river[RNG.int(river.length)];
+  const crossRow = 5 + RNG.int(3);        // 横穿行（原冥河三行，保留路线变化）
   const entryCol = RNG.int(3);            // 0..2
   const exitCol = 6 + RNG.int(3);         // 6..8
-  CONFIG.board.bridgeRow = bridgeRow;
+  CONFIG.board.crossRow = crossRow;
   CONFIG.base.col = exitCol;
-  CONFIG.pathCells = [[entryCol, 0], [entryCol, bridgeRow], [exitCol, bridgeRow], [exitCol, CONFIG.board.rows - 1]];
+  CONFIG.pathCells = [[entryCol, 0], [entryCol, crossRow], [exitCol, crossRow], [exitCol, CONFIG.board.rows - 1]];
 }
 
 /* ---------- 射程校准 ----------

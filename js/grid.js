@@ -10,21 +10,17 @@ const Grid = {
   init() { this.buildTiles(); },
 
   buildTiles() {
-    const river = new Set(CONFIG.board.riverRows);
     // 路径格集来自每局随机的路线拐点（见 main.js rollRoute）
     const pathSet = new Set();
-    for (let r = 0; r <= CONFIG.board.bridgeRow; r++) pathSet.add(CONFIG.pathCells[0][0] + ',' + r);   // 入口廊
-    for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.bridgeRow);                   // 冥河横渡（踏石）
-    for (let r = CONFIG.board.bridgeRow; r < this.rows; r++) pathSet.add(CONFIG.pathCells[2][0] + ',' + r); // 出口廊
+    for (let r = 0; r <= CONFIG.board.crossRow; r++) pathSet.add(CONFIG.pathCells[0][0] + ',' + r);   // 入口廊
+    for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.crossRow);                   // 横穿段
+    for (let r = CONFIG.board.crossRow; r < this.rows; r++) pathSet.add(CONFIG.pathCells[2][0] + ',' + r); // 出口廊
     this.tiles = [];
     const landKeys = [];
     for (let r = 0; r < this.rows; r++) {
       const row = [];
       for (let c = 0; c < this.cols; c++) {
-        let type;
-        if (pathSet.has(c + ',' + r)) type = 'path';
-        else if (river.has(r)) type = 'river';
-        else type = ((r * 7 + c * 13) % 5 === 0) ? 'white' : 'purple';
+        const type = pathSet.has(c + ',' + r) ? 'path' : (((r * 7 + c * 13) % 5 === 0) ? 'white' : 'purple');
         const land = (type === 'white' || type === 'purple');
         row.push({ type, tower: null, locked: land });
         if (land) landKeys.push(c + ',' + r);
