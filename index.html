@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>无敌悟空 · 文字塔防</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <!-- 顶栏 -->
+  <div id="hud-top">
+    <button id="btn-pause" class="hud-btn" title="暂停">❚❚</button>
+    <div class="pill"><span class="ico-peach"></span><span id="peach-num">0</span></div>
+    <div id="wave-label" class="pill">备战中</div>
+    <div class="pill pill-heart">♥<span id="heart-num">10</span></div>
+    <button id="btn-sound" class="hud-btn" title="音效开关">♪</button>
+  </div>
+
+  <!-- 波次横幅 -->
+  <div id="wave-banner" class="hidden"><div id="wave-banner-main"></div><div id="wave-banner-sub"></div></div>
+  <div id="toast" class="hidden"></div>
+
+  <!-- 底栏 -->
+  <div id="hud-bottom">
+    <div id="toolbar"></div>
+    <button id="btn-shovel" class="tool-btn tool-shovel" title="拆塔（后续开放）">
+      <span class="tchar">铲</span><span class="tname">×2</span>
+    </button>
+  </div>
+
+  <!-- 弹层 -->
+  <div id="overlay">
+    <div id="overlay-card">
+      <h1 id="overlay-title">无敌悟空</h1>
+      <p id="overlay-sub"></p>
+      <div id="overlay-stats"></div>
+      <div id="overlay-btns"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/rng.js"></script>
+<script src="js/save.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/state.js"></script>
+<script src="js/grid.js"></script>
+<script src="js/ui/fx.js"></script>
+<script src="js/battle/enemy.js"></script>
+<script src="js/battle/projectile.js"></script>
+<script src="js/battle/tower.js"></script>
+<script src="js/battle/director.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

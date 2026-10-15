@@ -1,0 +1,174 @@
+/* 无敌悟空 · 文字塔防 */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #0d0913;
+  overflow: hidden;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  user-select: none;
+}
+
+body { display: flex; align-items: center; justify-content: center; }
+
+#stage {
+  position: relative;
+  width: 720px; height: 1280px;
+  transform-origin: center center;
+  box-shadow: 0 0 60px #000;
+}
+
+#game {
+  position: absolute; inset: 0;
+  width: 720px; height: 1280px;
+  border-radius: 6px;
+}
+
+/* ---------- 通用 ---------- */
+.hidden { display: none !important; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #1d1628e0; border: 2px solid #4a3b5e; border-radius: 999px;
+  color: #f3ead6; font-size: 22px; font-weight: 700;
+  padding: 6px 18px; min-width: 96px; justify-content: center;
+}
+
+.ico-peach {
+  width: 26px; height: 26px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 35% 30%, #ffb3a0, #f2766a 60%, #d94f45);
+  position: relative; display: inline-block;
+}
+.ico-peach::after {
+  content: ""; position: absolute; top: -5px; left: 12px;
+  width: 12px; height: 8px; border-radius: 60% 40% 60% 40%;
+  background: #6fae5f; transform: rotate(-20deg);
+}
+
+.pill-heart { color: #ff6b81; }
+
+/* ---------- 顶栏 ---------- */
+#hud-top {
+  position: absolute; top: 0; left: 0; right: 0; height: 92px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; gap: 10px;
+  pointer-events: none;
+}
+#hud-top > * { pointer-events: auto; }
+
+.hud-btn {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: #1d1628e0; border: 2px solid #4a3b5e;
+  color: #e8b64c; font-size: 24px; font-weight: 900; cursor: pointer;
+}
+.hud-btn:active { transform: scale(0.94); }
+.hud-btn.off { color: #5a4f6e; }
+
+/* ---------- 波次横幅 ---------- */
+#wave-banner {
+  position: absolute; top: 340px; left: 0; right: 0;
+  text-align: center; pointer-events: none; z-index: 5;
+  animation: bannerIn 1.8s ease forwards;
+}
+#wave-banner-main {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 84px; color: #e8b64c;
+  text-shadow: 0 4px 0 #6b3f14, 0 8px 24px #000;
+  letter-spacing: 10px;
+}
+#wave-banner-sub {
+  font-size: 26px; color: #f3ead6; margin-top: 6px;
+  text-shadow: 0 2px 8px #000; letter-spacing: 4px;
+}
+@keyframes bannerIn {
+  0% { opacity: 0; transform: scale(1.6); }
+  15% { opacity: 1; transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.96) translateY(-10px); }
+}
+
+#toast {
+  position: absolute; top: 130px; left: 50%; transform: translateX(-50%);
+  background: #2a1f38f2; border: 2px solid #6b5a86; color: #ffd867;
+  font-size: 22px; padding: 10px 26px; border-radius: 999px; z-index: 6;
+  animation: toastIn 2s ease forwards; pointer-events: none;
+}
+@keyframes toastIn {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  12% { opacity: 1; transform: translate(-50%, 0); }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- 底栏 ---------- */
+#hud-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 152px;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(#17111f00, #17111f88 30%, #17111fd9);
+  pointer-events: none;
+}
+#hud-bottom > * { pointer-events: auto; }
+
+#toolbar { display: flex; gap: 14px; }
+
+.tool-btn {
+  width: 108px; height: 116px; border-radius: 16px; cursor: pointer;
+  background: #f3ead6; border: 3px solid #b8a67e;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: 0 4px 0 #85744f, 0 6px 10px #0007;
+  transition: transform .08s;
+}
+.tool-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #85744f; }
+.tool-btn .tchar {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 52px; font-weight: 900; line-height: 1; color: #4a3b52;
+}
+.tool-btn .tname { font-size: 17px; font-weight: 700; color: #8a795c; }
+.tool-btn.active {
+  border-color: #e8b64c; background: #fff6dd;
+  box-shadow: 0 4px 0 #a97e22, 0 0 18px #e8b64c88;
+  transform: translateY(-4px);
+}
+.tool-btn[data-key="bow"]   .tchar { color: #8a5a2e; }
+.tool-btn[data-key="spear"] .tchar { color: #a84a3e; }
+.tool-btn[data-key="staff"] .tchar { color: #7a4e86; }
+.tool-btn[data-key="camp"]  .tchar { color: #4e7a52; }
+
+.tool-shovel { background: #e6ddcf; }
+.tool-shovel .tchar { font-size: 44px; color: #5a5248; }
+.tool-shovel.disabled { filter: grayscale(1) opacity(.55); cursor: not-allowed; }
+
+/* ---------- 弹层 ---------- */
+#overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: #0d0913cc; backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+}
+#overlay-card {
+  width: 560px; padding: 48px 40px 42px;
+  background: #241b33f2; border: 3px solid #5a4872; border-radius: 22px;
+  text-align: center; box-shadow: 0 20px 60px #000c;
+}
+#overlay-title {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 76px; color: #e8b64c; letter-spacing: 8px;
+  text-shadow: 0 4px 0 #6b3f14, 0 8px 24px #000;
+}
+#overlay-sub { color: #b9a8d4; font-size: 22px; margin-top: 10px; letter-spacing: 2px; }
+#overlay-stats {
+  margin: 26px 0 4px; color: #f3ead6; font-size: 21px; line-height: 1.9;
+}
+#overlay-btns { margin-top: 28px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+
+.btn {
+  min-width: 300px; padding: 14px 34px; border-radius: 999px; cursor: pointer;
+  font-size: 26px; font-weight: 900; letter-spacing: 4px;
+  border: 3px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
+  box-shadow: 0 4px 0 #7a5410, 0 8px 16px #0008;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #7a5410; }
+.btn.ghost {
+  background: #2e2440; border-color: #5a4872; color: #cfc2e4;
+  box-shadow: 0 4px 0 #1a1428, 0 8px 16px #0008;
+}
