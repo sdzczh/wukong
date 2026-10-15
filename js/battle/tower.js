@@ -20,7 +20,11 @@ class Tower {
     const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
     return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent);
   }
-  get rangePx() { return (this.def.range + this.levelMul.range * (this.level - 1)) * Grid.tile; }
+  get rangePx() {
+    // 非光环单位享受当局射程地板：任何已开放格都摸得到路径
+    const floor = this.def.kind === 'aura' ? 0 : (R.rangeFloor || 0);
+    return (Math.max(this.def.range, floor) + this.levelMul.range * (this.level - 1)) * Grid.tile;
+  }
 
   /* 营的战鼓加成 */
   auraMul() {

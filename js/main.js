@@ -15,6 +15,7 @@ const Game = {
     Director.reset();
     rollRoute();                // 每局随机路线
     Grid.buildTiles();          // 重建棋盘：新路线 + 随机开放格 + 恢复「封」字锁定
+    calibrateRangeFloor();      // 按最远离径开放格校准当局射程地板
     Grid.buildPath();           // 路径像素随新路线重算
     R.state = 'battle';
     Panels.hide();
@@ -748,6 +749,36 @@ function rollRoute() {
   CONFIG.board.bridgeRow = bridgeRow;
   CONFIG.base.col = exitCol;
   CONFIG.pathCells = [[entryCol, 0], [entryCol, bridgeRow], [exitCol, bridgeRow], [exitCol, CONFIG.board.rows - 1]];
+}
+
+/* ---------- 射程校准 ----------
+   随机开放格里，距路径 ≤2.85 格的「近路径格」最远距离记为 worst（远池格
+   可达 6 格以外，若托底会把所有攻击单位变成全图狙手，故不参与）。
+   地板 = worst + 0.15 余量（封顶 3.0）：余量保证敌人路过最近点时
+   会在射程内停留 1 格以上的窗口，而不是擦着边界永远打不中。
+   战鼓光环（kind:'aura'）不参与。 */
+function calibrateRangeFloor() {
+  const T = Grid.tiles;
+  const pathCells = [];
+  for (let r = 0; r < Grid.rows; r++) {
+    for (let c = 0; c < Grid.cols; c++) {
+      if (T[r][c].type === 'path') pathCells.push({ c, r });
+    }
+  }
+  let worst = 0;
+  for (let r = 0; r < Grid.rows; r++) {
+    for (let c = 0; c < Grid.cols; c++) {
+      const t = T[r][c];
+      if (t.locked || (t.type !== 'white' && t.type !== 'purple')) continue;
+      let best = Infinity;
+      for (const p of pathCells) {
+        const d = Math.hypot(p.c - c, p.r - r);
+        if (d < best) best = d;
+      }
+      if (best <= 2.85 && best > worst) worst = best;
+    }
+  }
+  R.rangeFloor = Math.min(3.0, Math.ceil((worst + 0.15) * 10) / 10);
 }
 
 /* ---------- 启动 ---------- */

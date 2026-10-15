@@ -54,4 +54,5 @@ function resetRun() {
   R.shovelLeft = CONFIG.shovelUses;
   R.timeScale = 1;
   R.mightT = 0;        // 兵符全局加攻剩余秒数
+  R.rangeFloor = 0;    // 当局射程地板（startRun 时按最远离径开放格校准）
 }
