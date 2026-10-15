@@ -14,7 +14,7 @@ const Grid = {
     // 路径格集来自每局随机的路线拐点（见 main.js rollRoute）
     const pathSet = new Set();
     for (let r = 0; r <= CONFIG.board.bridgeRow; r++) pathSet.add(CONFIG.pathCells[0][0] + ',' + r);   // 入口廊
-    for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.bridgeRow);                   // 奈何桥
+    for (let c = 0; c < this.cols; c++) pathSet.add(c + ',' + CONFIG.board.bridgeRow);                   // 冥河横渡（踏石）
     for (let r = CONFIG.board.bridgeRow; r < this.rows; r++) pathSet.add(CONFIG.pathCells[2][0] + ',' + r); // 出口廊
     this.tiles = [];
     const landKeys = [];

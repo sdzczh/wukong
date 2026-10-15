@@ -173,7 +173,7 @@ function render(now) {
   drawBackground(now);
   drawRiver(now);
   drawTiles();
-  drawBridgeAndDecor(now);
+  drawDecor(now);
 
   for (const t of R.towers) t.draw(ctx);
   for (const e of R.enemies) e.draw(ctx, now);
@@ -261,8 +261,30 @@ function drawTiles() {
       const x = Grid.ox + c * tile, y = Grid.oy + r * tile;
       if (t.type === 'river') continue;
       if (t.type === 'path') {
-        ctx.fillStyle = ((c + r) % 2 === 0) ? '#463e55' : '#403850';
-        ctx.fillRect(x, y, tile, tile);
+        const alt = (c + r) % 2 === 0;
+        if (CONFIG.board.riverRows.includes(r)) {
+          // 冥河横渡：踏石（缩格留出岩浆缝隙，幽魂踩石而过）
+          ctx.fillStyle = alt ? '#bcae97' : '#b3a68f';
+          roundRect(ctx, x + 4, y + 5, tile - 8, tile - 10, 9);
+          ctx.fill();
+          ctx.fillStyle = alt ? '#a3977f' : '#9a8e77';
+          roundRect(ctx, x + 4, y + tile * 0.55, tile - 8, tile * 0.4 - 5, 8);
+          ctx.fill();
+          ctx.fillStyle = alt ? '#d3c7b1' : '#c9bda7';
+          roundRect(ctx, x + 6, y + 6, tile - 12, tile * 0.18, 6);
+          ctx.fill();
+        } else {
+          // 黄泉路：暖石路面，与砖块同三段式语法
+          ctx.fillStyle = alt ? '#8d7c66' : '#857361';
+          roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
+          ctx.fill();
+          ctx.fillStyle = alt ? '#756652' : '#6e6050';
+          roundRect(ctx, x + 2, y + tile * 0.55, tile - 4, tile * 0.43 - 2, 7);
+          ctx.fill();
+          ctx.fillStyle = alt ? '#a5947c' : '#9c8b74';
+          roundRect(ctx, x + 4, y + 3, tile - 8, tile * 0.2, 6);
+          ctx.fill();
+        }
         continue;
       }
       // 锁定地块：暗色石板 + 「封」字
@@ -294,35 +316,9 @@ function drawTiles() {
   }
 }
 
-function drawBridgeAndDecor(now) {
+/* 场景点缀：鬼门关（路径起点）与轮回殿（基地），均随随机路线移动 */
+function drawDecor(now) {
   const tile = Grid.tile;
-  const row = CONFIG.board.bridgeRow;
-  const c0 = CONFIG.pathCells[0][0], c1 = CONFIG.pathCells[2][0];   // 桥两端（入口列 / 出口列）
-
-  // 奈何桥（木板只铺在入口列与出口列之间）
-  for (let c = c0; c <= c1; c++) {
-    const x = Grid.ox + c * tile, y = Grid.oy + row * tile;
-    ctx.fillStyle = (c % 2 === 0) ? '#7a5236' : '#6d4830';
-    ctx.fillRect(x, y + 3, tile, tile - 6);
-    ctx.strokeStyle = '#4a3020'; ctx.lineWidth = 2;
-    for (let i = 1; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(x + i * tile / 4, y + 4);
-      ctx.lineTo(x + i * tile / 4, y + tile - 4);
-      ctx.stroke();
-    }
-  }
-  // 桥栏
-  ctx.strokeStyle = '#5a3d28'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-  const ry0 = Grid.oy + row * tile + 2, ry1 = ry0 + tile - 4;
-  ctx.beginPath();
-  ctx.moveTo(Grid.ox + c0 * tile, ry0); ctx.lineTo(Grid.ox + (c1 + 1) * tile, ry0);
-  ctx.moveTo(Grid.ox + c0 * tile, ry1); ctx.lineTo(Grid.ox + (c1 + 1) * tile, ry1);
-  ctx.stroke();
-  for (let c = c0; c <= c1 + 1; c += 1) {
-    const x = Grid.ox + c * tile;
-    ctx.beginPath(); ctx.moveTo(x, ry0 - 2); ctx.lineTo(x, ry1 + 2); ctx.stroke();
-  }
 
   // 鬼门关（路径起点，随入口列移动）
   const gate = Grid.center(CONFIG.pathCells[0][0], CONFIG.pathCells[0][1]);
@@ -701,7 +697,7 @@ Bus.on('leak', e => {
 Bus.on('waveStart', n => {
   const sub = R.endless
     ? (n % 5 === 0 ? '无尽征战，鬼将亲至！' : '无尽征战，敌势无穷！')
-    : (n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '跨过奈何，忘却轮回，杀！'));
+    : (n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '踏石渡冥河，忘却轮回，杀！'));
   HUD.showBanner('第 ' + n + ' 波', sub);
   SFX.play('horn');
   HUD.refresh();

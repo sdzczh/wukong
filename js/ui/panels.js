@@ -86,7 +86,7 @@ const Panels = {
   showSettle(win) {
     const reward = R.crystalsEarned;
     const title = win ? '大 捷' : (R.endless ? '壮 烈 战 殁' : '殿 破');
-    const sub = win ? '幽魂尽散，轮回重明' : (R.endless ? `无尽征战止步于第 ${R.wave} 波` : '魂过奈何，殿陷敌手');
+    const sub = win ? '幽魂尽散，轮回重明' : (R.endless ? `无尽征战止步于第 ${R.wave} 波` : '魂渡冥河，殿陷敌手');
     const stats =
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
