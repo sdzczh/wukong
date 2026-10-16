@@ -337,6 +337,11 @@ const RackUI = {
     if (item.type === 'char') return !CONFIG.charToTower[item.ch];
     return item.unit.isGeneral || String(item.unit.key).startsWith('ling:');
   },
+  /* 场上是否有可合成目标（同字同级/同级同名神将/神将字配对）→ 高亮架子卡 */
+  canMerge(slot) {
+    if (!R.rack[slot]) return false;
+    return !!Input.findMergeTarget(slot);
+  },
 
   refresh() {
     if (!this.slotEls) return;
@@ -344,7 +349,8 @@ const RackUI = {
       const el = this.slotEls[i], item = R.rack[i];
       el.className = 'slot' + (item ? ' filled' : ' empty') +
         (this.itemIsGod(item) ? ' god' : '') +
-        (R.armedSlot === i ? ' armed' : '');
+        (R.armedSlot === i ? ' armed' : '') +
+        (item && this.canMerge(i) ? ' can-merge' : '');
       if (!item) { el.innerHTML = ''; continue; }
       let badge = '';
       if (item.type === 'unit') {
