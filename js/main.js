@@ -26,6 +26,7 @@ const Game = {
     Grid.buildTiles();          // 重建棋盘：新路线 + 随机开放格 + 恢复「封」字锁定
     calibrateRangeFloor();      // 按最远离径开放格校准当局射程地板
     Grid.buildPath();           // 路径像素随新路线重算
+    R.ghosts = this.buildGhosts(kind, seedKey || null);   // 上局阵容占位建议
     R.state = 'battle';
     Panels.hide();
     RackUI.hideSel();
@@ -38,6 +39,7 @@ const Game = {
     HUD.toast(kind === 'weekly'
       ? '每周异变：' + R.weekly.map(p => p.name).join(' · ')
       : R.daily ? '每日轮回：今日全场同图，比谁走得更远'
+      : R.ghosts ? '金框虚线为上局阵容占位建议，照位摆字即可复刻布防'
       : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
   },
 
@@ -51,6 +53,42 @@ const Game = {
   startWeekly() {
     this.startRun(Weekly.seedKey(), 'weekly');
   },
+
+  /* 上局阵容 → 本局占位建议：同种子（每日/每周）直接复刻原位，异图按「环距匹配 + 近入口优先」重排 */
+  buildGhosts(kind, seed) {
+    const lu = Save.data.lastLineup;
+    if (!lu || !lu.items || !lu.items.length) return null;
+    const items = [...lu.items].sort((a, b) => b.dmg - a.dmg);   // 高伤塔优先占近路位
+    if (lu.kind === kind && seed && lu.seed === seed) {
+      return items.map(it => ({ c: it.col, r: it.row, ch: it.ch, god: it.god, lv: it.lv }));
+    }
+    const cands = [];
+    for (let r = 0; r < Grid.rows; r++) for (let c = 0; c < Grid.cols; c++) {
+      if (!Grid.placeable(c, r)) continue;
+      let ring = 99;
+      for (let rr = 0; rr < Grid.rows; rr++) for (let cc = 0; cc < Grid.cols; cc++) {
+        if (Grid.tiles[rr][cc].type !== 'path') continue;
+        ring = Math.min(ring, Math.max(Math.abs(cc - c), Math.abs(rr - r)));
+      }
+      const e0 = Grid.pathPx[0], p = Grid.center(c, r);
+      cands.push({ c, r, ring, ent: Math.hypot(p.x - e0.x, p.y - e0.y) });
+    }
+    cands.sort((a, b) => a.ring - b.ring || a.ent - b.ent);
+    const used = new Set(), out = [];
+    for (const it of items) {
+      let best = null, bestScore = 1e9;
+      for (const cd of cands) {
+        if (used.has(cd.c + ',' + cd.r)) continue;
+        const score = Math.abs(cd.ring - it.ring) * 1000 + cd.ent + (cd.ring > it.ring ? 500 : 0);
+        if (score < bestScore) { bestScore = score; best = cd; }
+      }
+      if (!best) break;
+      used.add(best.c + ',' + best.r);
+      out.push({ c: best.c, r: best.r, ch: it.ch, god: it.god, lv: it.lv });
+    }
+    return out.length ? out : null;
+  },
+
   pause() {
     if (R.state !== 'battle') return;
     R.state = 'paused';
@@ -81,6 +119,25 @@ const Game = {
       if (!s.weekly || s.weekly.key !== wk) s.weekly = { key: wk, best: 0 };
       s.weekly.best = Math.max(s.weekly.best, R.wave);
     }
+    // 上局阵容快照：字/等级/索敌/离路环距/伤害（下局开局给占位建议；每日/每周同种子可直接复刻位）
+    const pathSet = new Set();
+    for (let r = 0; r < Grid.rows; r++) for (let c = 0; c < Grid.cols; c++) {
+      if (Grid.tiles[r][c].type === 'path') pathSet.add(c + ',' + r);
+    }
+    const lineup = {
+      kind: R.runKind, seed: R.daily || (R.runKind === 'weekly' ? Weekly.seedKey() : null), ts: Date.now(),
+      items: R.towers.map(u => {
+        let ring = 99;
+        for (const p of pathSet) {
+          const [pc, pr] = p.split(',').map(Number);
+          ring = Math.min(ring, Math.max(Math.abs(pc - u.col), Math.abs(pr - u.row)));
+        }
+        return { ch: u.def.char, god: !!u.isGeneral, lv: u.level, mode: u.mode || 'first', ring,
+                 col: u.col, row: u.row,
+                 dmg: (R.dmgStats[u.tid] || { dmg: 0 }).dmg };
+      }),
+    };
+    if (lineup.items.length) s.lastLineup = lineup;
     Save.write();
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
@@ -219,6 +276,7 @@ function render(now) {
   drawBackground(now);
   drawTiles();
   drawDecor(now);
+  drawGhosts();
 
   for (const t of R.towers) t.draw(ctx);
   drawMergeGlow(now);
@@ -230,8 +288,31 @@ function render(now) {
   drawVignette();
 }
 
-/* 场上可两两合成的单位：金圈脉动 + 「合」角标（与架子卡高亮同一套语言） */
-function drawMergeGlow(now) {
+/* 上局阵容占位建议：金框虚线 + 字样（首波备战期显示，落子/开波即隐） */
+function drawGhosts() {
+  if (!R.ghosts || !R.ghosts.length || R.state !== 'battle' || R.wave !== 0) return;
+  ctx.save();
+  ctx.font = '900 ' + Math.round(Grid.tile * 0.46) + 'px "Ma Shan Zheng","Kaiti SC","STKaiti","KaiTi",serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const g of R.ghosts) {
+    if (Grid.tiles[g.r] && Grid.tiles[g.r][g.c] && Grid.tiles[g.r][g.c].tower) continue;   // 已落子让位
+    const p = Grid.center(g.c, g.r);
+    const open = Grid.placeable(g.c, g.r);
+    ctx.globalAlpha = open ? 0.55 : 0.16;
+    ctx.setLineDash([6, 5]);
+    ctx.strokeStyle = '#ffd867';
+    ctx.lineWidth = 2;
+    roundRect(ctx, p.x - Grid.tile * 0.4, p.y - Grid.tile * 0.4, Grid.tile * 0.8, Grid.tile * 0.8, 10);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = g.god ? '#9a86e8' : '#ffd867';
+    ctx.fillText(g.ch, p.x, p.y + 1);
+  }
+  ctx.restore();
+}
+
+/* 场上可两两合成的单位：金圈脉动 + 「合」角标（与架子卡高亮同一套语言） */function drawMergeGlow(now) {
   if (!R.towers.length) return;
   const flags = Input.boardMergeFlags();
   if (!flags.size) return;
@@ -1175,6 +1256,8 @@ window.GAME = {
   },
   dmgStats: () => JSON.parse(JSON.stringify(R.dmgStats)),
   dps: () => DpsUI.rows(),
+  ghosts: () => R.ghosts,
+  lineup: () => Save.data.lastLineup,
   snapshot: () => ({
     state: R.state, wave: R.wave, hearts: R.hearts, peaches: R.peaches,
     kills: R.kills, enemies: R.enemies.filter(e => e.alive).length,

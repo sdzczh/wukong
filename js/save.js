@@ -15,6 +15,7 @@ const Save = {
       talents: { po: 0, zs: 0, cs: 0 },   // 三系已点层数（M4）
       shards: {},                         // 专属装备碎片（boss 掉落，带出对局）
       sigGear: {},                        // 专属装备等级（局外合成升级，永久）
+      lastLineup: null,                   // 上局阵容快照（占位建议用，{kind, seed, ts, items}）
       wukongKills: 0,
     };
   },

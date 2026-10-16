@@ -102,6 +102,7 @@ function resetRun() {
   R.weekly = null;
   R.dmgStats = {};     // 每塔伤害统计 {towerId: dmg}（resetRun 初始化）
   R.battleTime = 0;    // 交战累计秒（开波计时，波间不计，DPS 面板用）
+  R.ghosts = null;     // 上局阵容占位建议 [{c,r,ch,god,lv}]（首波备战期显示）
   R.nextTowerId = 1;
   if (typeof Bonds !== 'undefined' && Bonds.reset) Bonds.reset();
 }
