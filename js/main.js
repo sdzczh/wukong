@@ -219,12 +219,45 @@ function render(now) {
   drawDecor(now);
 
   for (const t of R.towers) t.draw(ctx);
+  drawMergeGlow(now);
   for (const e of R.enemies) e.draw(ctx, now);
   for (const p of R.projectiles) p.draw(ctx);
   FX.draw(ctx);
   drawDropHints();
 
   drawVignette();
+}
+
+/* 场上可两两合成的单位：金圈脉动 + 「合」角标（与架子卡高亮同一套语言） */
+function drawMergeGlow(now) {
+  if (!R.towers.length) return;
+  const flags = Input.boardMergeFlags();
+  if (!flags.size) return;
+  if (!Input._glowTipShown && R.state === 'battle') {
+    Input._glowTipShown = true;
+    HUD.toast('金圈「合」标记的单位可合成：拖到另一个同字同级单位上叠放');
+  }
+  const tile = Grid.tile, half = tile * 0.42;
+  const pulse = 0.5 + 0.5 * Math.sin(now * 5);
+  for (const u of flags) {
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,216,103,${(0.45 + 0.55 * pulse).toFixed(3)})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = 'rgba(255,216,103,0.85)';
+    ctx.shadowBlur = 8 + 10 * pulse;
+    roundRect(ctx, u.x - half - 4, u.y - half - 4, (half + 4) * 2, (half + 4) * 2, 12);
+    ctx.stroke();
+    ctx.restore();
+    // 「合」角标挂左上（等级角标在右上，不撞位）
+    const bx = u.x - half + 4, by = u.y - half + 4;
+    ctx.fillStyle = '#e8b64c';
+    ctx.beginPath(); ctx.arc(bx, by, tile * 0.16, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#f3ead6'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#5a3a10';
+    ctx.font = `900 ${Math.round(tile * 0.19)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('合', bx, by + 1);
+  }
 }
 
 function drawBackground(now) {
@@ -684,6 +717,35 @@ const Input = {
       if (v === 'level' || v === 'general-level' || v === 'pair') return t;
     }
     return null;
+  },
+
+  /* 棋盘单位两两可合成集合（棋盘↔棋盘、棋盘↔架子卡均算）：
+     渲染每帧调用一次——先建计数表，再 O(1) 逐塔判定 */
+  boardMergeFlags() {
+    const bCnt = new Map(), rCnt = new Map();
+    const bChars = new Set(), rChars = new Set();
+    const bump = (m, ch, lv) => { const k = ch + '|' + lv; m.set(k, (m.get(k) || 0) + 1); };
+    for (const t of R.towers) { bump(bCnt, t.def.char, t.level); bChars.add(t.def.char); }
+    for (const it of R.rack) {
+      if (!it) continue;
+      if (it.type === 'unit') { bump(rCnt, it.unit.def.char, it.unit.level); rChars.add(it.unit.def.char); }
+      else { bump(rCnt, it.ch, it.lv || 1); rChars.add(it.ch); }
+    }
+    const out = new Set();
+    for (const t of R.towers) {
+      const ch = t.def.char;
+      if (t.level < t.maxLevel &&
+          ((bCnt.get(ch + '|' + t.level) || 0) >= 2 || (rCnt.get(ch + '|' + t.level) || 0) >= 1)) {
+        out.add(t);
+        continue;
+      }
+      // 神将字塔：配对的另一半字在场（棋盘或架子）→ 可凑对唤醒神将
+      if (!t.isGeneral && !CONFIG.charToTower[ch]) {
+        const ph = Merge.pairHintOf(ch);
+        if (ph && (bChars.has(ph.with) || rChars.has(ph.with))) out.add(t);
+      }
+    }
+    return out;
   },
 
   /* 双击架子卡：有目标走正常落子链路立即合成；没有则提示原因 */
