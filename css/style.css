@@ -437,20 +437,38 @@ body {
 /* ---------- 装备库（局外专属列表） ---------- */
 .sig-list { display: flex; flex-direction: column; gap: 10px; }
 .sig-row {
-  display: grid; grid-template-columns: 96px 110px 52px 1fr 78px; gap: 10px;
+  display: grid; grid-template-columns: 1fr auto;
+  grid-template-areas: "head btn" "desc shards";
+  column-gap: 14px; row-gap: 3px;
   align-items: center; text-align: left;
   padding: 10px 14px; border-radius: 12px;
   border: 2px solid #3a2e50; background: #241b33; color: #cfc2e4;
   border-left: 5px solid var(--gc, #5a4872);
 }
+/* 可操作行金框（可合成/可升级），与顶栏「装」按钮 can 同风格 */
+.sig-row.can { border-color: #e8b64c; box-shadow: 0 0 0 1px #e8b64c55, 0 0 14px #e8b64c33; }
+/* 合成/升级完成：行闪金光 */
+.sig-row.just { animation: sigFlash .55s ease; }
+@keyframes sigFlash {
+  0% { background: #241b33; }
+  35% { background: #4a3a1a; box-shadow: 0 0 18px #ffd86755; }
+  100% { background: #241b33; }
+}
 .sig-row.locked { opacity: .5; filter: grayscale(.7); }
+.sig-head { grid-area: head; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .sig-gname { font-size: 18px; font-weight: 900; }
 .sig-name { font-size: 18px; font-weight: 900; color: #ffe9a8; }
-.sig-lv { font-size: 16px; font-weight: 900; color: #ffd867; }
-.sig-desc { font-size: 15px; line-height: 1.45; color: #b9a8d4; }
-.sig-shards { font-size: 15px; font-weight: 900; color: #9fd8ff; }
+.sig-pips { font-size: 15px; font-weight: 900; color: #ffd867; white-space: nowrap; }
+.sig-pips i { font-style: normal; color: #6b5a86; margin-left: 5px; letter-spacing: 2px; }
+.sig-pips i b { color: #ffd867; font-weight: 900; }
+.sig-desc { grid-area: desc; font-size: 15px; line-height: 1.5; color: #b9a8d4; }
+.sig-desc .sig-next { color: #8fd67f; font-style: normal; margin-left: 8px; }
+.sig-shards { grid-area: shards; font-size: 15px; font-weight: 900; color: #9fd8ff; text-align: right; white-space: nowrap; }
+.sig-bar { display: block; height: 6px; width: 78px; margin: 4px 0 0 auto; border-radius: 99px; background: #3a2e50; overflow: hidden; }
+.sig-bar i { display: block; height: 100%; background: #6fa8d8; border-radius: 99px; }
+.sig-bar.full i { background: linear-gradient(#ffd867, #e8a63c); }
 .sig-btn {
-  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  grid-area: btn; padding: 8px 10px; border-radius: 10px; cursor: pointer;
   font-size: 15px; font-weight: 900; white-space: nowrap;
   border: 2px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
   box-shadow: 0 3px 0 #7a5410;
@@ -458,6 +476,23 @@ body {
 .sig-btn:active { transform: translateY(2px); box-shadow: none; }
 .sig-btn.poor { border-color: #5a4872; background: #2e2440; color: #8a7f9e; box-shadow: none; cursor: not-allowed; }
 .sig-btn.max { border-color: #6fae5f; background: #24402a; color: #8fd67f; box-shadow: none; cursor: default; }
+/* 卡内提示行（toast 会被弹层盖住）与可操作汇总 */
+#overlay-sub .sig-actsum { color: #ffd867; font-size: 18px; font-weight: 700; margin-top: 6px; }
+#overlay-sub .sig-hint { min-height: 26px; margin-top: 4px; color: #ffd867; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+#overlay-sub .sig-hint.pop { animation: sigHint 2.6s ease forwards; }
+@keyframes sigHint {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* 局内普通装备图例 */
+.sig-legend { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 2px dashed #3a2e50; text-align: left; }
+.sl-head { font-size: 15px; font-weight: 900; color: #9fd8ff; margin-bottom: 8px; }
+.sl-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.sl-chip { font-size: 14px; color: #cfc2e4; background: #1d1528; border-left: 4px solid var(--gc, #5a4872); border-radius: 8px; padding: 5px 9px; white-space: nowrap; }
+.sl-chip b { color: #ffe9a8; margin-right: 6px; }
+.sl-note { margin-top: 8px; font-size: 13px; color: #8a7f9e; line-height: 1.5; }
 
 /* ---------- 修炼天赋树 ---------- */
 .talent-tree { display: flex; gap: 16px; justify-content: center; }

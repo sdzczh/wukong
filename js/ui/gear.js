@@ -121,10 +121,21 @@ const GearUI = {
     const sub = document.getElementById('overlay-sub');
     const stats = document.getElementById('overlay-stats');
     const btns = document.getElementById('overlay-btns');
+    const F = CONFIG.gear;
     title.textContent = '装 备 库';
+
+    // 可操作汇总（只统计已点亮图鉴的行）
+    let nForge = 0, nUp = 0;
+    for (const key in CONFIG.sigGear) {
+      if (!(Save.data.codex.generals && Save.data.codex.generals[key])) continue;
+      if (Gear.canForgeSig(key)) nForge++;
+      else if (Gear.canUpgradeSig(key)) nUp++;
+    }
     const totalShards = Object.values(Save.data.shards || {}).reduce((a, b) => a + b, 0);
     sub.innerHTML =
-      `<div style="color:#9fd8ff;font-size:20px">专属碎片　${totalShards}　｜　鬼将（boss）必掉 1 枚，带出对局永久保留</div>`;
+      `<div style="color:#9fd8ff;font-size:20px">专属碎片 ${totalShards} ｜ 鬼将（boss）必掉 1 枚，败局也保留</div>` +
+      ((nForge || nUp) ? `<div class="sig-actsum">${[nForge && `可合成 ${nForge}`, nUp && `可升级 ${nUp}`].filter(Boolean).join(' · ')}——金框行可直接操作</div>` : '') +
+      `<div class="sig-hint" id="sig-hint"></div>`;
 
     let html = `<div class="sig-list">`;
     for (const key in CONFIG.sigGear) {
@@ -133,41 +144,83 @@ const GearUI = {
       const unlocked = !!(Save.data.codex.generals && Save.data.codex.generals[key]);
       const lv = Gear.sigLvOf(key);
       const shards = (Save.data.shards && Save.data.shards[key]) || 0;
-      const pct = lv > 0 ? Gear.sigStatPct(key, lv) : Gear.sigStatPct(key, 1);
-      const desc = sg.desc.replace('{v}', pct);
-      let btn;
-      if (!unlocked) btn = `<button class="sig-btn" disabled>图鉴未点亮</button>`;
-      else if (lv === 0) {
-        const ok = shards >= CONFIG.gear.sigForge;
-        btn = `<button class="sig-btn${ok ? '' : ' poor'}" data-k="${key}" data-act="forge" ${ok ? '' : 'disabled'}>合成　${CONFIG.gear.sigForge} 碎片</button>`;
-      } else if (lv >= CONFIG.gear.sigMaxLv) {
-        btn = `<button class="sig-btn max" disabled>已满级</button>`;
+      const canAct = unlocked && (Gear.canForgeSig(key) || Gear.canUpgradeSig(key));
+      // 碎片进度：下一档所需（合成 3 / 升级 2；满级不计）
+      const need = lv === 0 ? F.sigForge : (lv < F.sigMaxLv ? F.sigUpgrade : 0);
+
+      const pips = `<i><b>${'●'.repeat(lv)}</b>${'○'.repeat(F.sigMaxLv - lv)}</i>`;
+      const lvTag = lv > 0 ? `Lv${lv}` : '未持有';
+
+      let desc, next = '';
+      if (!unlocked) {
+        desc = '唤醒该神将（两字凑对）点亮图鉴后解锁，碎片可先囤';
       } else {
-        const ok = shards >= CONFIG.gear.sigUpgrade;
-        btn = `<button class="sig-btn${ok ? '' : ' poor'}" data-k="${key}" data-act="up" ${ok ? '' : 'disabled'}>升级 Lv${lv + 1}　${CONFIG.gear.sigUpgrade} 碎片</button>`;
+        desc = sg.desc.replace('{v}', Gear.sigStatPct(key, Math.max(lv, 1)));
+        if (lv >= F.sigMaxLv) next = '<i class="sig-next">已满级</i>';
+        else if (lv > 0) {
+          const sgn = sg.stat === 'cdMul' ? '-' : '+';
+          next = `<i class="sig-next">下一级 → ${this.statLabel[sg.stat]} ${sgn}${Gear.sigStatPct(key, lv + 1)}%</i>`;
+        }
       }
+
+      let btn;
+      if (!unlocked) btn = `<button class="sig-btn poor" data-k="${key}">未点亮</button>`;
+      else if (lv === 0) btn = `<button class="sig-btn${canAct ? '' : ' poor'}" data-k="${key}" data-act="forge">合成 ${F.sigForge} 碎片</button>`;
+      else if (lv >= F.sigMaxLv) btn = `<button class="sig-btn max" data-k="${key}">已满级</button>`;
+      else btn = `<button class="sig-btn${canAct ? '' : ' poor'}" data-k="${key}" data-act="up">升 Lv${lv + 1} ${F.sigUpgrade} 碎片</button>`;
+
       html +=
-        `<div class="sig-row${unlocked ? '' : ' locked'}" style="--gc:${sg.color}">` +
-        `<span class="sig-gname" style="color:${gd.color}">${unlocked ? gd.name : '？？'}</span>` +
-        `<span class="sig-name">${unlocked ? sg.name : '？？'}</span>` +
-        `<span class="sig-lv">${lv > 0 ? 'Lv' + lv : '—'}</span>` +
-        `<span class="sig-desc">${unlocked ? desc : '合成该神将点亮图鉴后可见'}</span>` +
-        `<span class="sig-shards">碎片 ${shards}</span>` +
-        btn + `</div>`;
+        `<div class="sig-row${unlocked ? '' : ' locked'}${canAct ? ' can' : ''}" data-k="${key}" style="--gc:${sg.color}">` +
+          `<div class="sig-head">` +
+            `<span class="sig-gname" style="color:${gd.color}">${unlocked ? gd.name : '？？'}</span>` +
+            `<span class="sig-name">${unlocked ? sg.name : '？？？'}</span>` +
+            `<span class="sig-pips">${lvTag}${pips}</span>` +
+          `</div>${btn}` +
+          `<div class="sig-desc">${desc}${next}</div>` +
+          `<div class="sig-shards">碎片 ${shards}${need ? '/' + need : ''}` +
+            (need ? `<span class="sig-bar${shards >= need ? ' full' : ''}"><i style="width:${Math.min(100, Math.round(shards / need * 100))}%"></i></span>` : '') +
+          `</div>` +
+        `</div>`;
     }
     html += `</div>`;
+
+    // 局内普通装备图例：四系数值 + 合成规则（装备库即完整装备参考）
+    const fams = F.families;
+    html += `<div class="sig-legend">` +
+      `<div class="sl-head">局内普通装备 · 每局重新收集</div>` +
+      `<div class="sl-chips">` + Object.keys(fams).map(fam => {
+        const f = fams[fam];
+        const sgn = f.stat === 'cdMul' ? '−' : '+';
+        return `<span class="sl-chip" style="--gc:${f.color}"><b>${f.char}·${f.name}</b>${this.statLabel[f.stat]} ${sgn}${f.per.map(v => Math.round(v * 100)).join('/')}%${f.generalOnly ? ' ·仅神将' : ''}</span>`;
+      }).join('') + `</div>` +
+      `<div class="sl-note">击杀概率掉部件（厉魂 +20%）｜${F.forgeNeed} 部件 → Lv1，${F.forgeNeed} 件同系同级 → 升一级（满 Lv${F.maxLv}）｜出售/铲除自动回库</div>` +
+    `</div>`;
+
     stats.innerHTML = html;
     stats.style.maxHeight = '780px';
     stats.style.overflowY = 'auto';
 
-    stats.querySelectorAll('.sig-btn:not([disabled])').forEach(el =>
+    // 交互反馈：不足/未点亮不再静默（#toast z-index 低于弹层会被盖住，改用卡内提示行）
+    stats.querySelectorAll('.sig-row:not(.locked) .sig-btn').forEach(el => {
       el.addEventListener('click', () => {
         const k = el.dataset.k;
-        if (el.dataset.act === 'forge') Gear.forgeSig(k);
-        else Gear.upgradeSig(k);
+        const sg = CONFIG.sigGear[k];
         SFX.play('click');
+        if (!el.dataset.act) return;   // 已满级
+        const cost = el.dataset.act === 'forge' ? F.sigForge : F.sigUpgrade;
+        const ok = el.dataset.act === 'forge' ? Gear.forgeSig(k) : Gear.upgradeSig(k);
+        if (!ok) { this.hint(`还差 ${cost - (Save.data.shards?.[k] || 0)} 枚碎片——鬼将（boss）必掉`); return; }
+        const msg = el.dataset.act === 'forge'
+          ? `${sg.name} 合成完成（Lv1），唤醒${CONFIG.towers[k].name}自动随身`
+          : `${sg.name} 升至 Lv${Gear.sigLvOf(k)}（碎片 -${F.sigUpgrade}）`;
         this.render();
-      }));
+        this.hint(msg);
+        const row = stats.querySelector(`.sig-row[data-k="${k}"]`);
+        if (row) { row.classList.add('just'); setTimeout(() => row.classList.remove('just'), 600); }
+      });
+    });
+    stats.querySelectorAll('.sig-row.locked').forEach(row =>
+      row.addEventListener('click', () => { SFX.play('click'); this.hint('先在局内唤醒该神将（两字凑对）点亮图鉴，碎片不丢'); }));
 
     btns.innerHTML = '';
     const back = document.createElement('button');
@@ -175,5 +228,17 @@ const GearUI = {
     back.textContent = '返 回';
     back.addEventListener('click', () => { SFX.play('click'); this.hide(); });
     btns.appendChild(back);
+  },
+
+  /* 卡内提示行：合成/升级结果、碎片不足、未点亮原因（toast 会被弹层盖住） */
+  hint(msg) {
+    const el = document.getElementById('sig-hint');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove('pop');
+    void el.offsetWidth;   // 重启淡入动画
+    el.classList.add('pop');
+    clearTimeout(this._ht);
+    this._ht = setTimeout(() => { el.textContent = ''; }, 2600);
   },
 };
