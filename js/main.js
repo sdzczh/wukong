@@ -9,6 +9,7 @@ const Game = {
     R.state = 'menu';
     Panels.showMenu();
     HUD.refresh();
+    WaveMods.render();          // 收起波间三选一（如中途弃选回菜单）
   },
   startRun(seedKey, kind) {
     kind = kind || 'normal';
@@ -30,6 +31,7 @@ const Game = {
     RackUI.dealStartChars();
     HUD.refresh();
     GearUI.refresh();
+    WaveMods.render();          // 复位波间三选一（隐藏上一局残留）
     HUD.toast(kind === 'weekly'
       ? '每周异变：' + R.weekly.map(p => p.name).join(' · ')
       : R.daily ? '每日轮回：今日全场同图，比谁走得更远'

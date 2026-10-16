@@ -28,10 +28,11 @@ const WaveMods = {
     HUD.toast('命运三选一 · 选择一条词条');
   },
 
+  /* 显隐统一走 .hidden（弹层初始自带 hidden，add('show') 会被 .hidden!important 压死） */
   render() {
     const bar = document.getElementById('mod-bar');
     if (!bar) return;
-    if (!R.modOffer) { bar.classList.remove('show'); bar.innerHTML = ''; return; }
+    if (!R.modOffer) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
     const cards = R.modOffer.map((id, i) => {
       const def = CONFIG.waveMods.pool.find(p => p.id === id);
       const stacked = R.mods[id] || 0;
@@ -45,7 +46,7 @@ const WaveMods = {
       </div>`;
     }).join('');
     bar.innerHTML = `<div class="mod-title">命运三选一</div><div class="mod-cards">${cards}</div>`;
-    bar.classList.add('show');
+    bar.classList.remove('hidden');
   },
 
   /* 选中第 i 张：应用并关闭；返回是否成功 */
