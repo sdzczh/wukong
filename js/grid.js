@@ -48,6 +48,7 @@ const Grid = {
       const [c, r] = key.split(',').map(Number);
       this.tiles[r][c].locked = false;
     }
+    if (typeof invalidateStatic === 'function') invalidateStatic();   // 换图 → 重建离屏静态层
   },
 
   /* 依据画布尺寸布局（逻辑坐标） */

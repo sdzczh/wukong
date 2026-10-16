@@ -267,16 +267,54 @@ function tick(dt) {
 }
 
 /* ---------- 渲染 ---------- */
+/* ---------- 离屏静态层：远景（渐变+山脊）、棋盘砖路、点缀建筑三幅预渲染 ----------
+   只有换图（buildTiles）、开垦、改尺寸才重画；平时每帧只是三次整幅 1:1 贴图，
+   棋盘底图成本从逐格数百次绘制降为三次 blit。三层是为保原层次：
+   流雾夹在远景与砖路之间、鬼门关心跳光晕夹在砖路与建筑之间，均按原样保留。 */
+let bgCv = null, tilesCv = null, decorCv = null;
+let bgG = null, tilesG = null, decorG = null;
+let staticDirty = true, staticBuilds = 0;
+function invalidateStatic() { staticDirty = true; }
+function buildStaticLayer() {
+  if (!bgCv) {
+    bgCv = document.createElement('canvas'); bgG = bgCv.getContext('2d');
+    tilesCv = document.createElement('canvas'); tilesG = tilesCv.getContext('2d');
+    decorCv = document.createElement('canvas'); decorG = decorCv.getContext('2d');
+  }
+  for (const cv of [bgCv, tilesCv, decorCv]) { cv.width = canvas.width; cv.height = canvas.height; }
+  for (const [g, fn] of [[bgG, drawBackgroundStatic], [tilesG, drawTiles], [decorG, drawDecorStatic]]) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    g.setTransform(view.k, 0, 0, view.k, view.ox, view.oy);
+    fn(g);
+  }
+  staticDirty = false;
+  staticBuilds++;
+}
+
 function render(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // 屏震：整体画面在逻辑坐标上随机偏移
+  // 屏震：整体画面在逻辑坐标上随机偏移（静态层贴图同样随震偏移，观感与旧管线一致）
   const sh = FX.shakeOffset();
-  ctx.setTransform(view.k, 0, 0, view.k, view.ox + sh.x * view.k, view.oy + sh.y * view.k);
+  if (staticDirty || !bgCv || bgCv.width !== canvas.width || bgCv.height !== canvas.height) buildStaticLayer();
+  const shx = sh.x * view.k, shy = sh.y * view.k;
+  ctx.setTransform(1, 0, 0, 1, shx, shy);
+  ctx.drawImage(bgCv, 0, 0);
+  ctx.setTransform(view.k, 0, 0, view.k, view.ox + shx, view.oy + shy);
 
-  drawBackground(now);
-  drawTiles();
-  drawDecor(now);
+  drawMist();
+
+  ctx.setTransform(1, 0, 0, 1, shx, shy);
+  ctx.drawImage(tilesCv, 0, 0);
+  ctx.setTransform(view.k, 0, 0, view.k, view.ox + shx, view.oy + shy);
+
+  drawGateGlow(now);
+
+  ctx.setTransform(1, 0, 0, 1, shx, shy);
+  ctx.drawImage(decorCv, 0, 0);
+  ctx.setTransform(view.k, 0, 0, view.k, view.ox + shx, view.oy + shy);
+
   drawGhosts();
 
   for (const t of R.towers) t.draw(ctx);
@@ -344,27 +382,30 @@ function drawGhosts() {
   }
 }
 
-function drawBackground(now) {
-  const g = ctx.createLinearGradient(0, 0, 0, CONFIG.logicalH);
-  g.addColorStop(0, '#342a4e');
-  g.addColorStop(0.45, '#241b36');
-  g.addColorStop(1, '#17111f');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, CONFIG.logicalW, CONFIG.logicalH);
+function drawBackgroundStatic(g) {
+  const grad = g.createLinearGradient(0, 0, 0, CONFIG.logicalH);
+  grad.addColorStop(0, '#342a4e');
+  grad.addColorStop(0.45, '#241b36');
+  grad.addColorStop(1, '#17111f');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, CONFIG.logicalW, CONFIG.logicalH);
 
   for (const ridge of scenery.ridges) {
-    ctx.save();
-    ctx.globalAlpha = ridge.alpha;
-    ctx.fillStyle = ridge.color;
-    ctx.beginPath();
-    ctx.moveTo(-40, ridge.base);
-    for (const p of ridge.pts) ctx.lineTo(p.x, p.y);
-    ctx.lineTo(CONFIG.logicalW + 40, ridge.base);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+    g.save();
+    g.globalAlpha = ridge.alpha;
+    g.fillStyle = ridge.color;
+    g.beginPath();
+    g.moveTo(-40, ridge.base);
+    for (const p of ridge.pts) g.lineTo(p.x, p.y);
+    g.lineTo(CONFIG.logicalW + 40, ridge.base);
+    g.closePath();
+    g.fill();
+    g.restore();
   }
+}
 
+/* 流雾：唯一会动的背景元素，留在主画布、画在远景与砖路之间 */
+function drawMist() {
   for (const m of scenery.mist) {
     m.x += m.v * 0.016;
     if (m.x - m.r > CONFIG.logicalW) m.x = -m.r;
@@ -376,7 +417,7 @@ function drawBackground(now) {
   }
 }
 
-function drawTiles() {
+function drawTiles(g = ctx) {
   const tile = Grid.tile;
   for (let r = 0; r < Grid.rows; r++) {
     for (let c = 0; c < Grid.cols; c++) {
@@ -384,8 +425,8 @@ function drawTiles() {
       const x = Grid.ox + c * tile, y = Grid.oy + r * tile;
       if (t.type === 'path') {
         // 黄泉路：满格连续路面（刻意与圆角砖的独立圆角砖区分形状语言），微色差防呆板
-        ctx.fillStyle = ((c + r) % 2 === 0) ? '#b29460' : '#ab8d5a';
-        ctx.fillRect(x, y, tile, tile);
+        g.fillStyle = ((c + r) % 2 === 0) ? '#b29460' : '#ab8d5a';
+        g.fillRect(x, y, tile, tile);
         // 车道虚线：朝每个路径邻格方向画一段，全图连通成引导线
         const T = Grid.tiles;
         const up = T[r - 1] && T[r - 1][c].type === 'path';
@@ -394,47 +435,45 @@ function drawTiles() {
         const rt = T[r][c + 1] && T[r][c + 1].type === 'path';
         const cx = x + tile / 2, cy = y + tile / 2;
         const dw = tile * 0.09, dl = tile * 0.3, dOff = tile * 0.1;
-        ctx.fillStyle = '#e8d5a5';
-        if (up) { roundRect(ctx, cx - dw / 2, cy - dOff - dl, dw, dl, dw / 2); ctx.fill(); }
-        if (dn) { roundRect(ctx, cx - dw / 2, cy + dOff, dw, dl, dw / 2); ctx.fill(); }
-        if (lf) { roundRect(ctx, cx - dOff - dl, cy - dw / 2, dl, dw, dw / 2); ctx.fill(); }
-        if (rt) { roundRect(ctx, cx + dOff, cy - dw / 2, dl, dw, dw / 2); ctx.fill(); }
+        g.fillStyle = '#e8d5a5';
+        if (up) { roundRect(g, cx - dw / 2, cy - dOff - dl, dw, dl, dw / 2); g.fill(); }
+        if (dn) { roundRect(g, cx - dw / 2, cy + dOff, dw, dl, dw / 2); g.fill(); }
+        if (lf) { roundRect(g, cx - dOff - dl, cy - dw / 2, dl, dw, dw / 2); g.fill(); }
+        if (rt) { roundRect(g, cx + dOff, cy - dw / 2, dl, dw, dw / 2); g.fill(); }
         continue;
       }
       // 锁定地块：暗色石板 + 「封」字
       if (t.locked) {
-        ctx.fillStyle = '#332c42';
-        roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
-        ctx.fill();
-        ctx.fillStyle = '#3d3550';
-        roundRect(ctx, x + 5, y + 5, tile - 10, tile - 10, 6);
-        ctx.fill();
-        ctx.fillStyle = '#5a5074';
-        ctx.font = `900 ${Math.round(tile * 0.4)}px "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('封', x + tile / 2, y + tile / 2 + 2);
+        g.fillStyle = '#332c42';
+        roundRect(g, x + 2, y + 2, tile - 4, tile - 4, 7);
+        g.fill();
+        g.fillStyle = '#3d3550';
+        roundRect(g, x + 5, y + 5, tile - 10, tile - 10, 6);
+        g.fill();
+        g.fillStyle = '#5a5074';
+        g.font = `900 ${Math.round(tile * 0.4)}px "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif`;
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText('封', x + tile / 2, y + tile / 2 + 2);
         continue;
       }
       // 紫砖 / 白石
       const isWhite = t.type === 'white';
-      ctx.fillStyle = isWhite ? '#e7dfcf' : '#7e6f9e';
-      roundRect(ctx, x + 2, y + 2, tile - 4, tile - 4, 7);
-      ctx.fill();
-      ctx.fillStyle = isWhite ? '#cfc6b2' : '#6d5e8c';
-      roundRect(ctx, x + 2, y + tile * 0.55, tile - 4, tile * 0.43 - 2, 7);
-      ctx.fill();
-      ctx.fillStyle = isWhite ? '#fffdf6' : '#8f80b0';
-      roundRect(ctx, x + 4, y + 3, tile - 8, tile * 0.2, 6);
-      ctx.fill();
+      g.fillStyle = isWhite ? '#e7dfcf' : '#7e6f9e';
+      roundRect(g, x + 2, y + 2, tile - 4, tile - 4, 7);
+      g.fill();
+      g.fillStyle = isWhite ? '#cfc6b2' : '#6d5e8c';
+      roundRect(g, x + 2, y + tile * 0.55, tile - 4, tile * 0.43 - 2, 7);
+      g.fill();
+      g.fillStyle = isWhite ? '#fffdf6' : '#8f80b0';
+      roundRect(g, x + 4, y + 3, tile - 8, tile * 0.2, 6);
+      g.fill();
     }
   }
 }
 
-/* 场景点缀：鬼门关（路径起点）与轮回殿（基地），均随随机路线移动 */
-function drawDecor(now) {
+/* 鬼门关心跳光晕：脉动红光，画在砖路之上、建筑之下（与旧管线层次一致） */
+function drawGateGlow(now) {
   const tile = Grid.tile;
-
-  // 鬼门关（路径起点，随入口列移动）
   const gate = Grid.center(CONFIG.pathCells[0][0], CONFIG.pathCells[0][1]);
   ctx.save();
   ctx.translate(gate.x, gate.y);
@@ -444,39 +483,50 @@ function drawDecor(now) {
   glow.addColorStop(1, 'rgba(190,80,90,0)');
   ctx.fillStyle = glow;
   ctx.beginPath(); ctx.arc(0, 0, tile * 0.85, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#33263a';
-  ctx.strokeStyle = '#8d3a46'; ctx.lineWidth = 3;
-  roundRect(ctx, -tile * 0.38, -tile * 0.2, tile * 0.76, tile * 0.62, 6);
-  ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#8d3a46';
-  ctx.beginPath();
-  ctx.moveTo(-tile * 0.5, -tile * 0.2); ctx.lineTo(0, -tile * 0.52); ctx.lineTo(tile * 0.5, -tile * 0.2);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#e8b64c';
-  ctx.font = `900 ${Math.round(tile * 0.22)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('关', 0, tile * 0.1);
   ctx.restore();
+}
+
+/* 棋盘之上的静态建筑：鬼门关门楼 + 轮回殿，随随机路线移动 */
+function drawDecorStatic(g) {
+  const tile = Grid.tile;
+
+  // 鬼门关门楼（路径起点，随入口列移动）
+  const gate = Grid.center(CONFIG.pathCells[0][0], CONFIG.pathCells[0][1]);
+  g.save();
+  g.translate(gate.x, gate.y);
+  g.fillStyle = '#33263a';
+  g.strokeStyle = '#8d3a46'; g.lineWidth = 3;
+  roundRect(g, -tile * 0.38, -tile * 0.2, tile * 0.76, tile * 0.62, 6);
+  g.fill(); g.stroke();
+  g.fillStyle = '#8d3a46';
+  g.beginPath();
+  g.moveTo(-tile * 0.5, -tile * 0.2); g.lineTo(0, -tile * 0.52); g.lineTo(tile * 0.5, -tile * 0.2);
+  g.closePath(); g.fill();
+  g.fillStyle = '#e8b64c';
+  g.font = `900 ${Math.round(tile * 0.22)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('关', 0, tile * 0.1);
+  g.restore();
 
   // 轮回殿（基地）
   const base = Grid.center(CONFIG.base.col, CONFIG.base.row);
-  ctx.save();
-  ctx.translate(base.x, base.y);
-  ctx.fillStyle = '#e8ddc8';
-  ctx.strokeStyle = '#8d7a5c'; ctx.lineWidth = 2.5;
-  roundRect(ctx, -tile * 0.34, -tile * 0.1, tile * 0.68, tile * 0.5, 5);
-  ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#7a2f3a';
-  ctx.beginPath();
-  ctx.moveTo(-tile * 0.46, -tile * 0.1); ctx.lineTo(0, -tile * 0.46); ctx.lineTo(tile * 0.46, -tile * 0.1);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#3a2a3a';
-  ctx.fillRect(-tile * 0.09, tile * 0.12, tile * 0.18, tile * 0.28);
-  ctx.fillStyle = '#e8b64c';
-  ctx.font = `900 ${Math.round(tile * 0.2)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('轮回殿', 0, -tile * 0.58);
-  ctx.restore();
+  g.save();
+  g.translate(base.x, base.y);
+  g.fillStyle = '#e8ddc8';
+  g.strokeStyle = '#8d7a5c'; g.lineWidth = 2.5;
+  roundRect(g, -tile * 0.34, -tile * 0.1, tile * 0.68, tile * 0.5, 5);
+  g.fill(); g.stroke();
+  g.fillStyle = '#7a2f3a';
+  g.beginPath();
+  g.moveTo(-tile * 0.46, -tile * 0.1); g.lineTo(0, -tile * 0.46); g.lineTo(tile * 0.46, -tile * 0.1);
+  g.closePath(); g.fill();
+  g.fillStyle = '#3a2a3a';
+  g.fillRect(-tile * 0.09, tile * 0.12, tile * 0.18, tile * 0.28);
+  g.fillStyle = '#e8b64c';
+  g.font = `900 ${Math.round(tile * 0.2)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
+  g.textAlign = 'center';
+  g.fillText('轮回殿', 0, -tile * 0.58);
+  g.restore();
 }
 
 /* 当前持握（拖拽中 / 已点选架子字）的来源/字/等级，无则 null */
@@ -1070,6 +1120,7 @@ Bus.on('shovelAt', cell => {
   // 开垦新地块
   if (tile.locked) {
     tile.locked = false;
+    invalidateStatic();   // 砖路在离屏静态层，开垦后重画
     R.shovelLeft--;
     R.tool = null;
     const p = Grid.center(cell.c, cell.r);
@@ -1159,8 +1210,9 @@ resize();
 // 首次启动先录名号，之后回主菜单
 if (User.has()) Game.toMenu();
 else Panels.showNameEntry(() => Game.toMenu());
-// 预加载展示字体（canvas 逐帧重绘，就绪后自然生效）
-document.fonts.load('64px "Ma Shan Zheng"').catch(() => {});
+// 预加载展示字体（canvas 逐帧重绘，就绪后自然生效）；静态层的「封/关/轮回殿」字样需就绪后重画一次
+document.fonts.load('64px "Ma Shan Zheng"').then(invalidateStatic, invalidateStatic);
+if (document.fonts.ready && document.fonts.ready.then) document.fonts.ready.then(invalidateStatic);
 requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
@@ -1258,6 +1310,7 @@ window.GAME = {
   },
   dmgStats: () => JSON.parse(JSON.stringify(R.dmgStats)),
   dps: () => DpsUI.rows(),
+  staticInfo: () => ({ builds: staticBuilds, dirty: staticDirty, w: bgCv && bgCv.width, h: bgCv && bgCv.height }),
   ghosts: () => R.ghosts,
   lineup: () => Save.data.lastLineup,
   tutState: () => TutUI.step,
