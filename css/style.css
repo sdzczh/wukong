@@ -248,6 +248,13 @@ body {
   display: flex; align-items: center; justify-content: center;
   border: 2px solid #f3ead6;
 }
+/* 神将星徽（架子卡左下） */
+.slot .st {
+  position: absolute; bottom: 3px; left: 4px;
+  font-size: 12px; font-weight: 900; color: #e8b64c; line-height: 1;
+  text-shadow: 0 1px 2px #0008; letter-spacing: -1px;
+}
+.slot .st.maxed { color: #ffd867; text-shadow: 0 0 6px #ffd867; }
 
 #btn-summon {
   width: 126px; height: 116px; border-radius: 16px; cursor: pointer;
@@ -351,6 +358,16 @@ body {
 }
 #sel-panel .sel-name { font-size: 24px; font-weight: 900; }
 #sel-panel .sel-lv { font-size: 18px; font-weight: 700; color: #ffd867; }
+#sel-panel .sel-star, #item-panel .sel-star {
+  font-size: 17px; font-weight: 900; color: #9a8a6a; letter-spacing: -1px; line-height: 1;
+}
+#sel-panel .sel-star.maxed, #item-panel .sel-star.maxed {
+  color: #ffd867; text-shadow: 0 0 8px #ffd867;
+}
+#sel-panel .sel-passive { color: #ffd867; }
+#sel-panel .sel-passive-locked { color: #8a7c92; }
+#sel-panel .sel-sig { font-weight: 700; }
+#sel-panel .sel-sig-locked { color: #8a7c92; font-size: 17px; }
 #sel-panel .sel-rarity {
   font-size: 15px; font-weight: 900; color: #fff;
   padding: 2px 10px; border-radius: 999px;
@@ -619,6 +636,11 @@ body {
   border: 1px solid #4a8fc0; background: #26324e; color: #9fd8ff;
 }
 .codex-lv.lv3 { border-color: #e8b64c; background: #3a2c14; color: #ffd867; }
+.codex-lv.star {
+  left: 5px; right: auto;
+  border-color: #e8b64c; background: #3a2c14; color: #ffd867;
+  text-shadow: 0 0 5px #ffd86766;
+}
 .codex-cell .codex-ch {
   font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
   font-size: 44px; font-weight: 900; line-height: 1; color: #f3ead6;

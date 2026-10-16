@@ -150,7 +150,10 @@ class Enemy {
 
   takeDamage(dmg, src) {
     if (!this.alive) return;
-    let eff = Math.max(1, dmg - (this.armor || 0));
+    const srcGen = src && src.isGeneral ? src : null;
+    // 满星悟空·火眼金睛：攻击无视护甲
+    const ignoreArmor = !!(srcGen && srcGen.starMaxed && srcGen.key === 'wukong');
+    let eff = Math.max(1, dmg - (ignoreArmor ? 0 : (this.armor || 0)));
     // 伤害统计：按实际输出计（含被护盾吸收部分）
     const out = eff;
     if (src && src.tid) {
@@ -172,6 +175,11 @@ class Enemy {
     }
     this.hp -= eff; this.flash = 0.12;
     if (src) this.lastHitBy = src;   // 记录伤害归属（神将吃经验）
+    // 满星被动附加：悟净·寒潮减速 / 李靖·镇魂概率眩晕
+    if (srcGen && srcGen.starMaxed && this.hp > 0) {
+      if (srcGen.key === 'wujing') this.applySlow(0.8, 1.5);
+      else if (srcGen.key === 'lijing' && RNG.next() < 0.15) this.applyStun(0.5);
+    }
     FX.float(String(eff), this.x, this.y - Grid.tile * 0.5, '#ffe9a8', 15);
     if (this.hp <= 0) {
       this.alive = false;

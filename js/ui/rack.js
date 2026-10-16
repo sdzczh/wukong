@@ -249,8 +249,9 @@ const RackUI = {
       this.itemPanel.innerHTML =
         `<div class="sel-head"><span class="sel-char" style="color:${u.def.color || '#4a3b52'}">${u.def.char}</span>` +
         `<span class="sel-name">${u.def.name}</span><span class="sel-lv">Lv.${u.level}</span>` +
+        (u.isGeneral && u.star > 0 ? `<span class="sel-star${u.starMaxed ? ' maxed' : ''}">${'★'.repeat(u.star)}${'☆'.repeat(CONFIG.generalStars.max - u.star)}</span>` : '') +
         `<button class="sel-close">×</button></div>` +
-        `<div class="sel-body">已铲回架子的单位，拖到棋盘可继续作战</div>` +
+        `<div class="sel-body">已铲回架子的单位，拖到棋盘可继续作战${u.isGeneral ? '；拖到同名神将上可升星' : ''}</div>` +
         `<button class="item-sell">出售 +${Merge.sellValue(u)} 桃</button>`;
       this.itemPanel.querySelector('.item-sell').addEventListener('click', () => {
         R.peaches += Merge.sellValue(u);
@@ -358,6 +359,7 @@ const RackUI = {
       if (item.type === 'unit') {
         const u = item.unit;
         if (u.level > 1) badge = `<span class="lv">${u.level}</span>`;
+        if (u.isGeneral && u.star > 0) badge += `<span class="st${u.starMaxed ? ' maxed' : ''}">${'★'.repeat(u.star)}</span>`;
       } else if (item.lv > 1) {
         badge = `<span class="lv">${item.lv}</span>`;
       }
@@ -415,6 +417,10 @@ const RackUI = {
     R.selected = t;
     const d = t.def;
     const rows = [];
+    // 神将星标：★★☆（满星金亮）
+    const starHtml = t.isGeneral
+      ? `<span class="sel-star${t.starMaxed ? ' maxed' : ''}">${'★'.repeat(t.star)}${'☆'.repeat(CONFIG.generalStars.max - t.star)}</span>`
+      : '';
     if (d.kind === 'aura') {
       const rate = Math.round((d.auraRate + (d.auraLvStep || 0) * (t.level - 1)) * 100);
       rows.push(`战鼓：周围 ${(t.rangePx / Grid.tile).toFixed(1)} 格友塔攻速 +${rate}%`);
@@ -425,6 +431,11 @@ const RackUI = {
       const st = t.skillT <= 0 ? '✦ 就绪' : `冷却 ${Math.max(0, t.skillT).toFixed(1)}s`;
       rows.push(`经验 ${t.exp}/${t.expNeed}${t.level >= t.maxLevel ? '（已满级）' : ''}`);
       rows.push(`技能 · ${d.skill.name}（${st}）：${d.skill.desc}`);
+      if (t.star > 0) rows.push(`星威 ★${t.star}：攻击 +${t.star * 8}% · 技能效果 +${t.star * 15}%`);
+      const s3 = d.star3;
+      rows.push(t.starMaxed
+        ? `<span class="sel-passive">满星被动 · ${s3.name}：${s3.desc}</span>`
+        : `<span class="sel-passive-locked">满星 ★★★ 解锁被动「${s3.name}」：${s3.desc}</span>`);
     }
     if (t.gear) {
       const f = CONFIG.gear.families[t.gear.fam];
@@ -432,9 +443,13 @@ const RackUI = {
       const txt = f.stat === 'cdMul' ? `技冷却 -${v}%` : `${GearUI.statLabel[f.stat]} +${v}%`;
       rows.push(`装备 · ${f.name} Lv${t.gear.lv}（${txt}）`);
     }
-    if (t.isGeneral && t.sigLv > 0) {
-      const sg = CONFIG.sigGear[t.key];
-      rows.push(`专属 · ${sg.name} Lv${t.sigLv}：${sg.desc.replace('{v}', Gear.sigStatPct(t.key, t.sigLv))}`);
+    if (t.isGeneral) {
+      const sg = CONFIG.sigGear[t.key], slv = t.sigLv;
+      if (slv > 0) {
+        rows.push(`<span class="sel-sig" style="color:${sg.color}">专属 · ${sg.name} Lv${slv}：${sg.desc.replace('{v}', Gear.sigStatPct(t.key, slv))}</span>`);
+      } else {
+        rows.push(`<span class="sel-sig-locked">专属 · ${sg.name} 未铸（boss 掉 3 碎片，装备库合成）</span>`);
+      }
     }
     if (d.pairHint) rows.push(`与「${d.pairHint.with}」合成 ${d.pairHint.general}`);
     if (d.desc) rows.push(d.desc);
@@ -451,7 +466,7 @@ const RackUI = {
 
     this.selPanel.innerHTML =
       `<div class="sel-head"><span class="sel-char" style="color:${d.color || '#4a3b52'}">${d.char}</span>` +
-      `<span class="sel-name">${d.name}</span><span class="sel-lv">Lv.${t.level}</span>` +
+      `<span class="sel-name">${d.name}</span><span class="sel-lv">Lv.${t.level}</span>` + starHtml +
       (d.rarity ? `<span class="sel-rarity" style="background:${CONFIG.rarityColors[d.rarity]}">${d.rarity}</span>` : '') +
       `<button class="sel-close">×</button></div>` +
       `<div class="sel-body">${rows.map(s => `<div>${s}</div>`).join('')}</div>` +

@@ -30,13 +30,14 @@ const Save = {
     try {
       this.data = Object.assign(this.defaults(), JSON.parse(localStorage.getItem(this.KEY)) || {});
     } catch (e) { this.data = this.defaults(); }
-    // 图鉴结构归一：{ chars, generals, charLv, genLv }（兼容早期扁平结构）
+    // 图鉴结构归一：{ chars, generals, charLv, genLv, genStar }（兼容早期扁平结构）
     const raw = this.data.codex || {};
     this.data.codex = {
       chars: raw.chars || {},
       generals: raw.generals || (raw.chars ? {} : raw),
       charLv: raw.charLv || {},          // 各字历史最高等级（图鉴等级区分）
       genLv: raw.genLv || {},            // 各神将实战最高等级
+      genStar: raw.genStar || {},        // 各神将历史最高星（升星系统）
     };
     if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
   },
@@ -80,6 +81,7 @@ const Save = {
         generals: raw.generals || (raw.chars ? {} : raw),
         charLv: raw.charLv || {},
         genLv: raw.genLv || {},
+        genStar: raw.genStar || {},
       };
       if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
       this.write();

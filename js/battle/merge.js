@@ -63,10 +63,14 @@ const Merge = {
   },
 
   /* 判定 aChar/aLevel（拖动方的字/单位）放到 b 上的结果。
-     合成规则：两个同字同级的单位才能合成升级；不同级只能换位 */
+     合成规则：两个同字同级的单位才能合成升级；同名神将任意等级合并 → 升星（满星后同级仍可升级）；
+     不同级只能换位 */
   judge(aChar, aLevel, b) {
     if (b.isGeneral) {
-      if (aChar === b.def.char) return (aLevel === b.level && b.level < b.maxLevel) ? 'general-level' : 'swap';
+      if (aChar === b.def.char) {
+        if ((b.star || 0) < CONFIG.generalStars.max) return 'general-star';
+        return (aLevel === b.level && b.level < b.maxLevel) ? 'general-level' : 'swap';
+      }
       return 'swap';
     }
     if (aChar === b.def.char) return (aLevel === b.level && b.level < b.maxLevel) ? 'level' : 'swap';
@@ -85,13 +89,17 @@ const Merge = {
     return key ? (CONFIG.towers[key].maxLevel || CONFIG.towerMaxLevel) : CONFIG.godCharBase.maxLevel;
   },
 
-  /* 架子内判定：a 放到 b 上的结果（同字同级升级 / 同级同名神将升级 / 神将字凑对），不可合成返回 null */
+  /* 架子内判定：a 放到 b 上的结果（同名神将升星 / 同字同级升级 / 神将字凑对），不可合成返回 null */
   judgeRack(a, b) {
     if (!a || !b) return null;
     const ac = Merge.itemChar(a), al = Merge.itemLevel(a);
     const bc = Merge.itemChar(b), bl = Merge.itemLevel(b);
     if (b.type === 'unit' && b.unit.isGeneral) {
-      return (ac === bc && al === bl && bl < b.unit.maxLevel) ? 'general-level' : null;
+      if (ac === bc) {
+        if ((b.unit.star || 0) < CONFIG.generalStars.max) return 'general-star';
+        return (al === bl && bl < b.unit.maxLevel) ? 'general-level' : null;
+      }
+      return null;
     }
     if (ac === bc) return (al === bl && bl < Merge.itemMaxLevel(b)) ? 'level' : null;
     if (CONFIG.pairs[ac + bc] || CONFIG.pairs[bc + ac]) return 'pair';
@@ -110,6 +118,11 @@ const Merge = {
     const verdict = Merge.judgeRack(a, b);
     if (!verdict) return null;
     if (a.type === 'unit' && a.unit.gear) { R.equips.push(a.unit.gear); GearUI.refresh(); }   // 被吸收单位的装备回库
+    if (verdict === 'general-star') {
+      R.rack[i] = null;
+      b.unit.starUp();
+      return { verdict, text: `升星 · ${b.unit.def.name} ★${b.unit.star}` };
+    }
     if (verdict === 'pair') {
       const aCh = Merge.itemChar(a), bCh = Merge.itemChar(b);
       if (b.type === 'unit' && b.unit.gear) { R.equips.push(b.unit.gear); GearUI.refresh(); }
@@ -157,6 +170,12 @@ const Merge = {
     }
 
     const verdict = Merge.judge(aChar, aLevel, b);
+    if (verdict === 'general-star') {
+      if (aUnit) Merge.removeUnit(aUnit);
+      b.starUp();
+      Bus.emit('towerMerged', { kind: 'general-star', unit: b });
+      return { action: 'star', unit: b };
+    }
     if (verdict === 'level' || verdict === 'general-level') {
       const lv = Math.min(b.maxLevel, Math.max(aLevel, b.level) + 1);
       if (aUnit) Merge.removeUnit(aUnit);
@@ -231,9 +250,16 @@ const Merge = {
     if (lv > (m[key] || 0)) { m[key] = lv; Save.write(); }
   },
 
-  /* 出售返还：普通字塔 sellRefund，神将 sellRefund + 4×等级；「回春」词条每层 +2 */
+  /* 图鉴星级记录：神将历史最高星（只升不降） */
+  recordStar(key, star) {
+    const m = Save.data.codex.genStar = Save.data.codex.genStar || {};
+    if (star > (m[key] || 0)) { m[key] = star; Save.write(); }
+  },
+
+  /* 出售返还：普通字塔 sellRefund，神将 sellRefund + 4×等级 + 6×星；「回春」词条每层 +2 */
   sellValue(u) {
     const mod = R.mods.sell * CONFIG.waveMods.steps.sell;
-    return CONFIG.economy.sellRefund + mod + (u.isGeneral ? 4 * u.level : 0);
+    return CONFIG.economy.sellRefund + mod +
+      (u.isGeneral ? 4 * u.level + (u.star || 0) * CONFIG.generalStars.sellStep : 0);
   },
 };

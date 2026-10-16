@@ -25,33 +25,33 @@ const Skills = {
   },
 
   /* 孙悟空：棍卷风云 —— 3 秒旋棍（专属 +0.5s/级），多次范围伤害+短暂眩晕 */
-  wukong(g) { g.spinT = 3 + 0.5 * g.sigLv; g.spinTick = 0; },
+  wukong(g) { g.spinT = (3 + 0.5 * g.sigLv) * g.starMul; g.spinTick = 0; },
 
   /* 猪八戒：倒打一耙 —— 周围敌人定身（专属 +0.2s/级）并击退 1 格（路径进度回退） */
   wuneng(g) {
     for (const e of Skills.enemiesAround(g, 1.4)) {
-      e.applyStun(1.2 + 0.2 * g.sigLv);
+      e.applyStun((1.2 + 0.2 * g.sigLv) * g.starMul);
       e.s = Math.max(0, e.s - Grid.tile);
       e.pos();
-      e.takeDamage(Math.round(g.atk * 1.2), g);
+      e.takeDamage(Math.round(g.atk * 1.2 * g.starMul), g);
     }
     FX.ring(g.x, g.y, g.rangePx * 1.4, '#8f7bb8');
   },
 
   /* 沙悟净：流沙河 —— 范围内敌人减速（专属 +3%/级）持续 4s */
   wujing(g) {
-    const slowF = Math.max(0.45, 0.6 - 0.03 * g.sigLv);
-    for (const e of Skills.enemiesAround(g, 1.2)) e.applySlow(slowF, 4);
+    const slowF = Math.max(0.4, 0.6 - 0.03 * g.sigLv - 0.04 * g.star);
+    for (const e of Skills.enemiesAround(g, 1.2)) e.applySlow(slowF, 4 * g.starMul);
     FX.ring(g.x, g.y, g.rangePx * 1.2, '#6f86b8');
   },
 
   /* 哪吒：乾坤圈 —— 攻击在至多 3 个敌人间弹射（专属 +1/级） */
   nezha(g) {
     const targets = Skills.enemiesAround(g, 1.2)
-      .sort((a, b) => b.s - a.s).slice(0, 3 + g.sigLv);
+      .sort((a, b) => b.s - a.s).slice(0, 3 + g.sigLv + g.star);
     let from = g;
     for (const e of targets) {
-      e.takeDamage(Math.round(g.atk * 1.2), g);
+      e.takeDamage(Math.round(g.atk * 1.2 * g.starMul), g);
       FX.tracer(from.x, from.y, Math.atan2(e.y - from.y, e.x - from.x),
         Math.hypot(e.x - from.x, e.y - from.y), '#d66a4a');
       from = e;
@@ -59,13 +59,13 @@ const Skills = {
   },
 
   /* 金吒：降魔杵 —— 蓄力，下一击 300%（专属 +20%/级） */
-  jinzha(g) { g.nextMul = 3 + 0.2 * g.sigLv; },
+  jinzha(g) { g.nextMul = (3 + 0.2 * g.sigLv) * g.starMul; },
 
   /* 木吒：吴钩双剑 —— 周围友塔攻速 +30% 5s（专属 +3%/级） */
   muzha(g) {
     for (const t of R.towers) {
       if (t === g || t.def.kind === 'aura') continue;
-      if (Math.hypot(t.x - g.x, t.y - g.y) <= Grid.tile * 2.5) { t.hasteDur = 5; t.hasteMul = 1.3 + 0.03 * g.sigLv; }
+      if (Math.hypot(t.x - g.x, t.y - g.y) <= Grid.tile * 2.5) { t.hasteDur = 5; t.hasteMul = 1 + (0.3 + 0.03 * g.sigLv) * g.starMul; }
     }
   },
 
@@ -82,17 +82,17 @@ const Skills = {
       if (dist > len) continue;
       let diff = Math.abs(Math.atan2(dy, dx) - ang);
       if (diff > Math.PI) diff = Math.PI * 2 - diff;
-      if (diff < 0.14) e.takeDamage(g.atk * (2 + 0.15 * g.sigLv), g);   // 专属 +15%/级
+      if (diff < 0.14) e.takeDamage(g.atk * (2 + 0.15 * g.sigLv) * g.starMul, g);   // 专属 +15%/级
     }
     FX.tracer(g.x, g.y, ang, len, '#7a6fd0');
   },
 
   /* 王母娘娘：蟠桃盛会 —— 轮回殿 +2 心（专属 3 级起再 +1），周围友塔攻速 +25% 5s */
   wangmu(g) {
-    R.hearts = Math.min(R.heartsMax, R.hearts + CONFIG.drops.mightHeart + 1 + (g.sigLv >= 3 ? 1 : 0));
+    R.hearts = Math.min(R.heartsMax, R.hearts + CONFIG.drops.mightHeart + 1 + g.star + (g.sigLv >= 3 ? 1 : 0));
     for (const t of R.towers) {
       if (t === g || t.def.kind === 'aura') continue;
-      if (Math.hypot(t.x - g.x, t.y - g.y) <= Grid.tile * 2.5) { t.hasteDur = 5; t.hasteMul = 1.25; }
+      if (Math.hypot(t.x - g.x, t.y - g.y) <= Grid.tile * 2.5) { t.hasteDur = 5; t.hasteMul = 1 + 0.25 * g.starMul; }
     }
     const base = Grid.center(CONFIG.base.col, CONFIG.base.row);
     FX.float('+2 心', base.x, base.y - Grid.tile * 0.8, '#ff8fa0', 18);
@@ -103,8 +103,8 @@ const Skills = {
   yudi(g) {
     for (const e of R.enemies) {
       if (!e.alive) continue;
-      e.applyStun(2 + 0.15 * g.sigLv);
-      e.takeDamage(Math.round(g.atk * 1.5), g);
+      e.applyStun((2 + 0.15 * g.sigLv) * g.starMul);
+      e.takeDamage(Math.round(g.atk * 1.5 * g.starMul), g);
     }
     FX.ring(CONFIG.logicalW / 2, CONFIG.logicalH / 2, Grid.tile * 6, '#d6b24a');
   },
@@ -117,7 +117,7 @@ const Skills = {
       if (!best || e.hp < best.hp) best = e;
     }
     if (best) {
-      best.deathMark = { t: Math.max(1.5, 3 - 0.2 * g.sigLv), src: g };
+      best.deathMark = { t: Math.max(1.2, (3 - 0.2 * g.sigLv) / g.starMul), src: g };
       FX.float('生死簿', best.x, best.y - Grid.tile * 0.7, '#4a4a58', 16);
     }
   },
@@ -126,12 +126,12 @@ const Skills = {
   change(g) {
     const targets = Skills.enemiesAround(g, 1.1);
     for (const e of targets) {
-      R.projectiles.push(new Projectile(g.x, g.y - Grid.tile * 0.2, e, Math.round(g.atk * (1.2 + 0.1 * g.sigLv)),
+      R.projectiles.push(new Projectile(g.x, g.y - Grid.tile * 0.2, e, Math.round(g.atk * (1.2 + 0.1 * g.sigLv) * g.starMul),
         { src: g, color: '#e0d0ff', size: 6, shape: 'moon', glow: 12, trail: '#b8a8e8', impact: true }));
     }
     if (targets.length) SFX.play('shoot');
   },
 
   /* 李靖：玲珑宝塔 —— 塔影罩范围（专属 +0.5s/级）：减速 30% + 持续受伤 */
-  lijing(g) { g.zoneT = 4 + 0.5 * g.sigLv; g.zoneTick = 0; },
+  lijing(g) { g.zoneT = (4 + 0.5 * g.sigLv) * g.starMul; g.zoneTick = 0; },
 };

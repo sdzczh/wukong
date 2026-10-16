@@ -61,7 +61,7 @@ const Game = {
     if (!lu || !lu.items || !lu.items.length) return null;
     const items = [...lu.items].sort((a, b) => b.dmg - a.dmg);   // 高伤塔优先占近路位
     if (lu.kind === kind && seed && lu.seed === seed) {
-      return items.map(it => ({ c: it.col, r: it.row, ch: it.ch, god: it.god, lv: it.lv }));
+      return items.map(it => ({ c: it.col, r: it.row, ch: it.ch, god: it.god, lv: it.lv, star: it.star || 0 }));
     }
     const cands = [];
     for (let r = 0; r < Grid.rows; r++) for (let c = 0; c < Grid.cols; c++) {
@@ -85,7 +85,7 @@ const Game = {
       }
       if (!best) break;
       used.add(best.c + ',' + best.r);
-      out.push({ c: best.c, r: best.r, ch: it.ch, god: it.god, lv: it.lv });
+      out.push({ c: best.c, r: best.r, ch: it.ch, god: it.god, lv: it.lv, star: it.star || 0 });
     }
     return out.length ? out : null;
   },
@@ -135,7 +135,7 @@ const Game = {
           const [pc, pr] = p.split(',').map(Number);
           ring = Math.min(ring, Math.max(Math.abs(pc - u.col), Math.abs(pr - u.row)));
         }
-        return { ch: u.def.char, god: !!u.isGeneral, lv: u.level, mode: u.mode || 'first', ring,
+        return { ch: u.def.char, god: !!u.isGeneral, lv: u.level, star: u.star || 0, mode: u.mode || 'first', ring,
                  col: u.col, row: u.row,
                  dmg: (R.dmgStats[u.tid] || { dmg: 0 }).dmg };
       }),
@@ -564,7 +564,7 @@ function drawDropHints() {
       state = (Grid.placeable(h.c, h.r) && R.towers.length < CONFIG.towerCap) ? 'ok' : 'fail';
     } else {
       const v = Merge.judge(held.ch, held.lv, t);
-      if (v === 'level' || v === 'general-level' || v === 'pair') state = 'ok';
+      if (v === 'level' || v === 'general-level' || v === 'general-star' || v === 'pair') state = 'ok';
       // 换位只对棋盘↔拖拽有效；架子字落到不可合成的塔上视为不可
       else state = (v === 'swap' && held.src === 'board') ? 'swap' : 'fail';
     }
@@ -883,7 +883,7 @@ const Input = {
     const aLevel = item.type === 'unit' ? item.unit.level : (item.lv || 1);
     for (const t of R.towers) {
       const v = Merge.judge(aChar, aLevel, t);
-      if (v === 'level' || v === 'general-level' || v === 'pair') return t;
+      if (v === 'level' || v === 'general-level' || v === 'general-star' || v === 'pair') return t;
     }
     return null;
   },
@@ -891,19 +891,27 @@ const Input = {
   /* 棋盘单位两两可合成集合（棋盘↔棋盘、棋盘↔架子卡均算）：
      渲染每帧调用一次——先建计数表，再 O(1) 逐塔判定 */
   boardMergeFlags() {
-    const bCnt = new Map(), rCnt = new Map();
+    const bCnt = new Map(), rCnt = new Map(), gCnt = new Map();
     const bChars = new Set(), rChars = new Set();
     const bump = (m, ch, lv) => { const k = ch + '|' + lv; m.set(k, (m.get(k) || 0) + 1); };
-    for (const t of R.towers) { bump(bCnt, t.def.char, t.level); bChars.add(t.def.char); }
+    for (const t of R.towers) {
+      bump(bCnt, t.def.char, t.level); bChars.add(t.def.char);
+      if (t.isGeneral) gCnt.set(t.def.char, (gCnt.get(t.def.char) || 0) + 1);   // 同名神将（任意等级）计数
+    }
     for (const it of R.rack) {
       if (!it) continue;
-      if (it.type === 'unit') { bump(rCnt, it.unit.def.char, it.unit.level); rChars.add(it.unit.def.char); }
-      else { bump(rCnt, it.ch, it.lv || 1); rChars.add(it.ch); }
+      if (it.type === 'unit') {
+        bump(rCnt, it.unit.def.char, it.unit.level); rChars.add(it.unit.def.char);
+        if (it.unit.isGeneral) gCnt.set(it.unit.def.char, (gCnt.get(it.unit.def.char) || 0) + 1);
+      } else { bump(rCnt, it.ch, it.lv || 1); rChars.add(it.ch); }
     }
     const out = new Set();
     for (const t of R.towers) {
       const ch = t.def.char;
-      if (t.level < t.maxLevel &&
+      // 神将：未满星且有第二张同名（棋盘或架子，任意等级）→ 可升星
+      if (t.isGeneral) {
+        if ((t.star || 0) < CONFIG.generalStars.max && (gCnt.get(ch) || 0) >= 2) { out.add(t); continue; }
+      } else if (t.level < t.maxLevel &&
           ((bCnt.get(ch + '|' + t.level) || 0) >= 2 || (rCnt.get(ch + '|' + t.level) || 0) >= 1)) {
         out.add(t);
         continue;
@@ -944,7 +952,9 @@ const Input = {
       ? String(item.unit.key).startsWith('ling:')
       : !CONFIG.charToTower[aChar];
     if (item.type === 'unit' && item.unit.isGeneral) {
-      HUD.toast('场上和架上都没有同级同名神将可升级');
+      HUD.toast((item.unit.star || 0) < CONFIG.generalStars.max
+        ? '场上和架上都没有第二张同名神将可升星'
+        : '已满星，场上也没有同级同名神将可升级');
     } else if (isLing) {
       const ph = Merge.pairHintOf(aChar);
       HUD.toast(ph ? `场上没有「${ph.with}」字塔，架上也没有「${ph.with}」字可凑对` : '场上和架上都没有可配对的目标');
@@ -1054,6 +1064,10 @@ Bus.on('enemyKilled', e => {
   FX.float('+' + reward + ' 桃', e.x, e.y - Grid.tile * 0.2, '#ffd867', 15);
   const src = e.lastHitBy;
   if (src && src.isGeneral) src.gainExp((e.def.exp || 1) * (e.expMul || 1));
+  if (src && src.isGeneral && src.starMaxed && src.key === 'yanwang' && RNG.next() < 0.2) {
+    src.skillT = 0;   // 满星阎王·索命：击杀 20% 概率刷新技能
+    FX.float('索命·技已刷新', src.x, src.y - Grid.tile * 0.9, '#c0c0e0', 14);
+  }
   if (src && src.key === 'wukong') { Save.data.wukongKills++; Save.write(); }
   if (e.type === 'boss') { Save.data.bossKills = (Save.data.bossKills || 0) + 1; Save.write(); }
   let dropChance = e.type === 'boss' ? CONFIG.drops.bossChance : CONFIG.drops.chance;
@@ -1080,6 +1094,13 @@ Bus.on('leak', e => {
 });
 
 Bus.on('waveStart', n => {
+  // 满星王母·福泽：每波开始 +2 桃
+  for (const g of R.towers) {
+    if (g.isGeneral && g.starMaxed && g.key === 'wangmu') {
+      R.peaches += 2;
+      FX.float('福泽 +2 桃', g.x, g.y - Grid.tile * 0.9, '#f0a8cc', 15);
+    }
+  }
   const boss = n % 5 === 0;
   const bp = boss ? CONFIG.bossPool[(Math.ceil(n / 5) - 1) % CONFIG.bossPool.length] : null;
   const sub = R.endless

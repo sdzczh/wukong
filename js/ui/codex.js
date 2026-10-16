@@ -56,6 +56,7 @@ const Codex = {
     const e = this.entries();
     const lvMap = Save.data.codex.charLv || {};
     const genLvMap = Save.data.codex.genLv || {};
+    const starMap = Save.data.codex.genStar || {};
     if (this.tab === 'chars') {
       let n2 = 0, n3 = 0, known = 0;
       const cells = e.chars.map(x => {
@@ -81,19 +82,22 @@ const Codex = {
           if (slv > 0) withSig++;
         }
         const glv = x.unlock ? (genLvMap[x.key] || 1) : 0;
+        const gst = x.unlock ? (starMap[x.key] || 0) : 0;
         const tier = x.unlock ? (glv >= 3 ? ' lv3' : glv === 2 ? ' lv2' : '') : '';
         const badge = glv > 1 ? `<span class="codex-lv lv${glv >= 3 ? 3 : 2}">实战 Lv${glv}</span>` : '';
+        const starBadge = gst > 0 ? `<span class="codex-lv star">${'★'.repeat(gst)}</span>` : '';
         const sigDef = slv > 0 ? CONFIG.sigGear[x.key] : null;
         const sigLine = sigDef ? `<span class="codex-sig" style="color:${sigDef.color}">随身 ${sigDef.name} Lv${slv}</span>` : '';
         const body = x.unlock
           ? `<span class="codex-ch" style="color:${d.color}">${d.char}</span>` +
             `<span class="codex-nm">${d.name}</span>` +
             `<span class="codex-sub" style="color:${rc}">${d.rarity} · 攻${d.atk} 速${d.rate} 程${d.range}</span>` +
-            `<span class="codex-skill">${d.skill.name}：${d.skill.desc}</span>` + sigLine
+            `<span class="codex-skill">${d.skill.name}：${d.skill.desc}</span>` +
+            `<span class="codex-skill">满星 · ${d.star3.name}：${d.star3.desc}</span>` + sigLine
           : `<span class="codex-ch">？</span>` +
             `<span class="codex-nm">？？？</span>` +
             `<span class="codex-sub">合成 ${d.pair.map(ch => ch + (Save.data.codex.chars[ch] ? '✓' : '')).join(' + ')} 解锁</span>`;
-        return `<div class="codex-cell general${x.unlock ? tier : ' locked'}">` + badge + body + `</div>`;
+        return `<div class="codex-cell general${x.unlock ? tier : ' locked'}">` + badge + starBadge + body + `</div>`;
       }).join('');
       stats.innerHTML = `<div class="codex-meta">已唤醒 ${awoken}/${e.generals.length} 位神将 · 随身专属 ${withSig} 件</div>` +
         `<div class="codex-grid">` + cells + `</div>`;

@@ -3,9 +3,31 @@ class General extends Tower {
   constructor(key, col, row) {
     super(key, col, row);
     this.exp = 0;
+    this.star = 0;        // 升星（同名神将合并 +1，满星解锁 star3 被动）
     this.skillT = 3;      // 开局 3s 后可用技能
     this.spinT = 0; this.spinTick = 0;   // 悟空旋棍
     this.zoneT = 0; this.zoneTick = 0;   // 李靖宝塔
+  }
+
+  /* 星级加成：每星攻击 +8%、技能效果 +15% */
+  get starMul() { return 1 + this.star * CONFIG.generalStars.skillStep; }
+  get starMaxed() { return this.star >= CONFIG.generalStars.max; }
+
+  /* 升星（合并同名神将时调用） */
+  starUp() {
+    this.star = Math.min(CONFIG.generalStars.max, this.star + 1);
+    Merge.recordStar(this.key, this.star);
+    const rc = CONFIG.rarityColors[this.def.rarity] || '#ffd867';
+    FX.ring(this.x, this.y, Grid.tile * 1.1, rc);
+    FX.float('★' + this.star, this.x, this.y - Grid.tile * 0.9, '#ffd867', 19);
+    if (this.starMaxed) {
+      FX.float('满星 · ' + this.def.star3.name, this.x, this.y - Grid.tile * 1.4, '#ffdfa0', 16);
+      HUD.toast(`${this.def.name} 满星！解锁被动「${this.def.star3.name}」：${this.def.star3.desc}`);
+    } else {
+      HUD.toast(`${this.def.name} 升星 ★${this.star}（攻击+8% · 技能+15%）`);
+    }
+    SFX.play('levelup');
+    Bus.emit('generalStarUp', this);
   }
 
   /* 升级所需经验：随等级线性增长（8/12/16/20…），压住无尽里的指数成长 */
@@ -50,7 +72,7 @@ class General extends Tower {
           if (!e.alive) continue;
           if (Math.hypot(e.x - this.x, e.y - this.y) <= Grid.tile * 1.8) {
             e.applyStun(0.3);
-            e.takeDamage(Math.round(this.atk * 0.6), this);
+            e.takeDamage(Math.round(this.atk * 0.6 * this.starMul), this);
           }
         }
         const a = (performance.now() / 180) % (Math.PI * 2);
@@ -67,7 +89,7 @@ class General extends Tower {
           if (!e.alive) continue;
           if (Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx) {
             e.applySlow(0.7, 0.6);
-            e.takeDamage(Math.max(1, Math.round(this.atk * 0.3) - (e.armor || 0)), this);
+            e.takeDamage(Math.max(1, Math.round(this.atk * 0.3 * this.starMul) - (e.armor || 0)), this);
           }
         }
         FX.ring(this.x, this.y, this.rangePx, '#8a9a6a');
@@ -90,6 +112,18 @@ class General extends Tower {
 
   draw(ctx) {
     super.draw(ctx);
+    // 星标：字牌下缘金星（满星金晕）
+    if (this.star > 0) {
+      const tile = Grid.tile;
+      const y = this.y + tile * 0.52;
+      ctx.save();
+      ctx.font = `900 ${Math.round(tile * 0.2)}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (this.starMaxed) { ctx.shadowColor = '#ffd867'; ctx.shadowBlur = 7; }
+      ctx.fillStyle = '#ffd867';
+      ctx.fillText('★'.repeat(this.star), this.x, y);
+      ctx.restore();
+    }
     // 技能就绪标记：金色光点
     if (this.skillT <= 0) {
       const tile = Grid.tile;
@@ -102,4 +136,30 @@ class General extends Tower {
       ctx.restore();
     }
   }
+}
+
+/* ---------- 满星被动查询（star3）：塔攻击链路按需调用 ----------
+   督战/连环：周围 2 格友塔增益；天威：全体增益；天目：自身射程+破隐 */
+function genPassiveAtkMul(t) {
+  let m = 1 + (t.star || 0) * CONFIG.generalStars.atkStep;   // 自身每星攻击 +8%
+  for (const g of R.towers) {
+    if (!g.isGeneral || !g.starMaxed) continue;
+    if (g.key === 'yudi') m += 0.10;   // 天威：全体攻击 +10%
+    else if (g.key === 'wuneng' && g !== t &&
+             Math.hypot(g.x - t.x, g.y - t.y) <= Grid.tile * 2) m += 0.15;   // 督战
+  }
+  return m;
+}
+function genPassiveRateMul(t) {
+  for (const g of R.towers) {
+    if (g !== t && g.isGeneral && g.starMaxed && g.key === 'muzha' &&
+        Math.hypot(g.x - t.x, g.y - t.y) <= Grid.tile * 2) return 1.2;   // 连环
+  }
+  return 1;
+}
+function genRangeBonus(t) {
+  return (t.isGeneral && t.starMaxed && t.key === 'yangjian') ? 1.5 : 0;   // 天目：+1.5 格（rangePx 内统一 ×Grid.tile）
+}
+function genSeesStealth(t) {
+  return !!(t.isGeneral && t.starMaxed && t.key === 'yangjian');   // 天目：可攻击遁形
 }

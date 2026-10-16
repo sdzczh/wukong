@@ -32,12 +32,14 @@ class Tower {
     const dread = bossDreadMul();   // 玄甲鬼将威压：存活时全军攻击 -25%
     const legend = 1 + (R.mods.latk || 0) * CONFIG.waveMods.legendSteps.latk;   // 传说·天罡战气
     return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * dread * legend
+      * genPassiveAtkMul(this)   // 神将星级攻击加成 + 满星天威/督战光环
       * (1 + this.gearMods.atkMul) * (1 + Bonds.bonus().atk) * (1 + R.mods.atk * CONFIG.waveMods.steps.atk));
   }
   get rangePx() {
     // 非光环单位享受当局射程地板：任何已开放格都摸得到路径
     const floor = this.def.kind === 'aura' ? 0 : (R.rangeFloor || 0);
-    return (Math.max(this.def.range, floor) + this.levelMul.range * (this.level - 1)) * (1 + this.gearMods.rangeMul) * Grid.tile;
+    return ((Math.max(this.def.range, floor) + this.levelMul.range * (this.level - 1)) * (1 + this.gearMods.rangeMul)
+      + genRangeBonus(this)) * Grid.tile;   // 满星杨戬·天目射程 +1.5 格
   }
 
   /* 营的战鼓加成：半径随等级扩圈，每级攻速额外 +5% */
@@ -54,11 +56,12 @@ class Tower {
 
   inRange(e) { return Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx; }
 
-  /* 索敌：按 this.mode 选取（默认最先 = 路径 progress 最大者）；隐匿遁形者跳过 */
+  /* 索敌：按 this.mode 选取（默认最先 = 路径 progress 最大者）；隐匿遁形者跳过（满星杨戬·天目可破隐） */
   pickTarget(enemies) {
+    const seeStealth = genSeesStealth(this);
     let best = null, bestVal = 0;
     for (const e of enemies) {
-      if (!e.alive || e.stealth || !this.inRange(e)) continue;
+      if (!e.alive || (e.stealth && !seeStealth) || !this.inRange(e)) continue;
       let v;
       if (this.mode === 'near') v = -Math.hypot(e.x - this.x, e.y - this.y);
       else if (this.mode === 'strong') v = e.hp;
@@ -79,7 +82,8 @@ class Tower {
     if (!target) return;
     const haste = this.hasteDur > 0 ? (this.hasteMul || 1.3) : 1;
     const bonds = Bonds.bonus();
-    this.cd = 1 / (this.def.rate * this.auraMul() * haste * (1 + this.gearMods.rateMul)
+    this.cd = 1 / (this.def.rate * this.auraMul() * haste * genPassiveRateMul(this)   // 满星木吒·连环
+      * (1 + this.gearMods.rateMul)
       * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate)
       * (1 + (R.mods.lrate || 0) * CONFIG.waveMods.legendSteps.lrate)   // 传说·神行法
       * (R.blessWave && R.blessWave.rate ? CONFIG.peachSink.bless.rate.mul : 1));
@@ -88,8 +92,13 @@ class Tower {
   }
 
   fire(target, enemies) {
-    const dmg = Math.round(this.atk * (this.nextMul || 1));
+    let dmg = Math.round(this.atk * (this.nextMul || 1));
     this.nextMul = 0;
+    // 满星金吒·破军：25% 暴击 ×2
+    if (this.starMaxed && this.key === 'jinzha' && RNG.next() < 0.25) {
+      dmg *= 2;
+      FX.float('暴击', this.x, this.y - Grid.tile * 0.85, '#ff8a5c', 16);
+    }
     const af = this.def.atkfx || null;
     if (this.def.kind === 'arrow') {
       const opts = { src: this };
@@ -98,6 +107,24 @@ class Tower {
         opts.glow = af.glow; opts.trail = af.trail; opts.impact = af.impact;
       }
       R.projectiles.push(new Projectile(this.x, this.y - Grid.tile * 0.2, target, dmg, opts));
+      // 满星被动：哪吒·三头六臂（额外命中 1 敌 50%）／嫦娥·月华（溅射目标相邻 50%）
+      if (this.isGeneral && this.starMaxed) {
+        if (this.key === 'nezha') {
+          const other = enemies.find(e => e.alive && e !== target && this.inRange(e));
+          if (other) {
+            other.takeDamage(Math.round(dmg * 0.5), this);
+            FX.tracer(target.x, target.y, Math.atan2(other.y - target.y, other.x - target.x),
+              Math.hypot(other.x - target.x, other.y - target.y), '#d66a4a');
+          }
+        } else if (this.key === 'change') {
+          for (const e of enemies) {
+            if (!e.alive || e === target) continue;
+            if (Math.hypot(e.x - target.x, e.y - target.y) <= Grid.tile * 1.1) {
+              e.takeDamage(Math.round(dmg * 0.5), this);
+            }
+          }
+        }
+      }
       SFX.play('shoot');
     } else if (this.def.kind === 'pierce') {
       const ang = Math.atan2(target.y - this.y, target.x - this.x);
