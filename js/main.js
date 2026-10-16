@@ -1077,9 +1077,10 @@ Bus.on('leak', e => {
 
 Bus.on('waveStart', n => {
   const boss = n % 5 === 0;
+  const bp = boss ? CONFIG.bossPool[(Math.ceil(n / 5) - 1) % CONFIG.bossPool.length] : null;
   const sub = R.endless
-    ? (boss ? '无尽征战，鬼将亲至！' : '无尽征战，敌势无穷！')
-    : (boss ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '魂行黄泉，忘却轮回，杀！'));
+    ? (boss ? `无尽征战，${bp.name}亲至！` : '无尽征战，敌势无穷！')
+    : (boss ? `${bp.name}亲至，小心应对！` : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '魂行黄泉，忘却轮回，杀！'));
   HUD.showBanner('第 ' + n + ' 波', sub, boss);
   SFX.play(boss ? 'alarm' : 'horn');
   HUD.refresh();
@@ -1296,6 +1297,13 @@ window.GAME = {
     e.s = Grid.totalLen * 0.25;
     e.pos();
     e.makeElite(affix || undefined);
+    R.enemies.push(e);
+    return e;
+  },
+  spawnBoss: kind => {   // 指定鬼将池种类直造 boss（验收用）
+    const e = new Enemy('boss', 1, kind || CONFIG.bossPool[0].id);
+    e.s = Grid.totalLen * 0.15;
+    e.pos();
     R.enemies.push(e);
     return e;
   },

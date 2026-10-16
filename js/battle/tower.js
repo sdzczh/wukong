@@ -29,7 +29,8 @@ class Tower {
   get atk() {
     const might = R.mightT > 0 ? CONFIG.drops.mightMul : 1;
     const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
-    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent
+    const dread = bossDreadMul();   // 玄甲鬼将威压：存活时全军攻击 -25%
+    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * dread
       * (1 + this.gearMods.atkMul) * (1 + Bonds.bonus().atk) * (1 + R.mods.atk * CONFIG.waveMods.steps.atk));
   }
   get rangePx() {
@@ -52,11 +53,11 @@ class Tower {
 
   inRange(e) { return Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx; }
 
-  /* 索敌：按 this.mode 选取（默认最先 = 路径 progress 最大者） */
+  /* 索敌：按 this.mode 选取（默认最先 = 路径 progress 最大者）；隐匿遁形者跳过 */
   pickTarget(enemies) {
     let best = null, bestVal = 0;
     for (const e of enemies) {
-      if (!e.alive || !this.inRange(e)) continue;
+      if (!e.alive || e.stealth || !this.inRange(e)) continue;
       let v;
       if (this.mode === 'near') v = -Math.hypot(e.x - this.x, e.y - this.y);
       else if (this.mode === 'strong') v = e.hp;

@@ -23,10 +23,18 @@ const Gear = {
     if (GearUI.bar) GearUI.refresh();
   },
 
-  /* boss 必掉 1 枚专属碎片：优先场上神将，否则 12 选 1；立即入档（败局也保留） */
+  /* boss 必掉 1 枚专属碎片：鬼将池轮换后按种类绑定三位神将（场上神将若在绑定列中则 70% 优先），
+     无绑定（兼容旧档/测试直造 boss）退回全场池；立即入档（败局也保留） */
   dropSigShard(e) {
+    const bound = e.bossDef && e.bossDef.shards;
     const onBoard = R.towers.filter(t => t.isGeneral).map(t => t.key);
-    const pool = onBoard.length && RNG.next() < 0.7 ? onBoard : Object.keys(CONFIG.sigGear);
+    let pool;
+    if (bound) {
+      const hit = onBoard.filter(k => bound.includes(k));
+      pool = hit.length && RNG.next() < 0.7 ? hit : bound.slice();
+    } else {
+      pool = onBoard.length && RNG.next() < 0.7 ? onBoard : Object.keys(CONFIG.sigGear);
+    }
     const key = pool[RNG.int(pool.length)];
     const sg = CONFIG.sigGear[key];
     Save.data.shards = Save.data.shards || {};

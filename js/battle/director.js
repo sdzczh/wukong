@@ -29,17 +29,21 @@ const Director = {
     this.timer += dt;
     while (this.spawnIdx < this.cur.spawns.length && this.cur.spawns[this.spawnIdx].t <= this.timer) {
       const sp = this.cur.spawns[this.spawnIdx++];
-      const e = new Enemy(sp.type, this.cur.hpMul);
+      const e = new Enemy(sp.type, this.cur.hpMul, sp.bossKind);
       // 精英词缀：中后期普通怪概率升级
       if (sp.type !== 'boss' && this.cur.n >= CONFIG.elite.fromWave && RNG.next() < CONFIG.elite.chance) {
         e.makeElite();
         FX.ring(e.x, e.y, Grid.tile * 0.9, CONFIG.elite.affixes[e.affix].color);
       }
-      // boss 入场：冲击波 + 屏震
+      // boss 入场：冲击波 + 屏震 + 种类点名
       if (sp.type === 'boss') {
         FX.ring(e.x, e.y, Grid.tile * 2.4, '#d64545', { life: 0.6, width: 5, grow: 90 });
         FX.spark(e.x, e.y, '#d64545', 14);
         FX.shake(7, 0.4);
+        if (e.bossDef) {
+          FX.float(e.bossDef.name, e.x, e.y - Grid.tile * 1.1, e.bossDef.color, 20);
+          HUD.toast(`${e.bossDef.name}：${e.bossDef.desc}`);
+        }
       }
       R.enemies.push(e);
     }

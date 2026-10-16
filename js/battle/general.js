@@ -67,7 +67,7 @@ class General extends Tower {
           if (!e.alive) continue;
           if (Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx) {
             e.applySlow(0.7, 0.6);
-            e.takeDamage(Math.max(1, Math.round(this.atk * 0.3) - (e.def.armor || 0)), this);
+            e.takeDamage(Math.max(1, Math.round(this.atk * 0.3) - (e.armor || 0)), this);
           }
         }
         FX.ring(this.x, this.y, this.rangePx, '#8a9a6a');

@@ -1,6 +1,6 @@
-/* 敌人：沿路径移动的魂系单位（elite = 精英词缀怪） */
+/* 敌人：沿路径移动的魂系单位（elite = 精英词缀怪；bossKind = 鬼将池轮换种类） */
 class Enemy {
-  constructor(type, hpMul) {
+  constructor(type, hpMul, bossKind) {
     const d = CONFIG.enemies[type];
     this.type = type; this.def = d;
     const ruleMul = R.rules ? R.rules.enemyHpMul : 1;
@@ -14,6 +14,19 @@ class Enemy {
     this.shield = 0; this.shieldMax = 0; this.shieldT = 0;
     this.healT = 0; this.mini = false;          // mini = 分裂出的小分身
     this.rewardMul = 1; this.expMul = 1;
+    this.armor = d.armor || 0;                  // 护甲（鬼将池可覆写）
+    this.bossKind = null; this.bossDef = null;  // Boss 池：xuanjia/zhaohuan/kuangbao/yinshen
+    this.summonT = 3;                           // 唤魂：下次召小鬼
+    this.stealth = false; this.stealthT = CONFIG.bossStealth.off;   // 隐匿：现形先行
+    this.enraged = false;                       // 狂暴：半血触发一次
+    if (type === 'boss' && bossKind) {
+      const bp = CONFIG.bossPool.find(b => b.id === bossKind);
+      if (bp) {
+        this.bossKind = bp.id; this.bossDef = bp;
+        if (bp.armor) this.armor = bp.armor;
+        if (bp.color) this.tint = bp.color;
+      }
+    }
     this.pos();
   }
 
@@ -38,8 +51,10 @@ class Enemy {
 
   get speedPx() {
     const swift = this.affix === 'swift' ? 1.6 : 1;
+    const rage = (this.bossKind === 'kuangbao' && this.enraged) ? CONFIG.bossEnrageSpd : 1;
+    const kind = this.bossDef && this.bossDef.speedMul ? this.bossDef.speedMul : 1;
     const bless = R.blessWave && R.blessWave.slow ? CONFIG.peachSink.bless.slow.spdMul : 1;
-    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * bless * (R.rules ? R.rules.enemySpdMul : 1);
+    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * rage * kind * bless * (R.rules ? R.rules.enemySpdMul : 1);
   }
 
   pos() {
@@ -50,6 +65,39 @@ class Enemy {
   update(dt) {
     if (!this.alive) return;
     if (this.flash > 0) this.flash -= dt;
+    // Boss 池机制：唤魂召小鬼 / 隐匿周期遁形 / 狂暴半血暴走
+    if (this.bossKind === 'zhaohuan') {
+      this.summonT -= dt;
+      if (this.summonT <= 0) {
+        this.summonT = CONFIG.bossSummonEvery;
+        const mul = this.maxHp / CONFIG.enemies.boss.hp;   // 随波次水涨船高
+        for (let i = 0; i < 2; i++) {
+          const m = new Enemy('ghost', 1);
+          m.maxHp = Math.max(1, Math.round(CONFIG.enemies.ghost.hp * mul * 1.5));
+          m.hp = m.maxHp;
+          m.mini = true; m.rewardMul = 0;
+          m.s = Math.max(0, this.s - i * Grid.tile * 0.3);
+          m.pos();
+          R.enemies.push(m);
+        }
+        FX.ring(this.x, this.y, Grid.tile * 0.9, this.bossDef.color);
+        FX.float('唤魂', this.x, this.y - Grid.tile * 0.7, this.bossDef.color, 15);
+      }
+    }
+    if (this.bossKind === 'yinshen') {
+      this.stealthT -= dt;
+      if (this.stealthT <= 0) {
+        this.stealth = !this.stealth;
+        this.stealthT = this.stealth ? CONFIG.bossStealth.on : CONFIG.bossStealth.off;
+        FX.ring(this.x, this.y, Grid.tile * 0.8, this.stealth ? '#5cc0a8' : '#e8d5a5');
+      }
+    }
+    if (this.bossKind === 'kuangbao' && !this.enraged && this.hp < this.maxHp * 0.5) {
+      this.enraged = true;
+      FX.ring(this.x, this.y, Grid.tile * 1.6, '#d64545', { life: 0.7, width: 5, grow: 80 });
+      FX.shake(6, 0.35);
+      FX.float('狂暴', this.x, this.y - Grid.tile * 0.8, '#d64545', 20);
+    }
     // 精英：治疗光环（护盾重生成在受击破盾后计时）
     if (this.elite) {
       if (this.shieldMax > 0 && this.shield < this.shieldMax) {
@@ -83,7 +131,7 @@ class Enemy {
         const src = this.deathMark.src;
         this.deathMark = null;
         // 按真实剩余量斩杀（含护甲与护盾）：伤害统计与飘字不被 99999 虚高
-        this.takeDamage(this.hp + (this.def.armor || 0) + (this.shield || 0), src);
+        this.takeDamage(this.hp + this.armor + (this.shield || 0), src);
         return;
       }
     }
@@ -101,7 +149,7 @@ class Enemy {
 
   takeDamage(dmg, src) {
     if (!this.alive) return;
-    let eff = Math.max(1, dmg - (this.def.armor || 0));
+    let eff = Math.max(1, dmg - (this.armor || 0));
     // 伤害统计：按实际输出计（含被护盾吸收部分）
     const out = eff;
     if (src && src.tid) {
@@ -151,15 +199,37 @@ class Enemy {
 
   draw(ctx, now) {
     const tile = Grid.tile;
-    const size = tile * this.def.size * (this.mini ? 0.7 : 1);
+    const size = tile * this.def.size * (this.mini ? 0.7 : 1) * (this.enraged ? 1 + Math.sin(now * 9) * 0.05 : 1);
     const bob = Math.sin(now * 4.5 + this.wobble) * tile * 0.04;
 
     // 影
     ctx.save();
+    if (this.stealth) ctx.globalAlpha = 0.22;   // 隐匿：遁形时近乎透明（仍可见淡影防彻底丢目标）
     ctx.fillStyle = '#00000055';
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + size * 0.42, size * 0.42, size * 0.14, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // Boss 池：狂暴红环 / 玄甲甲环
+    if (this.bossKind === 'kuangbao' && this.enraged) {
+      ctx.strokeStyle = '#d64545';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([9, 6]);
+      ctx.lineDashOffset = now * 40;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y + bob * 0.5, size * 0.85, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (this.bossKind === 'xuanjia') {
+      ctx.strokeStyle = 'rgba(106,122,154,0.55)';
+      ctx.lineWidth = 5;
+      ctx.setLineDash([4, 9]);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y + bob * 0.5, size * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     // 精英：旋转虚线环
     if (this.elite && this.affix) {
@@ -178,7 +248,7 @@ class Enemy {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 4; ctx.strokeStyle = '#12101ccc';
     ctx.strokeText(this.def.char, this.x, this.y + bob);
-    ctx.fillStyle = this.flash > 0 ? '#ffffff' : this.def.color;
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : (this.tint || this.def.color);
     ctx.fillText(this.def.char, this.x, this.y + bob);
 
     // 精英：词缀角标
@@ -191,6 +261,17 @@ class Enemy {
       ctx.font = `900 ${Math.round(size * 0.3)}px "Ma Shan Zheng","Kaiti SC","STKaiti","KaiTi",serif`;
       ctx.fillStyle = '#1a1626';
       ctx.fillText(a.char, bx, by + 1);
+    }
+
+    // Boss 池：种类角标（挂右上，与精英词缀角标镜像）
+    if (this.bossDef) {
+      const bx = this.x + size * 0.6, by = this.y - size * 0.52;
+      ctx.fillStyle = this.bossDef.color;
+      ctx.beginPath(); ctx.arc(bx, by, size * 0.32, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#12101c'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = `900 ${Math.round(size * 0.32)}px "Ma Shan Zheng","Kaiti SC","STKaiti","KaiTi",serif`;
+      ctx.fillStyle = '#1a1626';
+      ctx.fillText(this.bossDef.char, bx, by + 1);
     }
 
     // 状态标记
@@ -208,6 +289,14 @@ class Enemy {
       ctx.font = `900 ${Math.round(size * 0.34)}px sans-serif`;
       ctx.fillStyle = '#7fc4ff';
       ctx.fillText('❄', this.x + size * 0.42, this.y - size * 0.5);
+    }
+    // 隐匿：遁形提示（略提亮，隐了也得知道为啥打不着）
+    if (this.stealth) {
+      ctx.globalAlpha = 0.85;
+      ctx.font = `900 ${Math.round(size * 0.36)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
+      ctx.fillStyle = '#5cc0a8';
+      ctx.fillText('遁', this.x - size * 0.42, this.y - size * 0.5);
+      ctx.globalAlpha = 0.22;
     }
 
     // 血条（精英常显；带护盾时下方追加蓝色盾条）
@@ -229,4 +318,10 @@ class Enemy {
     }
     ctx.restore();
   }
+}
+
+/* 玄甲鬼将威压：场上存活的玄甲使全军攻击 -25%（塔攻击、弹道伤害统一走 Tower.atk） */
+function bossDreadMul() {
+  for (const e of R.enemies) if (e.alive && e.bossKind === 'xuanjia') return 0.75;
+  return 1;
 }

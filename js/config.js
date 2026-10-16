@@ -214,6 +214,27 @@ const CONFIG = {
     swarm:  { char: '游', name: '游魂', hp: 8,   speed: 1.3, reward: 1,  exp: 1, dmg: 1, size: 0.46, color: '#9aa3b8' },
     boss:   { char: '鬼', name: '鬼将', hp: 600, speed: 0.5, reward: 20, exp: 4, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
   },
+
+  /* Boss 池轮换：每个鬼将波（n%5==0）从池中按波次轮换登场，机制与碎片偏好绑定。
+     shards：该鬼将必掉的专属碎片偏向哪三位神将（碎片掉落绑定） */
+  bossPool: [
+    { id: 'xuanjia', char: '甲', name: '玄甲鬼将', color: '#6a7a9a', armor: 8,
+      desc: '玄甲庇体：护甲极高，且存活时全军攻击 -25%',
+      shards: ['lijing', 'jinzha', 'yanwang'] },
+    { id: 'zhaohuan', char: '唤', name: '唤魂鬼将', color: '#9a6fd0',
+      desc: '唤魂：行进间不断召出幽魂小鬼',
+      shards: ['wangmu', 'change', 'wuneng'] },
+    { id: 'kuangbao', char: '狂', name: '狂暴鬼将', color: '#d64545', speedMul: 1.15,
+      desc: '狂暴：半血后怒不可遏，移速暴涨',
+      shards: ['wukong', 'nezha', 'muzha'] },
+    { id: 'yinshen', char: '隐', name: '隐匿鬼将', color: '#5cc0a8',
+      desc: '隐匿：周期遁形 2 秒，隐身时无法被索敌',
+      shards: ['yangjian', 'yudi', 'wujing'] },
+  ],
+  bossSummonEvery: 4,      // 唤魂：召小鬼间隔（秒）
+  bossStealth: { on: 2, off: 3 },   // 隐匿：遁形/现形时长（秒）
+  bossEnrageSpd: 1.6,      // 狂暴：半血后移速乘数
+
   waveCount: 10,
   waveHpGrowth: 1.14,
   // 前期保护：前 earlyWaveCount 波敌人血量乘 earlyWaveHpEase（给新玩家上手缓冲）
@@ -318,6 +339,12 @@ const CONFIG = {
   },
 };
 
+/* Boss 池轮换：第 5 波→池 0、第 10 波→池 1……按波次公式轮换（不用 RNG，保日/周种子回放一致） */
+function bossKindFor(n) {
+  const pool = CONFIG.bossPool;
+  return pool[(Math.ceil(n / 5) - 1) % pool.length].id;
+}
+
 /* 无尽波次生成：n>10；公式延续前十波的节奏并逐波加压 */
 function buildEndlessWave(n) {
   const list = [];
@@ -331,7 +358,7 @@ function buildEndlessWave(n) {
     else if (r < 0.68) type = 'wraith';
     list.push({ t: 2 + i * 1.0, type });
   }
-  if (isBoss) list.push({ t: 2 + count * 1.0 + 2, type: 'boss' });
+  if (isBoss) list.push({ t: 2 + count * 1.0 + 2, type: 'boss', bossKind: bossKindFor(n) });
   return { n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1), spawns: list };
 }
 
@@ -351,7 +378,7 @@ function buildWaves() {
       else if (n >= 2 && r < 0.62) type = 'wraith';
       list.push({ t: 2 + i * 1.1, type });
     }
-    if (isBoss) list.push({ t: 2 + count * 1.1 + 2, type: 'boss' });
+    if (isBoss) list.push({ t: 2 + count * 1.1 + 2, type: 'boss', bossKind: bossKindFor(n) });
     const ease = n <= CONFIG.earlyWaveCount ? CONFIG.earlyWaveHpEase : 1;
     waves.push({ n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1) * ease, spawns: list });
   }
