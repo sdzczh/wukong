@@ -13,6 +13,10 @@ const Skills = {
     const tile = Grid.tile;
     FX.float('✦ ' + g.def.skill.name, g.x, g.y - tile * 0.95, CONFIG.rarityColors[g.def.rarity] || '#ffd867', 16);
     FX.ring(g.x, g.y, tile * 1.1, CONFIG.rarityColors[g.def.rarity] || '#ffd867');
+    // 熟练度特效强化（纯表现）：Lv1 双环 → Lv3 花火
+    const mt = Mastery.tierOf(g.key);
+    if (mt >= 1) FX.ring(g.x, g.y, tile * 1.7, '#ffd867', { life: 0.5, width: 2.5 });
+    if (mt >= 3) FX.spark(g.x, g.y, '#ffd867', 10);
     FX.shake(4, 0.22);
     SFX.play('skill');
   },

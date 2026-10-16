@@ -80,6 +80,10 @@ const CONFIG = {
   /* 神将升星：同名神将合并 → +1 星（任意等级可作材料）；每星攻击/技能强化，满星解锁被动 */
   generalStars: { max: 3, atkStep: 0.08, skillStep: 0.15, sellStep: 6 },
 
+  /* 神将熟练度：上场次数累计（跨局），纯表现特效强化（不影响数值）
+     tier1 技能双环 → tier2 字牌金描边+出场花火 → tier3 常驻金晕+技能花火 */
+  mastery: { tiers: [5, 15, 40], names: ['初试锋芒', '驾轻就熟', '出神入化'] },
+
   towerMaxLevel: 5,
   towerLevelMul: { atk: 0.4, range: 0.15 },
 

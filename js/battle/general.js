@@ -163,3 +163,26 @@ function genRangeBonus(t) {
 function genSeesStealth(t) {
   return !!(t.isGeneral && t.starMaxed && t.key === 'yangjian');   // 天目：可攻击遁形
 }
+
+/* ---------- 神将熟练度：上场次数累计（跨局），纯表现特效强化 ---------- */
+const Mastery = {
+  uses(key) { return (Save.data.mastery && Save.data.mastery[key]) || 0; },
+  tierOf(key) {
+    const u = this.uses(key), t = CONFIG.mastery.tiers;
+    return u >= t[2] ? 3 : u >= t[1] ? 2 : u >= t[0] ? 1 : 0;
+  },
+  /* 上场计数：每局每神将只记一次（铲回再上不刷次数） */
+  countPlace(key) {
+    R.masteryCounted = R.masteryCounted || new Set();
+    if (R.masteryCounted.has(key)) return;
+    R.masteryCounted.add(key);
+    const m = Save.data.mastery = Save.data.mastery || {};
+    const before = this.tierOf(key);
+    m[key] = (m[key] || 0) + 1;
+    const after = this.tierOf(key);
+    if (after > before) {
+      HUD.toast(`${CONFIG.towers[key].name} 熟练度提升 · ${CONFIG.mastery.names[after - 1]}`);
+      Save.write();
+    } else if (m[key] % 5 === 0) Save.write();   // 攒 5 次落一次盘
+  },
+};

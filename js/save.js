@@ -13,6 +13,7 @@ const Save = {
       daily: { key: 0, best: 0 },         // 每日轮回当日最佳（key=yyyymmdd）
       weekly: { key: 0, best: 0 },        // 每周异变本周最佳（key=yyyy*100+周序）
       codex: {},                          // 神将图鉴点亮（M3）
+      mastery: {},                        // 神将熟练度：上场次数累计（key → uses）
       talents: { po: 0, zs: 0, cs: 0 },   // 三系已点层数（M4）
       shards: {},                         // 专属装备碎片（boss 掉落，带出对局）
       sigGear: {},                        // 专属装备等级（局外合成升级，永久）

@@ -93,7 +93,11 @@ const Codex = {
             `<span class="codex-nm">${d.name}</span>` +
             `<span class="codex-sub" style="color:${rc}">${d.rarity} · 攻${d.atk} 速${d.rate} 程${d.range}</span>` +
             `<span class="codex-skill">${d.skill.name}：${d.skill.desc}</span>` +
-            `<span class="codex-skill">满星 · ${d.star3.name}：${d.star3.desc}</span>` + sigLine
+            `<span class="codex-skill">满星 · ${d.star3.name}：${d.star3.desc}</span>` +
+            (() => {
+              const mu = Mastery.uses(x.key), mt = Mastery.tierOf(x.key);
+              return `<span class="codex-skill">熟练 ${mt > 0 ? `Lv${mt} ${CONFIG.mastery.names[mt - 1]}` : '尚未入门'} · 上场 ${mu} 次</span>`;
+            })() + sigLine
           : `<span class="codex-ch">？</span>` +
             `<span class="codex-nm">？？？</span>` +
             `<span class="codex-sub">合成 ${d.pair.map(ch => ch + (Save.data.codex.chars[ch] ? '✓' : '')).join(' + ')} 解锁</span>`;

@@ -1347,6 +1347,8 @@ window.GAME = {
   staticInfo: () => ({ builds: staticBuilds, dirty: staticDirty, w: bgCv && bgCv.width, h: bgCv && bgCv.height }),
   ghosts: () => R.ghosts,
   lineup: () => Save.data.lastLineup,
+  masteryState: () => Save.data.mastery,
+  masterySet: (key, n) => { Save.data.mastery[key] = n; Save.write(); },
   tutState: () => TutUI.step,
   tutFinish: () => TutUI.finish(),
   achState: () => ({ n: Object.keys(Save.data.ach || {}).length, title: Ach.titleText(), fresh: Ach.fresh.map(a => a.name) }),

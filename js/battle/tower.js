@@ -170,8 +170,15 @@ class Tower {
     ctx.fillStyle = this.def.cardBg || '#f3ead6';
     ctx.strokeStyle = this.isGeneral ? (CONFIG.rarityColors[this.def.rarity] || '#e8933c') : '#c3b18a';
     ctx.lineWidth = this.isGeneral ? 3.5 : 2.5;
+    // 熟练度特效（纯表现）：Lv2 金描边 → Lv3 常驻金晕
+    if (this.isGeneral) {
+      const mt = Mastery.tierOf(this.key);
+      if (mt >= 2) { ctx.strokeStyle = '#ffd867'; ctx.lineWidth = 4; }
+      if (mt >= 3) { ctx.shadowColor = '#ffd867'; ctx.shadowBlur = 9; }
+    }
     roundRect(ctx, -half, -half, half * 2, half * 2, 9);
     ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;   // 金晕只上牌框，字保持清爽
     ctx.fillStyle = '#00000012';
     roundRect(ctx, -half + 4, half * 0.35, half * 2 - 8, half * 0.5, 6);
     ctx.fill();

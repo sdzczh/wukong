@@ -47,7 +47,7 @@ const Merge = {
     }
     Grid.tiles[row][col].tower = u;
     R.towers.push(u);
-    if (u.isGeneral) Gear.onGeneralBorn(u);   // 局外专属随身提示
+    if (u.isGeneral) { Gear.onGeneralBorn(u); Mastery.countPlace(u.key); }   // 专属随身提示 + 熟练度上场计数
     Bonds.invalidate();                        // 神将增减 → 羁绊重算
     return u;
   },

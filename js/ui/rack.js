@@ -436,6 +436,8 @@ const RackUI = {
       rows.push(t.starMaxed
         ? `<span class="sel-passive">满星被动 · ${s3.name}：${s3.desc}</span>`
         : `<span class="sel-passive-locked">满星 ★★★ 解锁被动「${s3.name}」：${s3.desc}</span>`);
+      const mu = Mastery.uses(t.key), mt = Mastery.tierOf(t.key);
+      rows.push(`熟练 ${mt > 0 ? `Lv${mt} · ${CONFIG.mastery.names[mt - 1]}` : '尚未入门'}（上场 ${mu} 次）`);
     }
     if (t.gear) {
       const f = CONFIG.gear.families[t.gear.fam];
