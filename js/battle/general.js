@@ -26,6 +26,7 @@ class General extends Tower {
       if (this.exp < need) break;
       this.exp -= need;
       this.level++;
+      Merge.recordGeneral(this.key, this.level);   // 图鉴实战最高等级
       this.skillT = Math.min(this.skillT, 2);   // 升级奖励：技能快转 2s
       FX.ring(this.x, this.y, Grid.tile * 0.9, CONFIG.rarityColors[this.def.rarity] || '#e8933c');
       FX.float('Lv' + this.level, this.x, this.y - Grid.tile * 0.7, '#ffd867', 17);

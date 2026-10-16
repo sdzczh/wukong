@@ -123,11 +123,14 @@ const Merge = {
     if (b.type === 'unit') {
       b.unit.level = Math.min(b.unit.maxLevel, b.unit.level + 1);
       if (verdict === 'general-level') b.unit.exp = 0;
+      if (b.unit.isGeneral) Merge.recordGeneral(b.unit.key, b.unit.level);
+      else Merge.recordChar(b.unit.def.char, b.unit.level);
       R.rack[i] = null;
       SFX.play('merge');
       return { verdict, text: `合成升级 · ${b.unit.def.name} Lv${b.unit.level}` };
     }
     b.lv = (b.lv || 1) + 1;
+    Merge.recordChar(Merge.itemChar(b), b.lv);
     R.rack[i] = null;
     SFX.play('merge');
     return { verdict, text: `合成升级 · ${Merge.itemChar(b)} Lv${b.lv}` };
@@ -148,7 +151,7 @@ const Merge = {
       if (aUnit) { Merge.removeUnit(aUnit); }
       const u = Merge.makeUnit(aUnit || Merge.towerKeyOfChar(aChar), col, row);
       if (aUnit) u.cd = 0.1;
-      else if (a.lv > 1) u.level = Math.min(u.maxLevel, a.lv);   // 自走棋式高级字卡：直接落为对应等级
+      else if (a.lv > 1) { u.level = Math.min(u.maxLevel, a.lv); Merge.recordChar(aChar, u.level); }   // 自走棋式高级字卡：直接落为对应等级
       SFX.play('place');
       return { action: 'move', unit: u };
     }
@@ -159,6 +162,8 @@ const Merge = {
       if (aUnit) Merge.removeUnit(aUnit);
       b.level = lv;
       if (verdict === 'general-level') b.exp = 0;
+      if (b.isGeneral) Merge.recordGeneral(b.key, lv);
+      else Merge.recordChar(b.def.char, lv);
       const color = verdict === 'general-level' ? (CONFIG.rarityColors[b.def.rarity] || '#e8933c') : '#ffd867';
       FX.ring(b.x, b.y, Grid.tile * 0.85, color);
       FX.float('Lv' + lv, b.x, b.y - Grid.tile * 0.6, '#ffd867', 16);
@@ -213,6 +218,17 @@ const Merge = {
       Save.data.codex.chars[ch] = true;
       Save.write();
     }
+  },
+
+  /* 图鉴等级记录：字 / 神将历史最高等级（只升不降） */
+  recordChar(ch, lv) {
+    const m = Save.data.codex.charLv = Save.data.codex.charLv || {};
+    if (lv > (m[ch] || 0)) { m[ch] = lv; Save.write(); }
+  },
+
+  recordGeneral(key, lv) {
+    const m = Save.data.codex.genLv = Save.data.codex.genLv || {};
+    if (lv > (m[key] || 0)) { m[key] = lv; Save.write(); }
   },
 
   /* 出售返还：普通字塔 sellRefund，神将 sellRefund + 4×等级；「回春」词条每层 +2 */

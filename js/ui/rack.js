@@ -187,6 +187,7 @@ const RackUI = {
     const d = R.draft.splice(i, 1)[0];
     R.rack[slot] = { type: 'char', ch: d.ch, lv: d.lv };
     Merge.unlockChar(d.ch);
+    Merge.recordChar(d.ch, d.lv);
     SFX.play('place');
     if (R.rack.every(x => x)) {
       R.draft = null;
@@ -310,6 +311,7 @@ const RackUI = {
       const ch = this.rollChar();
       R.rack[slot] = { type: 'char', ch };
       Merge.unlockChar(ch);
+      Merge.recordChar(ch, 1);
     }
   },
 

@@ -21,11 +21,13 @@ const Save = {
     try {
       this.data = Object.assign(this.defaults(), JSON.parse(localStorage.getItem(this.KEY)) || {});
     } catch (e) { this.data = this.defaults(); }
-    // 图鉴结构归一：{ chars: {}, generals: {} }（兼容早期扁平结构）
+    // 图鉴结构归一：{ chars, generals, charLv, genLv }（兼容早期扁平结构）
     const raw = this.data.codex || {};
     this.data.codex = {
       chars: raw.chars || {},
       generals: raw.generals || (raw.chars ? {} : raw),
+      charLv: raw.charLv || {},          // 各字历史最高等级（图鉴等级区分）
+      genLv: raw.genLv || {},            // 各神将实战最高等级
     };
     if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
   },
@@ -67,6 +69,8 @@ const Save = {
       this.data.codex = {
         chars: raw.chars || {},
         generals: raw.generals || (raw.chars ? {} : raw),
+        charLv: raw.charLv || {},
+        genLv: raw.genLv || {},
       };
       if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
       this.write();

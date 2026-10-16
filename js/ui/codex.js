@@ -53,25 +53,49 @@ const Codex = {
       b.addEventListener('click', () => { SFX.play('click'); this.tab = b.dataset.tab; this.render(); }));
 
     const e = this.entries();
+    const lvMap = Save.data.codex.charLv || {};
+    const genLvMap = Save.data.codex.genLv || {};
     if (this.tab === 'chars') {
-      stats.innerHTML = `<div class="codex-grid">` + e.chars.map(x =>
-        `<div class="codex-cell ${x.unlock ? '' : 'locked'} ${x.god ? 'god' : ''}">` +
-        `<span class="codex-ch">${x.unlock ? x.ch : '？'}</span>` +
-        `<span class="codex-nm">${x.unlock ? x.name : '未收录'}</span>` +
-        `</div>`).join('') + `</div>`;
+      let n2 = 0, n3 = 0, known = 0;
+      const cells = e.chars.map(x => {
+        const lv = x.unlock ? (lvMap[x.ch] || 1) : 0;
+        if (x.unlock) known++;
+        if (lv >= 3) n3++; else if (lv === 2) n2++;
+        const tier = x.unlock ? (lv >= 3 ? ' lv3' : lv === 2 ? ' lv2' : '') : '';
+        const badge = lv > 1 ? `<span class="codex-lv lv${lv >= 3 ? 3 : 2}">最高 Lv${lv}</span>` : '';
+        return `<div class="codex-cell${x.unlock ? tier : ' locked'}${x.god ? ' god' : ''}">` + badge +
+          `<span class="codex-ch">${x.unlock ? x.ch : '？'}</span>` +
+          `<span class="codex-nm">${x.unlock ? x.name : '未收录'}</span>` +
+          `</div>`;
+      }).join('');
+      stats.innerHTML = `<div class="codex-meta">已识 ${known}/${e.chars.length} 字 · Lv2 ${n2} 张 · Lv3 ${n3} 张</div>` +
+        `<div class="codex-grid">` + cells + `</div>`;
     } else {
-      stats.innerHTML = `<div class="codex-grid">` + e.generals.map(x => {
+      let awoken = 0, withSig = 0;
+      const cells = e.generals.map(x => {
         const d = x.def, rc = CONFIG.rarityColors[d.rarity];
+        const slv = x.unlock ? Gear.sigLvOf(x.key) : 0;
+        if (x.unlock) {
+          awoken++;
+          if (slv > 0) withSig++;
+        }
+        const glv = x.unlock ? (genLvMap[x.key] || 1) : 0;
+        const tier = x.unlock ? (glv >= 3 ? ' lv3' : glv === 2 ? ' lv2' : '') : '';
+        const badge = glv > 1 ? `<span class="codex-lv lv${glv >= 3 ? 3 : 2}">实战 Lv${glv}</span>` : '';
+        const sigDef = slv > 0 ? CONFIG.sigGear[x.key] : null;
+        const sigLine = sigDef ? `<span class="codex-sig" style="color:${sigDef.color}">随身 ${sigDef.name} Lv${slv}</span>` : '';
         const body = x.unlock
           ? `<span class="codex-ch" style="color:${d.color}">${d.char}</span>` +
             `<span class="codex-nm">${d.name}</span>` +
             `<span class="codex-sub" style="color:${rc}">${d.rarity} · 攻${d.atk} 速${d.rate} 程${d.range}</span>` +
-            `<span class="codex-skill">${d.skill.name}：${d.skill.desc}</span>`
+            `<span class="codex-skill">${d.skill.name}：${d.skill.desc}</span>` + sigLine
           : `<span class="codex-ch">？</span>` +
             `<span class="codex-nm">？？？</span>` +
-            `<span class="codex-sub">合成 ${d.pair[0]} + ${d.pair[1]} 解锁</span>`;
-        return `<div class="codex-cell general ${x.unlock ? '' : 'locked'}">${body}</div>`;
-      }).join('') + `</div>`;
+            `<span class="codex-sub">合成 ${d.pair.map(ch => ch + (Save.data.codex.chars[ch] ? '✓' : '')).join(' + ')} 解锁</span>`;
+        return `<div class="codex-cell general${x.unlock ? tier : ' locked'}">` + badge + body + `</div>`;
+      }).join('');
+      stats.innerHTML = `<div class="codex-meta">已唤醒 ${awoken}/${e.generals.length} 位神将 · 随身专属 ${withSig} 件</div>` +
+        `<div class="codex-grid">` + cells + `</div>`;
     }
     stats.style.maxHeight = '760px';
     stats.style.overflowY = 'auto';
