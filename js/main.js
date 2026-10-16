@@ -715,6 +715,25 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('resize', resize);
 
+/* ---------- iOS Safari：彻底封锁双击/捏合缩放 ----------
+   viewport 的 user-scalable=no 在部分 iOS 版本被忽略，纯 CSS touch-action 也偶有漏网，
+   这里再补两道保险：
+   1) 捏合缩放：拦截 Safari 专有 gesture 事件；
+   2) 双击缩放：两次 touchend 相隔 <320ms 即拦截（输入控件与按钮除外，
+      避免吞掉连点召唤等快速点击的 click）。
+   游戏内自己的「双击开垦」判定走 pointerdown，不受此处影响。 */
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+}
+let _lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const t = e.target;
+  if (t && t.closest && t.closest('input, textarea, button, .btn, .draft-card, .mod-card')) return;
+  const now = Date.now();
+  if (now - _lastTouchEnd <= 320) e.preventDefault();
+  _lastTouchEnd = now;
+}, { passive: false });
+
 /* ---------- 事件绑定 ---------- */
 Bus.on('togglePause', () => { R.state === 'battle' ? Game.pause() : Game.resume(); });
 

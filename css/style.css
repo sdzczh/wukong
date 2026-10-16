@@ -18,6 +18,8 @@ html, body {
   /* 移动端：fixed 防 iOS 橡皮筋滚动；overscroll 防下拉刷新/上拉导航 */
   position: fixed; inset: 0;
   overscroll-behavior: none;
+  /* 双击缩放封锁兜底：舞台外安全区/字面量区域同样禁双击放大（保留滚动与选择） */
+  touch-action: manipulation;
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   user-select: none;
   -webkit-user-select: none;

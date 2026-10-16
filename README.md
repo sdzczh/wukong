@@ -45,6 +45,8 @@
 
 已适配手机竖屏：舞台整体等比缩放（transform scale），触控拖拽/点选与桌面鼠标一致，支持高分辨率屏（背缓冲密度自适应），禁用了双击缩放/下拉刷新/橡皮筋滚动等浏览器默认手势；刘海屏读取 env(safe-area-inset-*) 留边，画面不被挖孔/圆角遮挡。背景音乐为 WebAudio 程序合成的低频氛围音（55/82.41/110Hz 三音呼吸漂移），随音效开关启停，零素材零加载。
 
+iOS Safari 缩放封锁为三层保险：viewport `user-scalable=no` + 全页 `touch-action`（舞台 none、页面 manipulation）+ JS 拦截（Safari 专有 gesturestart/change/end 事件拦捏合；320ms 内两次 touchend 拦双击，输入控件与按钮除外以免吞连点）——被忽略 viewport 的 iOS 版本也可靠 JS 层兜住。
+
 ## 技术栈
 
 原生 JavaScript + Canvas 2D（渲染）+ DOM Overlay（面板），零第三方依赖，可平滑移植微信小游戏。展示字体「马善政毛笔体」已子集化（约 340KB woff2，仅含游戏用字）。
