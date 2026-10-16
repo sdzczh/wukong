@@ -54,6 +54,8 @@ const Gear = {
     if (!this.canForge(fam)) return false;
     R.parts[fam] -= CONFIG.gear.forgeNeed;
     R.equips.push({ fam, lv: 1 });
+    Save.data.equipForged = (Save.data.equipForged || 0) + 1;
+    Ach.check();
     SFX.play('merge');
     HUD.toast(`${CONFIG.gear.families[fam].name}装备打造完成，点装备再点塔佩戴`);
     if (GearUI.bar) GearUI.refresh();
@@ -72,6 +74,8 @@ const Gear = {
     if (idxs.length < CONFIG.gear.forgeNeed) return false;
     for (let i = idxs.length - 1; i >= 0; i--) R.equips.splice(idxs[i], 1);
     R.equips.push({ fam, lv: lv + 1 });
+    Save.data.equipForged = (Save.data.equipForged || 0) + 1;
+    Ach.check();
     SFX.play('levelup');
     HUD.toast(`${CONFIG.gear.families[fam].name}装备升至 Lv${lv + 1}`);
     if (GearUI.bar) GearUI.refresh();
@@ -157,6 +161,7 @@ const Gear = {
     if (!this.canForgeSig(key)) return false;
     Save.data.shards[key] -= CONFIG.gear.sigForge;
     Save.data.sigGear[key] = 1;
+    Ach.check();
     Save.write();
     SFX.play('levelup');
     return true;

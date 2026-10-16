@@ -77,6 +77,8 @@ const Panels = {
 
   showMenu() {
     const s = Save.data;
+    Ach.check();   // 兜底：老档/导入档在此补结算成就
+    const titleTxt = Ach.titleText();
     const d = new Date();
     const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
     const dailyBest = (s.daily && s.daily.key === key) ? s.daily.best : 0;
@@ -94,7 +96,7 @@ const Panels = {
 
     this._fill(
       '无敌悟空',
-      `道友「${s.username || '无名氏'}」· 文字合成塔防 · 地府篇`,
+      `道友「${s.username || '无名氏'}」${titleTxt ? `·「<span style="color:#ffd867">${titleTxt}</span>」` : ''}· 文字合成塔防 · 地府篇`,
       `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}<br>` +
       `<span class="settle-break">本周异变　${Weekly.summary()}</span>`,
       []
@@ -222,6 +224,13 @@ const Panels = {
       ? `<br>本周异变最佳　${(Save.data.weekly && Save.data.weekly.key === Weekly.key()) ? Save.data.weekly.best : R.wave}　波`
       : '';
     const sigLine = R.sigRun > 0 ? `<br>本局专属碎片　+${R.sigRun}　（已入库，主菜单「装备库」合成）` : '';
+    // 称号与成就：佩戴中称号 + 本局新达成（展示后清空，避免跨局重复）
+    const wornTxt = Ach.titleText();
+    const titleLine = wornTxt ? `<br>佩戴称号　「<span style="color:#ffd867">${wornTxt}</span>」` : '';
+    const achLine = Ach.fresh.length
+      ? `<br><span style="color:#ffd867">成就达成　${Ach.fresh.map(a => a.name).join(' · ')}</span>`
+      : '';
+    Ach.fresh.length = 0;
     // 每塔伤害前三
     const tops = Object.values(R.dmgStats)
       .sort((a, b) => b.dmg - a.dmg).slice(0, 3)
@@ -234,7 +243,7 @@ const Panels = {
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
       `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + weeklyLine + sigLine + dmgLine;
+      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine;
     this._fill(title, sub, stats, [
       { text: '再 来 一 局', fn: () => Game.startRun() },
       { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },

@@ -114,11 +114,13 @@ const Game = {
       // 每日轮回：只记录当日的最佳波次
       if (!s.daily || s.daily.key !== R.daily) s.daily = { key: R.daily, best: 0 };
       s.daily.best = Math.max(s.daily.best, R.wave);
+      s.dailyDone = (s.dailyDone || 0) + 1;
     }
     if (R.runKind === 'weekly') {
       const wk = Weekly.key();
       if (!s.weekly || s.weekly.key !== wk) s.weekly = { key: wk, best: 0 };
       s.weekly.best = Math.max(s.weekly.best, R.wave);
+      s.weeklyDone = (s.weeklyDone || 0) + 1;
     }
     // 上局阵容快照：字/等级/索敌/离路环距/伤害（下局开局给占位建议；每日/每周同种子可直接复刻位）
     const pathSet = new Set();
@@ -139,6 +141,7 @@ const Game = {
       }),
     };
     if (lineup.items.length) s.lastLineup = lineup;
+    Ach.check();   // 成就结算：波次/击杀/收集等持久数据齐了再判（解锁即写档）
     Save.write();
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
@@ -1052,6 +1055,7 @@ Bus.on('enemyKilled', e => {
   const src = e.lastHitBy;
   if (src && src.isGeneral) src.gainExp((e.def.exp || 1) * (e.expMul || 1));
   if (src && src.key === 'wukong') { Save.data.wukongKills++; Save.write(); }
+  if (e.type === 'boss') { Save.data.bossKills = (Save.data.bossKills || 0) + 1; Save.write(); }
   let dropChance = e.type === 'boss' ? CONFIG.drops.bossChance : CONFIG.drops.chance;
   // 无尽征战掉率衰减：第 10 波后每波 ×0.85，掉落运气不再是续命主力
   if (R.endless && R.wave > CONFIG.waveCount) {
@@ -1324,6 +1328,9 @@ window.GAME = {
   lineup: () => Save.data.lastLineup,
   tutState: () => TutUI.step,
   tutFinish: () => TutUI.finish(),
+  achState: () => ({ n: Object.keys(Save.data.ach || {}).length, title: Ach.titleText(), fresh: Ach.fresh.map(a => a.name) }),
+  achUnlockAll: () => { ACHS.forEach(a => { if (!Save.data.ach[a.id]) Save.data.ach[a.id] = Date.now(); }); Save.write(); Ach.check(); },
+  achClear: () => { Save.data.ach = {}; Save.data.title = ''; Ach.fresh.length = 0; Save.write(); },
   snapshot: () => ({
     state: R.state, wave: R.wave, hearts: R.hearts, peaches: R.peaches,
     kills: R.kills, enemies: R.enemies.filter(e => e.alive).length,

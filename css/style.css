@@ -766,6 +766,31 @@ body {
   box-shadow: 0 2px 8px #00000066;
 }
 
+/* ---------- 图鉴·成就页签 ---------- */
+.ach-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.ach-cell {
+  position: relative; border-radius: 12px; padding: 12px 14px;
+  background: #2a2140; border: 2px solid #5a4872; cursor: pointer;
+}
+.ach-cell.locked { opacity: 0.55; cursor: default; }
+.ach-cell.equipped {
+  border-color: #e8b64c;
+  box-shadow: 0 0 0 1px #e8b64c55, 0 0 12px #e8b64c33;
+  background: #38301e;
+}
+.ach-name {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 22px; font-weight: 900; color: #e8b64c; line-height: 1.1;
+}
+.ach-cell.locked .ach-name { color: #6a5f85; }
+.ach-desc { font-size: 14px; color: #d9cdb4; margin-top: 5px; line-height: 1.4; }
+.ach-cell.locked .ach-desc { color: #8d80a8; }
+.ach-title { font-size: 13px; font-weight: 900; color: #9fd8ff; margin-top: 6px; }
+.ach-cell.equipped .ach-title { color: #ffd867; }
+
 /* ---------- 塔详情：索敌模式行 + 本塔伤害 ---------- */
 #sel-panel .sel-mode-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 #sel-panel .sel-mode-row .sm-label { font-size: 17px; color: #b9a8d4; white-space: nowrap; }

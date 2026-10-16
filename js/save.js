@@ -18,6 +18,12 @@ const Save = {
       sigGear: {},                        // 专属装备等级（局外合成升级，永久）
       lastLineup: null,                   // 上局阵容快照（占位建议用，{kind, seed, ts, items}）
       wukongKills: 0,
+      bossKills: 0,                       // 累计鬼将击杀（成就）
+      equipForged: 0,                     // 累计锻造装备件数（合成与升级都计，成就）
+      dailyDone: 0,                       // 完成每日轮回局数（成就）
+      weeklyDone: 0,                      // 完成每周异变局数（成就）
+      ach: {},                            // 成就达成表 {id: 时间戳}
+      title: '',                          // 当前佩戴称号（对应成就 id，''=未佩戴）
     };
   },
   load() {
