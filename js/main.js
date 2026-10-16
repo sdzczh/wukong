@@ -602,7 +602,17 @@ const Input = {
     if (!g.dragging) {
       // 点选：架子→arm；棋盘单位→选中
       if (g.src.type === 'rack') {
+        const now = performance.now();
+        const lt = this._lastSlotTap;
+        const dbl = lt && lt.slot === g.src.slot && now - lt.t < 400;
+        this._lastSlotTap = dbl ? null : { t: now, slot: g.src.slot };
+        if (dbl && this.autoMerge(g.src.slot)) return;   // 双击卡：自动合成场上同字同级/配对目标
         R.armedSlot = R.armedSlot === g.src.slot ? -1 : g.src.slot;
+        // 首次 arm 且场上有可合成目标 → 教一次双击
+        if (R.armedSlot === g.src.slot && !this._mergeTipShown && this.findMergeTarget(g.src.slot)) {
+          this._mergeTipShown = true;
+          HUD.toast('双击卡片，可自动合成场上的同字同级单位（神将字则自动凑对）');
+        }
         RackUI.hideSel();
         SFX.play('click');
       } else {
@@ -612,6 +622,7 @@ const Input = {
       RackUI.refresh();
       return;
     }
+    this._lastSlotTap = null;   // 拖拽不参与双击判定
 
     // 拖拽落下：先查架子槽，再查棋盘
     const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -660,6 +671,40 @@ const Input = {
     }
     RackUI.refresh();
     HUD.refresh();
+  },
+
+  /* 场上可合成的目标（双击合成 / 提示用）：同字同级、同级同名神将、神将字配对 */
+  findMergeTarget(slot) {
+    const item = R.rack[slot];
+    if (!item) return null;
+    const aChar = item.type === 'unit' ? item.unit.def.char : item.ch;
+    const aLevel = item.type === 'unit' ? item.unit.level : (item.lv || 1);
+    for (const t of R.towers) {
+      const v = Merge.judge(aChar, aLevel, t);
+      if (v === 'level' || v === 'general-level' || v === 'pair') return t;
+    }
+    return null;
+  },
+
+  /* 双击架子卡：有目标走正常落子链路立即合成；没有则提示原因 */
+  autoMerge(slot) {
+    const item = R.rack[slot];
+    if (!item) return false;
+    const t = this.findMergeTarget(slot);
+    if (t) { this.dropRack(slot, t.col, t.row, false); return true; }
+    const aChar = item.type === 'unit' ? item.unit.def.char : item.ch;
+    const isLing = item.type === 'unit'
+      ? String(item.unit.key).startsWith('ling:')
+      : !CONFIG.charToTower[aChar];
+    if (item.type === 'unit' && item.unit.isGeneral) {
+      HUD.toast('场上没有同级同名神将可升级');
+    } else if (isLing) {
+      const ph = Merge.pairHintOf(aChar);
+      HUD.toast(ph ? `场上没有「${ph.with}」字塔可凑对唤醒神将` : '场上没有可配对的目标');
+    } else {
+      HUD.toast(`场上没有同字同级的${aChar}单位可升级`);
+    }
+    return false;
   },
 
   /* 棋盘单位落到另一格 */
