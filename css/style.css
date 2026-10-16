@@ -757,6 +757,37 @@ body {
 .bless-chip.bought .bc-sub { color: #7fa383; }
 .bless-chip.bought:active { transform: none; }
 
+/* ---------- 瑶池祝福购买确认（祝福条上方，避免遮棋盘） ---------- */
+#bless-confirm {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 224px; z-index: 8; width: 470px;
+  padding: 16px 26px 18px; text-align: center;
+  background: #241b33f7; border: 3px solid #8a6fd0; border-radius: 18px;
+  box-shadow: 0 14px 44px #000c;
+}
+#bless-confirm .bc-title {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 30px; color: #e8b64c; letter-spacing: 8px; line-height: 1;
+  text-shadow: 0 3px 0 #6b3f14;
+}
+#bless-confirm .bc-body { margin-top: 10px; font-size: 19px; color: #d9cdb4; line-height: 1.45; }
+#bless-confirm .bc-body b { color: #ffd867; font-size: 24px; }
+#bless-confirm .bc-body em { font-style: normal; color: #9adf9f; }
+#bless-confirm .bc-btns {
+  margin-top: 14px; display: flex; gap: 14px; justify-content: center;
+}
+#bless-confirm .bc-btns button {
+  padding: 8px 30px; border-radius: 999px; cursor: pointer;
+  font-size: 20px; font-weight: 900; letter-spacing: 4px;
+  border: 3px solid #a97e22; background: linear-gradient(#ffd867, #e8a63c); color: #5a3a10;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#bless-confirm .bc-btns button:active { transform: translateY(2px); box-shadow: none; }
+#bless-confirm .bc-btns button.ghost {
+  border-color: #5a4872; background: #2e2440; color: #cfc2e4;
+  box-shadow: 0 3px 0 #1a1428;
+}
+
 /* ---------- 顶栏「装」按钮：开合态 + 可合成金边提示 ---------- */
 #btn-gear.on {
   background: #40351c; border-color: #e8b64c; color: #ffd867;

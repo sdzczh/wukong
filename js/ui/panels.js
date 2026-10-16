@@ -38,6 +38,7 @@ const Panels = {
 
   _fill(title, sub, statsHtml, buttons) {
     this.hideUnlock();   // 任何弹层出现时收起开垦确认
+    if (typeof BlessUI !== 'undefined' && BlessUI.hideConfirm) BlessUI.hideConfirm();   // 及祝福确认
     this.card.classList.remove('menu');   // 菜单专用布局仅主菜单使用
     this.title.textContent = title;
     this.sub.textContent = sub || '';

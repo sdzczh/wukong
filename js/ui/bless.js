@@ -13,10 +13,61 @@ const BlessUI = {
   init() {
     this.bar = document.getElementById('bless-bar');
     if (!this.bar) return;
+    this.confirmEl = document.getElementById('bless-confirm');
+    this.confirmBody = this.confirmEl ? this.confirmEl.querySelector('.bc-body') : null;
     this.bar.addEventListener('click', e => {
       const chip = e.target.closest('.bless-chip');
-      if (chip) { SFX.ensure(); this.buy(chip.dataset.id); }
+      if (chip) { SFX.ensure(); this.ask(chip.dataset.id); }
     });
+    if (this.confirmEl) {
+      document.getElementById('bc-yes').addEventListener('click', () => {
+        SFX.play('click'); this.confirmBuy();
+      });
+      document.getElementById('bc-no').addEventListener('click', () => {
+        SFX.play('click'); this.hideConfirm();
+      });
+    }
+  },
+
+  /* 点芯片：已购 / 心满 / 桃不足 → 直接 buy 走原有原因提示；可买 → 弹确认框 */
+  ask(id) {
+    if (!this.canShow()) return;
+    const done = !!(R.blessWave && R.blessWave[id]);
+    const fullHeart = id === 'heart' && R.hearts >= R.heartsMax;
+    if (done || fullHeart || R.peaches < this.cost(id)) { this.buy(id); return; }
+    this.showConfirm(id);
+  },
+
+  /* 确认框定位在祝福条正上方（随装备栏上抬联动），不遮棋盘中央 */
+  _placeConfirm() {
+    if (!this.confirmEl) return;
+    const gb = GearUI.open && GearUI.bar && !GearUI.bar.classList.contains('hidden')
+      ? GearUI.bar.offsetHeight : 0;
+    const barBottom = gb ? 156 + gb + 8 : 164;
+    this.confirmEl.style.bottom = (barBottom + (this.bar.offsetHeight || 52) + 8) + 'px';
+  },
+
+  showConfirm(id) {
+    if (!this.confirmEl) return;
+    const m = this.meta[id];
+    this._pending = id;
+    const effect = id === 'heart' ? '立即 +1 心（永久）' : m.sub + '，过波失效';
+    this.confirmBody.innerHTML =
+      `花 <b>${this.cost(id)}</b> 桃，购买「${m.name}」？<br><em>${effect}</em>（每波每项限购一次）`;
+    if (SFX.ensure) SFX.ensure();
+    this._placeConfirm();
+    this.confirmEl.classList.remove('hidden');
+  },
+
+  hideConfirm() {
+    this._pending = null;
+    if (this.confirmEl) this.confirmEl.classList.add('hidden');
+  },
+
+  confirmBuy() {
+    const id = this._pending;
+    this.hideConfirm();
+    if (id) this.buy(id);
   },
 
   /* 价格 = base + step × 当局已购数 */
@@ -36,11 +87,12 @@ const BlessUI = {
   refresh() {
     const bar = this.bar || document.getElementById('bless-bar');
     if (!bar) return;
-    if (!this.canShow()) { bar.classList.add('hidden'); bar.innerHTML = ''; bar._html = ''; return; }
+    if (!this.canShow()) { this.hideConfirm(); bar.classList.add('hidden'); bar.innerHTML = ''; bar._html = ''; return; }
     // 底栏上方横排；装备栏打开时整条上抬到装备栏上方让位
     const gb = GearUI.open && GearUI.bar && !GearUI.bar.classList.contains('hidden')
       ? GearUI.bar.offsetHeight : 0;
     bar.style.bottom = (gb ? 156 + gb + 8 : 164) + 'px';
+    if (this._pending) this._placeConfirm();   // 确认框跟着祝福条走
     // 首次出现给一次教学提示
     if (!R.blessTaught) { R.blessTaught = true; HUD.toast('蟠桃有处花：瑶池祝福每波限购一次'); }
     const html = this.ids.map(id => {
