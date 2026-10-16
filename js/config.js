@@ -21,6 +21,16 @@ const CONFIG = {
     interestEvery: 10, interestCap: 5,  // 过波息钱：每持 10 桃 +1，单波上限 +5
   },
 
+  /* 蟠桃出口：后期（尤其无尽）回收溢出桃——补铲 + 波间瑶池祝福 */
+  peachSink: {
+    shovel: { base: 50, step: 15 },               // 补铲价 = base + step × 当局已补数
+    bless: {
+      heart: { base: 30, step: 10 },              // 回心：立即 +1 心
+      rate:  { base: 45, step: 10, mul: 1.25 },   // 疾风：本波全员攻速 ×1.25
+      slow:  { base: 40, step: 10, spdMul: 0.6 }, // 定身：本波敌人移速 ×0.6
+    },
+  },
+
   // 召唤（抽字）：一次召唤弹出 draftSize 张卡，点选入架，未选的再召唤时消失
   summon: {
     base: 9, step: 1,                // 费用 = base + step × 已召唤次数

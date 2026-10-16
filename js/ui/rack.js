@@ -13,8 +13,21 @@ const RackUI = {
     this.stageEl = document.getElementById('stage');
 
     this.summonBtn.addEventListener('click', () => { SFX.ensure(); this.doSummon(); });
+    // 铲子：短按=开垦/取消；无铲时短按=花桃补铲；长按 0.52s=随时补铲
+    let shovelHold = null;
+    const cancelHold = () => { if (shovelHold) { clearTimeout(shovelHold); shovelHold = null; } };
+    this.shovelBtn.addEventListener('pointerdown', () => {
+      this._shovelHoldBuy = false;
+      cancelHold();
+      shovelHold = setTimeout(() => { shovelHold = null; this._shovelHoldBuy = true; this.buyShovel(); }, 520);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+      this.shovelBtn.addEventListener(ev, cancelHold));
     this.shovelBtn.addEventListener('click', () => {
-      SFX.ensure(); SFX.play('click');
+      SFX.ensure();
+      if (this._shovelHoldBuy) { this._shovelHoldBuy = false; return; } // 长按已补铲，吞掉收尾点击
+      SFX.play('click');
+      if (R.shovelLeft <= 0) { this.buyShovel(); return; }              // 无铲：短按即补
       R.tool = R.tool === 'shovel' ? null : 'shovel';
       if (R.tool === 'shovel') { R.armedSlot = -1; HUD.toast('点「封」字地块开垦；点单位铲回架子'); }
       this.refresh();
@@ -29,6 +42,26 @@ const RackUI = {
     this.draftBar.querySelector('.draft-x').addEventListener('click', () => { SFX.play('click'); this.discardDraft(); });
 
     this.buildSlots();
+  },
+
+  /* 补铲价 = base + step × 当局已补数 */
+  shovelBuyCost() {
+    const cfg = CONFIG.peachSink.shovel;
+    return cfg.base + cfg.step * (R.shovelBuys || 0);
+  },
+
+  /* 花桃补 1 把铲（无铲短按 / 长按 0.52s） */
+  buyShovel() {
+    if (R.state !== 'battle') return false;
+    const cost = this.shovelBuyCost();
+    if (R.peaches < cost) { HUD.toast(`补铲需 ${cost} 桃，蟠桃不足`); SFX.play('click'); return false; }
+    R.peaches -= cost;
+    R.shovelBuys++;
+    R.shovelLeft++;
+    SFX.play('coin');
+    HUD.toast(`瑶池补铲 +1（现有 ${R.shovelLeft} 把）· 下一把 ${this.shovelBuyCost()} 桃`);
+    HUD.refresh();
+    return true;
   },
 
   /* 3 桃重 roll 当前 5 张（不动保底计数） */
@@ -327,10 +360,20 @@ const RackUI = {
     this.summonBtn.querySelector('.sum-cost').textContent = cost + ' 桃';
     this.summonBtn.classList.toggle('disabled', full || R.peaches < cost || R.state !== 'battle');
     this.summonBtn.querySelector('.sum-label').textContent = full ? '架子满' : '召 唤';
-    // 铲子
-    this.shovelBtn.querySelector('.tname').textContent = '×' + R.shovelLeft;
-    this.shovelBtn.classList.toggle('disabled', R.shovelLeft <= 0 || R.state !== 'battle');
+    // 铲子：无铲时进补铲模式（短按即买）；有铲短按开垦、长按随时补铲
+    const shovelCost = this.shovelBuyCost();
+    const canBuy = R.state === 'battle' && R.peaches >= shovelCost;
+    this.shovelBtn.querySelector('.tname').textContent = R.shovelLeft > 0 ? '×' + R.shovelLeft : '补 1 把';
+    this.shovelBtn.querySelector('.tbuy').textContent = shovelCost + ' 桃';
+    this.shovelBtn.classList.toggle('disabled', R.shovelLeft <= 0 ? !canBuy : R.state !== 'battle');
     this.shovelBtn.classList.toggle('active', R.tool === 'shovel');
+    this.shovelBtn.classList.toggle('buy-mode', R.shovelLeft <= 0 && R.state === 'battle');
+    // 首次用完铲给一次教学提示
+    if (R.shovelLeft <= 0 && this._lastShovelN > 0 && !R.shovelTaught) {
+      R.shovelTaught = true;
+      HUD.toast(`铲子用完了 · 点铲子按钮或长按花 ${shovelCost} 桃补一把`);
+    }
+    this._lastShovelN = R.shovelLeft;
   },
 
   /* ---------- 拖拽幽灵 ---------- */

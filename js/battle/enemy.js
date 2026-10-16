@@ -38,7 +38,8 @@ class Enemy {
 
   get speedPx() {
     const swift = this.affix === 'swift' ? 1.6 : 1;
-    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * (R.rules ? R.rules.enemySpdMul : 1);
+    const bless = R.blessWave && R.blessWave.slow ? CONFIG.peachSink.bless.slow.spdMul : 1;
+    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * bless * (R.rules ? R.rules.enemySpdMul : 1);
   }
 
   pos() {

@@ -38,6 +38,11 @@ const R = {
   runKind: 'normal',  // 本局类型：normal | daily | weekly
   mods: null,         // 波间词条累计 {atk,rate,peach,interest,exp,aura,cd,sell}（resetRun 初始化）
   modOffer: null,     // 待选词条（3 个 id），非 null 时暂停开波
+  shovelBuys: 0,      // 当局花桃补铲数（补铲价递增）
+  blessBuys: null,    // 当局瑶池祝福已购数 {heart,rate,slow}（价格递增）
+  blessWave: null,    // 本波祝福/已购标记 {heart,rate,slow}；过波清空
+  blessTaught: false, // 本局是否已提示过瑶池祝福
+  shovelTaught: false,// 本局是否已提示过补铲
   weekly: null,       // 每周异变生效的规则名列表（展示用）
   rules: null,        // 本局全局规则倍率（newRules 初始化）
   dmgStats: null,     // 每塔伤害统计 {towerId: {name, dmg, color}}
@@ -88,6 +93,11 @@ function resetRun() {
   R.runKind = 'normal';
   R.mods = newMods();
   R.modOffer = null;
+  R.shovelBuys = 0;
+  R.blessBuys = { heart: 0, rate: 0, slow: 0 };
+  R.blessWave = {};
+  R.blessTaught = false;
+  R.shovelTaught = false;
   R.rules = newRules();
   R.weekly = null;
   R.dmgStats = {};     // 每塔伤害统计 {towerId: dmg}（resetRun 初始化）

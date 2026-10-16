@@ -730,7 +730,7 @@ for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
 let _lastTouchEnd = 0;
 document.addEventListener('touchend', e => {
   const t = e.target;
-  if (t && t.closest && t.closest('input, textarea, button, .btn, .draft-card, .mod-card')) return;
+  if (t && t.closest && t.closest('input, textarea, button, .btn, .draft-card, .mod-card, .bless-chip')) return;
   const now = Date.now();
   if (now - _lastTouchEnd <= 320) e.preventDefault();
   _lastTouchEnd = now;
@@ -785,6 +785,7 @@ Bus.on('waveStart', n => {
 });
 
 Bus.on('waveClear', n => {
+  R.blessWave = {};   // 瑶池祝福过波失效（价格递增保留）
   const reward = CONFIG.economy.waveRewardBase + n;
   R.peaches += reward;
   // 息钱：持桃生息（每 10 桃 +1，单波上限；每周「聚财」翻倍、词条「钱庄」抬上限）
@@ -900,6 +901,7 @@ RackUI.init();
 GearUI.init();
 Panels.init();
 WaveMods.init();
+BlessUI.init();
 resize();
 // 首次启动先录名号，之后回主菜单
 if (User.has()) Game.toMenu();
@@ -975,6 +977,10 @@ window.GAME = {
   },
   pickMod: i => WaveMods.pick(i),
   modOffer: () => R.modOffer,
+  buyShovel: () => RackUI.buyShovel(),
+  buyBless: id => BlessUI.buy(id),
+  blessWave: () => ({ ...R.blessWave }),
+  blessCost: id => BlessUI.cost(id),
   applyMod: id => { WaveMods.apply(id); return { ...R.mods }; },
   bonds: () => Bonds.bonus(),
   weeklyInfo: () => ({ key: Weekly.key(), picks: Weekly.picksFor(Weekly.key()).map(p => p.id) }),

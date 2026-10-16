@@ -678,3 +678,61 @@ body {
   padding: 4px 14px;
 }
 .menu-link:active { color: #cfc2e4; }
+
+/* ============================================================
+ * M10 蟠桃出口：补铲（价签 + 无铲补铲模式）/ 波间瑶池祝福条
+ * ============================================================ */
+
+/* ---------- 铲子价签 + 补铲模式 ---------- */
+#btn-shovel .tbuy {
+  font-size: 15px; font-weight: 900; color: #6b4a12;
+  background: #ffd867; border: 2px solid #a97e22; border-radius: 999px;
+  padding: 1px 10px; margin-top: 2px;
+}
+#btn-shovel.buy-mode:not(.disabled) {
+  background: linear-gradient(#ffe9a8, #f0b840); border-color: #a97e22;
+  box-shadow: 0 4px 0 #7a5410, 0 0 22px #ffd86788;
+  animation: buyPulse 1.6s ease-in-out infinite;
+}
+#btn-shovel.buy-mode .tchar { color: #7a4a10; }
+#btn-shovel.buy-mode .tname { color: #8a5a14; }
+#btn-shovel.buy-mode .tbuy { background: #fff6dd; }
+@keyframes buyPulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ---------- 波间瑶池祝福（备战期左上，避开右上叫波按钮） ---------- */
+#bless-bar {
+  position: absolute; left: 16px; top: 102px; z-index: 6;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.bless-chip {
+  width: 172px; padding: 8px 12px 9px; border-radius: 14px; cursor: pointer;
+  background: #241b33e8; border: 3px solid #8a6fd0;
+  box-shadow: 0 4px 0 #17111f, 0 6px 14px #0008;
+  transition: transform .08s, border-color .08s;
+  touch-action: manipulation;
+}
+.bless-chip:active { transform: translateY(3px); border-color: #e8b64c; }
+.bless-chip .bc-name {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 24px; font-weight: 900; color: #ffd867; line-height: 1.1;
+}
+.bless-chip .bc-price {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 16px; font-weight: 700; color: #d9cdb4;
+}
+.bless-chip .bc-price b { color: #ffd867; font-size: 20px; }
+.bless-chip .bc-sub { display: block; margin-top: 3px; font-size: 13px; color: #b8a8d0; }
+.bless-chip.poor { filter: grayscale(.7) opacity(.6); }
+.bless-chip.bought {
+  border-color: #4f8a53; background: #1c2a1de8; cursor: default;
+  box-shadow: 0 4px 0 #17111f;
+}
+.bless-chip.bought .bc-name { color: #9adf9f; }
+.bless-chip.bought .bc-price { color: #7fa383; }
+.bless-chip.bought .bc-price b { color: #7fa383; }
+.bless-chip.bought .bc-sub { color: #7fa383; }
+.bless-chip.bought:active { transform: none; }

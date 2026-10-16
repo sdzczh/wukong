@@ -74,6 +74,7 @@ const HUD = {
       this.callBonus.textContent = '+' + bonus + ' 桃';
     }
     RackUI.refresh();
+    BlessUI.refresh();
   },
 
   /* 横幅：boss=true 时走红色警报样式（更久） */

@@ -78,7 +78,8 @@ class Tower {
     const haste = this.hasteDur > 0 ? (this.hasteMul || 1.3) : 1;
     const bonds = Bonds.bonus();
     this.cd = 1 / (this.def.rate * this.auraMul() * haste * (1 + this.gearMods.rateMul)
-      * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate));
+      * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate)
+      * (R.blessWave && R.blessWave.rate ? CONFIG.peachSink.bless.rate.mul : 1));
     this.animT = 0.14;
     this.fire(target, enemies);
   }
