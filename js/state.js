@@ -49,7 +49,7 @@ const R = {
   nextTowerId: 1,     // 塔唯一 id 计数
 };
 
-function newMods() { return { atk: 0, rate: 0, peach: 0, interest: 0, exp: 0, aura: 0, cd: 0, sell: 0 }; }
+function newMods() { return { atk: 0, rate: 0, peach: 0, interest: 0, exp: 0, aura: 0, cd: 0, sell: 0, latk: 0, lrate: 0, lslow: 0, lgold: 0 }; }
 function newRules() {
   return {
     enemyHpMul: 1, enemySpdMul: 1, peachAwardMul: 1, summonCostDelta: 0,

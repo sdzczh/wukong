@@ -1088,7 +1088,8 @@ Bus.on('waveStart', n => {
 
 Bus.on('waveClear', n => {
   R.blessWave = {};   // 瑶池祝福过波失效（价格递增保留）
-  const reward = CONFIG.economy.waveRewardBase + n;
+  const reward = CONFIG.economy.waveRewardBase + n
+    + (R.mods.lgold || 0) * CONFIG.waveMods.legendSteps.lgold;   // 传说·点石成桃
   R.peaches += reward;
   // 息钱：持桃生息（每 10 桃 +1，单波上限；每周「聚财」翻倍、词条「钱庄」抬上限）
   const cap = CONFIG.economy.interestCap + R.mods.interest * CONFIG.waveMods.steps.interest;

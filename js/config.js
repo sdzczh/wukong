@@ -276,6 +276,16 @@ const CONFIG = {
       { id: 'heart',    name: '续命', desc: '立即 +2 心' },
       { id: 'shovel',   name: '拓荒', desc: '立即 +2 铲' },
     ],
+    /* 传说词条：每次三选一约 legendChance 概率随机降临一张（金红卡面），强全局效果 */
+    legendChance: 0.05,
+    legendSteps: { latk: 0.35, lrate: 0.25, lslow: 0.20, lgold: 30 },
+    legendPool: [
+      { id: 'latk',  name: '天罡战气', desc: '全体攻击 +35%' },
+      { id: 'lrate', name: '神行法',   desc: '全体攻速 +25%' },
+      { id: 'lslow', name: '冰封千里', desc: '敌方移速 -20%' },
+      { id: 'lgold', name: '点石成桃', desc: '过波奖励 +30 桃' },
+      { id: 'lheart',name: '蟠桃盛会', desc: '立即 +5 心，心上限 +3' },
+    ],
   },
 
   /* 每周异变：同周同盘 + 3 条全局规则，结算计每周最佳 */

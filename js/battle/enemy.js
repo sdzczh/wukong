@@ -54,7 +54,8 @@ class Enemy {
     const rage = (this.bossKind === 'kuangbao' && this.enraged) ? CONFIG.bossEnrageSpd : 1;
     const kind = this.bossDef && this.bossDef.speedMul ? this.bossDef.speedMul : 1;
     const bless = R.blessWave && R.blessWave.slow ? CONFIG.peachSink.bless.slow.spdMul : 1;
-    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * rage * kind * bless * (R.rules ? R.rules.enemySpdMul : 1);
+    const freeze = 1 - Math.min(0.5, (R.mods.lslow || 0) * CONFIG.waveMods.legendSteps.lslow);   // 传说·冰封千里
+    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * rage * kind * bless * freeze * (R.rules ? R.rules.enemySpdMul : 1);
   }
 
   pos() {

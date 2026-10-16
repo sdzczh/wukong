@@ -13,7 +13,7 @@ const WaveMods = {
     });
   },
 
-  /* 抽取 3 张不重复词条并弹出 */
+  /* 抽取 3 张不重复词条并弹出；约 5% 概率有一张被传说词条顶替 */
   offer() {
     const pool = CONFIG.waveMods.pool.slice();
     const picks = [];
@@ -21,6 +21,12 @@ const WaveMods = {
     for (let i = 0; i < n; i++) {
       const j = RNG.int(pool.length);
       picks.push(pool.splice(j, 1)[0].id);
+    }
+    // 传说降临：整次三选一掷一次，命中则随机顶替一张（不与已给词条重复）
+    const lp = CONFIG.waveMods.legendPool || [];
+    if (lp.length && RNG.next() < (CONFIG.waveMods.legendChance || 0)) {
+      const cand = lp.filter(l => !picks.includes(l.id));
+      if (cand.length) picks[RNG.int(picks.length)] = cand[RNG.int(cand.length)].id;
     }
     R.modOffer = picks;
     this.render();
@@ -33,13 +39,17 @@ const WaveMods = {
     const bar = document.getElementById('mod-bar');
     if (!bar) return;
     if (!R.modOffer) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
+    const legendIds = new Set((CONFIG.waveMods.legendPool || []).map(l => l.id));
     const cards = R.modOffer.map((id, i) => {
-      const def = CONFIG.waveMods.pool.find(p => p.id === id);
+      const def = (CONFIG.waveMods.legendPool || []).find(p => p.id === id)
+        || CONFIG.waveMods.pool.find(p => p.id === id);
       const stacked = R.mods[id] || 0;
+      const isLegend = legendIds.has(id);
       // 心/铲是即时结算不叠加；其余词条显示「选后层数」
       const stackTxt = (stacked > 0 && id !== 'heart' && id !== 'shovel')
         ? `<span class="mod-stack">再选 ×${stacked + 1}</span>` : '';
-      return `<div class="mod-card" data-i="${i}">
+      return `<div class="mod-card${isLegend ? ' legend' : ''}" data-i="${i}">
+        ${isLegend ? '<span class="mod-legend">传说</span>' : ''}
         <div class="mod-name">${def.name}</div>
         <div class="mod-desc">${def.desc}</div>
         ${stackTxt}
@@ -67,6 +77,10 @@ const WaveMods = {
     } else if (id === 'shovel') {
       R.shovelLeft += 2;
       HUD.toast('拓荒 +2 铲');
+    } else if (id === 'lheart') {
+      R.heartsMax += 3;
+      R.hearts += 5;
+      FX.float('+5 心 上限+3', 360, 200, '#ff9a5a', 18);
     } else {
       R.mods[id] = (R.mods[id] || 0) + 1;
     }

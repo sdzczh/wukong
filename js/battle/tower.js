@@ -30,7 +30,8 @@ class Tower {
     const might = R.mightT > 0 ? CONFIG.drops.mightMul : 1;
     const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
     const dread = bossDreadMul();   // 玄甲鬼将威压：存活时全军攻击 -25%
-    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * dread
+    const legend = 1 + (R.mods.latk || 0) * CONFIG.waveMods.legendSteps.latk;   // 传说·天罡战气
+    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * dread * legend
       * (1 + this.gearMods.atkMul) * (1 + Bonds.bonus().atk) * (1 + R.mods.atk * CONFIG.waveMods.steps.atk));
   }
   get rangePx() {
@@ -80,6 +81,7 @@ class Tower {
     const bonds = Bonds.bonus();
     this.cd = 1 / (this.def.rate * this.auraMul() * haste * (1 + this.gearMods.rateMul)
       * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate)
+      * (1 + (R.mods.lrate || 0) * CONFIG.waveMods.legendSteps.lrate)   // 传说·神行法
       * (R.blessWave && R.blessWave.rate ? CONFIG.peachSink.bless.rate.mul : 1));
     this.animT = 0.14;
     this.fire(target, enemies);

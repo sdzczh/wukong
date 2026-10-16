@@ -742,6 +742,29 @@ body {
 }
 #mod-bar .mod-desc { font-size: 17px; color: #d9cdb4; margin-top: 8px; line-height: 1.45; }
 #mod-bar .mod-stack { display: block; margin-top: 8px; font-size: 14px; font-weight: 900; color: #9fd8ff; }
+/* 传说词条：金红卡面 + 呼吸金光，与普通词条一眼分层 */
+#mod-bar .mod-card.legend {
+  position: relative;
+  background: linear-gradient(160deg, #3c2016, #2c1830);
+  border-color: #e8933c;
+  box-shadow: 0 0 0 1px #ffd86755, 0 0 16px #e8933c55, inset 0 0 22px #d6454522;
+  animation: legendPulse 1.6s ease-in-out infinite;
+}
+@keyframes legendPulse {
+  0%, 100% { box-shadow: 0 0 0 1px #ffd86755, 0 0 12px #e8933c44, inset 0 0 22px #d6454518; }
+  50% { box-shadow: 0 0 0 1px #ffd86799, 0 0 24px #e8933c88, inset 0 0 26px #d6454533; }
+}
+#mod-bar .mod-card.legend .mod-name { color: #ffd867; text-shadow: 0 0 12px #e8933c88; }
+#mod-bar .mod-card.legend .mod-desc { color: #f3d9b8; }
+#mod-bar .mod-card.legend .mod-stack { color: #ff9a5a; }
+#mod-bar .mod-legend {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  padding: 2px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 900; letter-spacing: 2px; color: #3a1408;
+  background: linear-gradient(90deg, #ffd867, #e8933c 55%, #d64545);
+  border: 1px solid #ffe9a8;
+  box-shadow: 0 2px 8px #00000066;
+}
 
 /* ---------- 塔详情：索敌模式行 + 本塔伤害 ---------- */
 #sel-panel .sel-mode-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
