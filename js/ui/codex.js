@@ -26,6 +26,7 @@ const Codex = {
     this.from = from || 'menu';
     this.tab = 'chars';
     this.overlay = document.getElementById('overlay');
+    Panels.card.classList.remove('menu');   // 退出菜单专用布局
     this.render();
     this.overlay.classList.remove('hidden');
   },

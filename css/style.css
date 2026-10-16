@@ -637,3 +637,44 @@ body {
 }
 #save-code:focus { border-color: #e8b64c; box-shadow: 0 0 12px #e8b64c44; }
 .save-hint { margin-top: 10px; font-size: 15px; color: #b9a8d4; line-height: 1.6; }
+
+/* ============================================================
+ * M9：主菜单布局改版（英雄位 + 主 CTA + 2×3 副入口网格）
+ * 仅 #overlay-card.menu 生效，暂停/结算等其他弹层不受影响
+ * ============================================================ */
+#overlay-card.menu { width: 620px; padding: 40px 36px 24px; }
+#overlay-card.menu #overlay-title { font-size: 84px; letter-spacing: 10px; }
+#overlay-card.menu #overlay-stats { margin: 22px 0 0; }
+#overlay-card.menu #overlay-btns { margin-top: 24px; width: 100%; gap: 16px; }
+
+.btn.menu-cta {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 15px 34px 13px; letter-spacing: 0;
+  animation: ctaBreath 2.6s ease-in-out infinite;
+}
+.btn.menu-cta .mc-main { font-size: 33px; font-weight: 900; letter-spacing: 10px; text-indent: 10px; }
+.btn.menu-cta .mc-sub { font-size: 15px; font-weight: 700; color: #8a5c14; letter-spacing: 3px; }
+.btn.menu-cta:active { animation: none; }
+@keyframes ctaBreath {
+  0%, 100% { box-shadow: 0 4px 0 #7a5410, 0 8px 16px #0008; }
+  50% { box-shadow: 0 4px 0 #7a5410, 0 8px 16px #0008, 0 0 26px #e8b64c88; }
+}
+
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.menu-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 0; padding: 13px 8px 11px; border-radius: 16px; cursor: pointer;
+  border: 3px solid #5a4872; background: #2e2440; color: #e8ddc8;
+  box-shadow: 0 4px 0 #1a1428, 0 8px 16px #0008;
+}
+.menu-tile .mt-name { font-size: 24px; font-weight: 900; letter-spacing: 4px; color: #efd9a8; }
+.menu-tile .mt-sub { font-size: 14px; color: #9a8fb4; letter-spacing: 1px; }
+.menu-tile .mt-sub.fresh { color: #ffd867; font-weight: 700; }
+.menu-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 #1a1428; }
+
+.menu-link {
+  border: none; background: none; cursor: pointer;
+  font-size: 18px; font-weight: 700; letter-spacing: 4px; color: #8a7f9e;
+  padding: 4px 14px;
+}
+.menu-link:active { color: #cfc2e4; }

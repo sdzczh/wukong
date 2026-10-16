@@ -2,6 +2,7 @@
 const Panels = {
   init() {
     this.overlay = document.getElementById('overlay');
+    this.card = document.getElementById('overlay-card');
     this.title = document.getElementById('overlay-title');
     this.sub = document.getElementById('overlay-sub');
     this.stats = document.getElementById('overlay-stats');
@@ -37,6 +38,7 @@ const Panels = {
 
   _fill(title, sub, statsHtml, buttons) {
     this.hideUnlock();   // 任何弹层出现时收起开垦确认
+    this.card.classList.remove('menu');   // 菜单专用布局仅主菜单使用
     this.title.textContent = title;
     this.sub.textContent = sub || '';
     this.stats.innerHTML = statsHtml || '';
@@ -55,6 +57,7 @@ const Panels = {
 
   /* 名号录入（首次启动 / 菜单改名） */
   showNameEntry(cb) {
+    this.card.classList.remove('menu');
     this.title.textContent = '道 友 名 号';
     this.sub.textContent = '名号会留在本地存档中';
     this.stats.innerHTML = '<input id="name-input" maxlength="8" placeholder="如：齐天大圣" autocomplete="off">';
@@ -78,27 +81,64 @@ const Panels = {
     const dailyBest = (s.daily && s.daily.key === key) ? s.daily.best : 0;
     const wk = Weekly.key();
     const weeklyBest = (s.weekly && s.weekly.key === wk) ? s.weekly.best : 0;
+    // 副入口角标信息：图鉴进度 / 神兵与碎片
+    const cx = s.codex || { chars: {}, generals: {} };
+    const cxTotal = Object.keys(CONFIG.charToTower).length +
+      Object.keys(CONFIG.godCharWeights).length +
+      Object.keys(CONFIG.towers).filter(k => CONFIG.towers[k].general).length;
+    const cxDone = Object.keys(cx.chars || {}).length + Object.keys(cx.generals || {}).length;
+    const sigN = Object.keys(s.sigGear || {}).length;
+    const shardSum = Object.values(s.shards || {}).reduce((a, b) => a + b, 0);
+    const gearSub = sigN ? `神兵 ${sigN}/12 · 碎片 ${shardSum}` : `碎片 ${shardSum} · 三件合成`;
+
     this._fill(
       '无敌悟空',
       `道友「${s.username || '无名氏'}」· 文字合成塔防 · 地府篇`,
       `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}<br>` +
-      `今日轮回最佳　${dailyBest}　波　｜　本周异变最佳　${weeklyBest}　波<br>` +
       `<span class="settle-break">本周异变　${Weekly.summary()}</span>`,
-      [
-        { text: '开 始 战 斗', fn: () => Game.startRun() },
-        { text: '每 日 轮 回', fn: () => Game.startDaily(), ghost: true },
-        { text: '每 周 异 变', fn: () => Game.startWeekly(), ghost: true },
-        { text: '修 炼', fn: () => TalentUI.show('menu'), ghost: true },
-        { text: '装 备 库', fn: () => GearUI.show('menu'), ghost: true },
-        { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
-        { text: '存 档 码', fn: () => this.showSaveCode(), ghost: true },
-        { text: '改 名 号', fn: () => this.showNameEntry(() => this.showMenu()), ghost: true },
-      ]
+      []
     );
+    this.card.classList.add('menu');
+
+    // 主行动：开始战斗
+    const cta = document.createElement('button');
+    cta.className = 'btn menu-cta';
+    cta.innerHTML = '<span class="mc-main">开 始 战 斗</span><span class="mc-sub">镇守轮回殿 · 十波幽魂</span>';
+    cta.addEventListener('click', () => { SFX.play('click'); Game.startRun(); });
+    this.btns.appendChild(cta);
+
+    // 副入口 2×3 网格：角标直接带今日/本周战绩与成长进度
+    const grid = document.createElement('div');
+    grid.className = 'menu-grid';
+    const tiles = [
+      ['每日轮回', dailyBest ? `今日最佳 ${dailyBest} 波` : '今日未挑战', !dailyBest, () => Game.startDaily()],
+      ['每周异变', weeklyBest ? `本周最佳 ${weeklyBest} 波` : '本周未挑战', !weeklyBest, () => Game.startWeekly()],
+      ['修炼', `魂晶 ${s.crystals}`, false, () => TalentUI.show('menu')],
+      ['装备库', gearSub, false, () => GearUI.show('menu')],
+      ['图鉴', `已识 ${cxDone}/${cxTotal}`, false, () => Codex.show('menu')],
+      ['存档码', '换机迁移', false, () => this.showSaveCode()],
+    ];
+    for (const [name, sub, fresh, fn] of tiles) {
+      const el = document.createElement('button');
+      el.className = 'menu-tile';
+      el.innerHTML = `<span class="mt-name">${name}</span>` +
+        `<span class="mt-sub${fresh ? ' fresh' : ''}">${sub}</span>`;
+      el.addEventListener('click', () => { SFX.play('click'); fn(); });
+      grid.appendChild(el);
+    }
+    this.btns.appendChild(grid);
+
+    // 改名号：低调文字链
+    const rename = document.createElement('button');
+    rename.className = 'menu-link';
+    rename.textContent = '改 名 号';
+    rename.addEventListener('click', () => { SFX.play('click'); this.showNameEntry(() => this.showMenu()); });
+    this.btns.appendChild(rename);
   },
 
   /* 存档码面板：导出当前存档 / 粘贴导入覆盖 */
   showSaveCode() {
+    this.card.classList.remove('menu');
     this.title.textContent = '存 档 码';
     this.sub.textContent = '复制存档码可在其他设备恢复进度';
     this.stats.innerHTML =
