@@ -25,7 +25,11 @@ const HUD = {
       SFX.play('click');
     });    document.getElementById('btn-fast').addEventListener('click', () => {
       SFX.ensure(); SFX.play('click');
-      R.timeScale = R.timeScale === 1 ? 2 : 1;
+      // 1→2→3→4 循环，偏好入档（下局开局沿用）
+      const speeds = [1, 2, 3, 4];
+      R.timeScale = speeds[(speeds.indexOf(R.timeScale) + 1) % speeds.length] || 1;
+      Save.data.speed = R.timeScale;
+      Save.write();
       this.refresh();
     });
     // 提前叫波

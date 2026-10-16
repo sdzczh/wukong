@@ -81,7 +81,7 @@ function resetRun() {
   R.selected = null;
   R.hover = null;
   R.shovelLeft = CONFIG.shovelUses;
-  R.timeScale = 1;
+  R.timeScale = (Save.data && Save.data.speed) || 1;   // 速度偏好沿用（HUD 可 1/2/3/4 循环）
   R.mightT = 0;        // 兵符全局加攻剩余秒数
   R.rangeFloor = 0;    // 当局射程地板（startRun 时按最远离径开放格校准）
   R.endless = false;   // 无尽征战模式（通关第 10 波后可选择进入）
@@ -101,6 +101,7 @@ function resetRun() {
   R.rules = newRules();
   R.weekly = null;
   R.dmgStats = {};     // 每塔伤害统计 {towerId: dmg}（resetRun 初始化）
+  R.battleTime = 0;    // 交战累计秒（开波计时，波间不计，DPS 面板用）
   R.nextTowerId = 1;
   if (typeof Bonds !== 'undefined' && Bonds.reset) Bonds.reset();
 }

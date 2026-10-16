@@ -185,12 +185,14 @@ function frame(now) {
   last = now;
   if (dt > 0.25) dt = 0.25;
   acc += dt * R.timeScale;
+  if (acc > STEP * 12) acc = STEP * 12;   // 高倍速下设备跟不上时不螺旋死亡，宁可慢放
   while (acc >= STEP) { tick(STEP); acc -= STEP; }
   render(now / 1000);
 }
 
 function tick(dt) {
   if (R.state !== 'battle') return;
+  if (Director.cur) R.battleTime += dt;   // 交战计时（DPS 面板分母）
   if (R.mightT > 0) R.mightT -= dt;
   Director.update(dt);
   for (const e of R.enemies) e.update(dt);
@@ -1064,6 +1066,7 @@ Save.load();
 RNG.seed((Math.random() * 1e9) | 0);
 Grid.init();
 HUD.init();
+DpsUI.init();
 RackUI.init();
 GearUI.init();
 Panels.init();
@@ -1171,6 +1174,7 @@ window.GAME = {
     return t.mode;
   },
   dmgStats: () => JSON.parse(JSON.stringify(R.dmgStats)),
+  dps: () => DpsUI.rows(),
   snapshot: () => ({
     state: R.state, wave: R.wave, hearts: R.hearts, peaches: R.peaches,
     kills: R.kills, enemies: R.enemies.filter(e => e.alive).length,

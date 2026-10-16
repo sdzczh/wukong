@@ -89,6 +89,30 @@ body {
 }
 .hud-btn:active { transform: scale(0.94); }
 .hud-btn.off { color: #5a4f6e; }
+.hud-btn.on { border-color: #e8b64c; background: #4a3a1ae0; }
+
+/* ---------- 实时 DPS 面板 ---------- */
+#dps-panel {
+  position: absolute; top: 104px; left: 12px; z-index: 4;
+  min-width: 210px; max-width: 260px;
+  padding: 10px 12px; border-radius: 12px;
+  background: #1d1628d9; border: 2px solid #4a3b5e;
+  pointer-events: none;
+}
+.dps-head {
+  font-size: 15px; font-weight: 900; color: #ffd867;
+  letter-spacing: 2px; padding-bottom: 6px; margin-bottom: 4px;
+  border-bottom: 1px solid #4a3b5e;
+}
+.dps-row {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 15px; line-height: 1.7; color: #d9cdb4;
+}
+.dps-row i { font-style: normal; width: 16px; color: #8a7f9e; font-weight: 900; font-size: 13px; }
+.dps-row b { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dps-row span { font-weight: 900; color: #f3ead6; }
+.dps-row em { font-style: normal; font-size: 13px; font-weight: 700; color: #9fd8ff; min-width: 52px; text-align: right; }
+.dps-empty { font-size: 14px; color: #8a7f9e; padding: 4px 0; }
 
 /* ---------- 波次横幅 ---------- */
 #wave-banner {
