@@ -46,6 +46,7 @@ const GearUI = {
     }
     if (!inBattle || (R.draft && R.draft.length) || !this.open) {
       this.bar.classList.add('hidden');   // 未开 / 选牌中 / 非战斗：收起
+      BlessUI.refresh();                  // 收起后祝福条归位
       return;
     }
     const fams = CONFIG.gear.families;
@@ -81,6 +82,7 @@ const GearUI = {
       (invHtml ? `<span class="gp-sep"></span>${invHtml}` : '') +
       (R.gearArm >= 0 ? `<span class="gp-tip">点塔佩戴</span>` : '');
     this.bar.classList.remove('hidden');
+    BlessUI.refresh();   // 开栏后祝福条上抬让位
   },
 
   /* 点库存装备：≥3 且未满级 → 合成升级；否则进入佩戴模式 */

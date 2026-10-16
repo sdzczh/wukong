@@ -721,13 +721,14 @@ body {
   50% { transform: translateY(-3px); }
 }
 
-/* ---------- 波间瑶池祝福（备战期左上，避开右上叫波按钮） ---------- */
+/* ---------- 波间瑶池祝福（备战期，底栏上方横排；装备栏打开时由 JS 上抬让位） ---------- */
 #bless-bar {
-  position: absolute; left: 16px; top: 102px; z-index: 6;
-  display: flex; flex-direction: column; gap: 8px;
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 164px; z-index: 6;
+  display: flex; gap: 8px;
 }
 .bless-chip {
-  width: 172px; padding: 8px 12px 9px; border-radius: 14px; cursor: pointer;
+  width: 168px; padding: 6px 12px 7px; border-radius: 14px; cursor: pointer;
   background: #241b33e8; border: 3px solid #8a6fd0;
   box-shadow: 0 4px 0 #17111f, 0 6px 14px #0008;
   transition: transform .08s, border-color .08s;
@@ -737,14 +738,14 @@ body {
 .bless-chip .bc-name {
   display: flex; align-items: center; justify-content: space-between;
   font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
-  font-size: 24px; font-weight: 900; color: #ffd867; line-height: 1.1;
+  font-size: 22px; font-weight: 900; color: #ffd867; line-height: 1.1;
 }
 .bless-chip .bc-price {
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  font-size: 16px; font-weight: 700; color: #d9cdb4;
+  font-size: 15px; font-weight: 700; color: #d9cdb4;
 }
-.bless-chip .bc-price b { color: #ffd867; font-size: 20px; }
-.bless-chip .bc-sub { display: block; margin-top: 3px; font-size: 13px; color: #b8a8d0; }
+.bless-chip .bc-price b { color: #ffd867; font-size: 18px; }
+.bless-chip .bc-sub { display: block; margin-top: 2px; font-size: 12px; color: #b8a8d0; }
 .bless-chip.poor { filter: grayscale(.7) opacity(.6); }
 .bless-chip.bought {
   border-color: #4f8a53; background: #1c2a1de8; cursor: default;
