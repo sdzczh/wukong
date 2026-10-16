@@ -9,6 +9,7 @@ const Save = {
       bestWave: 0, totalKills: 0, crystals: 0,
       sound: true,
       speed: 1,                           // 倍速偏好（1/2/3/4，下局沿用）
+      tut: 0,                             // 新手引导完成标记（1=已完成/跳过）
       daily: { key: 0, best: 0 },         // 每日轮回当日最佳（key=yyyymmdd）
       weekly: { key: 0, best: 0 },        // 每周异变本周最佳（key=yyyy*100+周序）
       codex: {},                          // 神将图鉴点亮（M3）

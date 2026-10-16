@@ -41,6 +41,7 @@ const Game = {
       : R.daily ? '每日轮回：今日全场同图，比谁走得更远'
       : R.ghosts ? '金框虚线为上局阵容占位建议，照位摆字即可复刻布防'
       : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
+    TutUI.maybeStart();   // 新手三步引导（仅未完成时弹）
   },
 
   /* 每日轮回：按日期种子开局（固定路线与抽卡序列） */
@@ -1148,6 +1149,7 @@ RNG.seed((Math.random() * 1e9) | 0);
 Grid.init();
 HUD.init();
 DpsUI.init();
+TutUI.init();
 RackUI.init();
 GearUI.init();
 Panels.init();
@@ -1258,6 +1260,8 @@ window.GAME = {
   dps: () => DpsUI.rows(),
   ghosts: () => R.ghosts,
   lineup: () => Save.data.lastLineup,
+  tutState: () => TutUI.step,
+  tutFinish: () => TutUI.finish(),
   snapshot: () => ({
     state: R.state, wave: R.wave, hearts: R.hearts, peaches: R.peaches,
     kills: R.kills, enemies: R.enemies.filter(e => e.alive).length,

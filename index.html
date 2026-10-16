@@ -29,6 +29,12 @@
   <!-- 实时 DPS 面板：顶栏「伤」开关 -->
   <div id="dps-panel" class="hidden"></div>
 
+  <!-- 新手三步引导气泡：不拦截操作，完成/跳过后不再弹 -->
+  <div id="tut-tip" class="hidden">
+    <span id="tut-msg"></span>
+    <button id="tut-skip">跳过</button>
+  </div>
+
   <!-- 提前叫波：备战期显示，按剩余秒数奖桃 -->
   <button id="btn-callwave" class="hidden">提前叫波<span id="callwave-bonus"></span></button>
 
@@ -127,6 +133,7 @@
 <script src="js/battle/director.js?v=20261016s"></script>
 <script src="js/ui/hud.js?v=20261016s"></script>
 <script src="js/ui/dps.js?v=20261016s"></script>
+<script src="js/ui/tut.js?v=20261016s"></script>
 <script src="js/ui/rack.js?v=20261016s"></script>
 <script src="js/ui/gear.js?v=20261016s"></script>
 <script src="js/ui/panels.js?v=20261016s"></script>
