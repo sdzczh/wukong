@@ -621,6 +621,7 @@ const Input = {
       RackUI.showGhost(label, isGod);
     }
     RackUI.moveGhost(e.clientX, e.clientY);
+    this.updateRackDropHint(e);
   },
 
   up(e) {
@@ -629,6 +630,7 @@ const Input = {
     R.drag = null;
     clearTimeout(this._lpTimer);
     RackUI.hideGhost();
+    this.clearRackDropHint();
     if (!g) return;
     if (R.state !== 'battle') return;
 
@@ -641,10 +643,11 @@ const Input = {
         this._lastSlotTap = dbl ? null : { t: now, slot: g.src.slot };
         if (dbl && this.autoMerge(g.src.slot)) return;   // 双击卡：自动合成场上同字同级/配对目标
         R.armedSlot = R.armedSlot === g.src.slot ? -1 : g.src.slot;
-        // 首次 arm 且场上有可合成目标 → 教一次双击
-        if (R.armedSlot === g.src.slot && !this._mergeTipShown && this.findMergeTarget(g.src.slot)) {
+        // 首次 arm 且场上/架上有可合成目标 → 教一次双击
+        if (R.armedSlot === g.src.slot && !this._mergeTipShown &&
+            (this.findMergeTarget(g.src.slot) || this.findRackMergeTarget(g.src.slot) >= 0)) {
           this._mergeTipShown = true;
-          HUD.toast('双击卡片，可自动合成场上的同字同级单位（神将字则自动凑对）');
+          HUD.toast('双击卡片：与场上/架上同字同级合成升级，神将字自动凑对');
         }
         RackUI.hideSel();
         SFX.play('click');
@@ -663,9 +666,19 @@ const Input = {
     if (slotEl && this.rackElContains(slotEl)) {
       const j = Number(slotEl.dataset.slot);
       if (g.src.type === 'rack') {
-        // 架内交换
         const i = g.src.slot;
-        if (i !== j) { const tmp = R.rack[i]; R.rack[i] = R.rack[j]; R.rack[j] = tmp; SFX.play('place'); }
+        if (i !== j) {
+          const res = Merge.mergeRack(i, j);   // 架内可合成（同字同级升级 / 神将字凑对）→ 直接合成
+          if (res) {
+            RackUI.refresh();
+            HUD.toast(res.text);
+            HUD.refresh();          // HUD.refresh 内部会重刷架子（重写 className），弹跳动画须排在其后
+            RackUI.flashSlot(j);
+            return;   // 已重渲染，跳过末尾统一 refresh
+          }
+          // 不可合成 → 架内交换
+          const tmp = R.rack[i]; R.rack[i] = R.rack[j]; R.rack[j] = tmp; SFX.play('place');
+        }
       } else {
         this.dropBoardOnRack(g.src.unit, j);
       }
@@ -680,6 +693,25 @@ const Input = {
   },
 
   rackElContains(el) { return RackUI.rackEl && RackUI.rackEl.contains(el); },
+
+  /* 拖拽架子卡悬停在可合成的架上目标 → 目标槽亮绿框预兆 */
+  updateRackDropHint(e) {
+    let el = null;
+    if (this.activeDrag() && R.drag && R.drag.src.type === 'rack') {
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const s = under && under.closest ? under.closest('.slot') : null;
+      if (s && this.rackElContains(s)) {
+        const j = Number(s.dataset.slot);
+        if (j !== R.drag.src.slot && Merge.judgeRack(R.rack[R.drag.src.slot], R.rack[j])) el = s;
+      }
+    }
+    if (this._hintEl && this._hintEl !== el) this._hintEl.classList.remove('drop-merge');
+    if (el) el.classList.add('drop-merge');
+    this._hintEl = el;
+  },
+  clearRackDropHint() {
+    if (this._hintEl) { this._hintEl.classList.remove('drop-merge'); this._hintEl = null; }
+  },
 
   hideItemPanel() { clearTimeout(this._lpTimer); RackUI.hideItemPanel(); },
 
@@ -748,25 +780,50 @@ const Input = {
     return out;
   },
 
-  /* 双击架子卡：有目标走正常落子链路立即合成；没有则提示原因 */
+  /* 双击架子卡：有目标走正常落子链路立即合成（场上优先）；没有则找架上配对，再没有则提示原因 */
   autoMerge(slot) {
     const item = R.rack[slot];
     if (!item) return false;
     const t = this.findMergeTarget(slot);
-    if (t) { this.dropRack(slot, t.col, t.row, false); return true; }
+    if (t) {
+      if (R.armedSlot === slot) R.armedSlot = -1;   // 卡已被合成消耗，清除持握
+      this.dropRack(slot, t.col, t.row, false);
+      return true;
+    }
+    const j = this.findRackMergeTarget(slot);
+    if (j >= 0) {
+      const res = Merge.mergeRack(slot, j);
+      if (res) {
+        if (R.armedSlot === slot) R.armedSlot = -1;
+        RackUI.refresh();
+        HUD.toast(res.text);
+        HUD.refresh();          // HUD.refresh 内部会重刷架子（重写 className），弹跳动画须排在其后
+        RackUI.flashSlot(j);
+        return true;
+      }
+    }
     const aChar = item.type === 'unit' ? item.unit.def.char : item.ch;
     const isLing = item.type === 'unit'
       ? String(item.unit.key).startsWith('ling:')
       : !CONFIG.charToTower[aChar];
     if (item.type === 'unit' && item.unit.isGeneral) {
-      HUD.toast('场上没有同级同名神将可升级');
+      HUD.toast('场上和架上都没有同级同名神将可升级');
     } else if (isLing) {
       const ph = Merge.pairHintOf(aChar);
-      HUD.toast(ph ? `场上没有「${ph.with}」字塔可凑对唤醒神将` : '场上没有可配对的目标');
+      HUD.toast(ph ? `场上没有「${ph.with}」字塔，架上也没有「${ph.with}」字可凑对` : '场上和架上都没有可配对的目标');
     } else {
-      HUD.toast(`场上没有同字同级的${aChar}单位可升级`);
+      HUD.toast(`场上和架上都没有同字同级的${aChar}单位可升级`);
     }
     return false;
+  },
+
+  /* 架上可合成的目标槽（同字同级升级 / 神将字凑对，规则同棋盘） */
+  findRackMergeTarget(slot) {
+    for (let j = 0; j < R.rack.length; j++) {
+      if (j === slot) continue;
+      if (Merge.judgeRack(R.rack[slot], R.rack[j])) return j;
+    }
+    return -1;
   },
 
   /* 棋盘单位落到另一格 */

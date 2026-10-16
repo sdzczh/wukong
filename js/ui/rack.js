@@ -337,10 +337,10 @@ const RackUI = {
     if (item.type === 'char') return !CONFIG.charToTower[item.ch];
     return item.unit.isGeneral || String(item.unit.key).startsWith('ling:');
   },
-  /* 场上是否有可合成目标（同字同级/同级同名神将/神将字配对）→ 高亮架子卡 */
+  /* 场上或架上是否有可合成目标（同字同级/同级同名神将/神将字配对）→ 高亮架子卡 */
   canMerge(slot) {
     if (!R.rack[slot]) return false;
-    return !!Input.findMergeTarget(slot);
+    return !!Input.findMergeTarget(slot) || Input.findRackMergeTarget(slot) >= 0;
   },
 
   refresh() {
@@ -381,6 +381,16 @@ const RackUI = {
       HUD.toast(`铲子用完了 · 点铲子按钮或长按花 ${shovelCost} 桃补一把`);
     }
     this._lastShovelN = R.shovelLeft;
+  },
+
+  /* 合成完成：槽位弹跳一下（金框动画；refresh 重写 className 后调用方须在其后再闪） */
+  flashSlot(i) {
+    const el = this.slotEls && this.slotEls[i];
+    if (!el) return;
+    el.classList.remove('just-merged');
+    void el.offsetWidth;   // 强制重排以重启动画
+    el.classList.add('just-merged');
+    setTimeout(() => el.classList.remove('just-merged'), 650);
   },
 
   /* ---------- 拖拽幽灵 ---------- */

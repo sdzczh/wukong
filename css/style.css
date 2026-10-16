@@ -178,6 +178,20 @@ body {
     box-shadow: 0 4px 0 #85744f, 0 6px 10px #0007, 0 0 20px 7px #ffd867e6;
   }
 }
+/* 架内合成目标：拖拽悬停到可合成的卡上亮绿框（animation:none 掐掉金框脉动，
+   否则 mergePulse 会持续覆写 border-color/box-shadow，绿框画不出来） */
+.slot.drop-merge {
+  border-color: #7fe08a;
+  box-shadow: 0 0 0 3px #7fe08acc, 0 0 18px #7fe08a;
+  animation: none;
+}
+/* 架内合成完成：槽位弹跳一下 */
+.slot.just-merged { animation: slotPop .6s ease; }
+@keyframes slotPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
 .slot .ch {
   font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
   font-size: 48px; font-weight: 900; color: #4a3b52; line-height: 1;

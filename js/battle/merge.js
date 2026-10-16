@@ -74,6 +74,65 @@ const Merge = {
     return 'swap';
   },
 
+  /* ---------- 架子内合成（两张卡都在召唤架上，规则与棋盘完全一致） ---------- */
+
+  /* 架子项统一口径：字 / 等级 / 等级上限（字卡与铲回的单位卡通用） */
+  itemChar(item) { return item.type === 'unit' ? item.unit.def.char : item.ch; },
+  itemLevel(item) { return item.type === 'unit' ? item.unit.level : (item.lv || 1); },
+  itemMaxLevel(item) {
+    if (item.type === 'unit') return item.unit.maxLevel;
+    const key = CONFIG.charToTower[item.ch];
+    return key ? (CONFIG.towers[key].maxLevel || CONFIG.towerMaxLevel) : CONFIG.godCharBase.maxLevel;
+  },
+
+  /* 架子内判定：a 放到 b 上的结果（同字同级升级 / 同级同名神将升级 / 神将字凑对），不可合成返回 null */
+  judgeRack(a, b) {
+    if (!a || !b) return null;
+    const ac = Merge.itemChar(a), al = Merge.itemLevel(a);
+    const bc = Merge.itemChar(b), bl = Merge.itemLevel(b);
+    if (b.type === 'unit' && b.unit.isGeneral) {
+      return (ac === bc && al === bl && bl < b.unit.maxLevel) ? 'general-level' : null;
+    }
+    if (ac === bc) return (al === bl && bl < Merge.itemMaxLevel(b)) ? 'level' : null;
+    if (CONFIG.pairs[ac + bc] || CONFIG.pairs[bc + ac]) return 'pair';
+    return null;
+  },
+
+  /* 架子里的待放单位（未登棋盘，放置时由 placeOnto / makeUnit 注册） */
+  makeRackUnit(key) {
+    return CONFIG.towers[key].general ? new General(key, 0, 0) : new Tower(key, 0, 0);
+  },
+
+  /* 架子内合成：b（槽 j）吸收 a（槽 i）；成功返回 {verdict, text}，不可合成返回 null */
+  mergeRack(i, j) {
+    const a = R.rack[i], b = R.rack[j];
+    if (i === j || !a || !b) return null;
+    const verdict = Merge.judgeRack(a, b);
+    if (!verdict) return null;
+    if (a.type === 'unit' && a.unit.gear) { R.equips.push(a.unit.gear); GearUI.refresh(); }   // 被吸收单位的装备回库
+    if (verdict === 'pair') {
+      const aCh = Merge.itemChar(a), bCh = Merge.itemChar(b);
+      if (b.type === 'unit' && b.unit.gear) { R.equips.push(b.unit.gear); GearUI.refresh(); }
+      const key = CONFIG.pairs[bCh + aCh] || CONFIG.pairs[aCh + bCh];
+      R.rack[j] = { type: 'unit', unit: Merge.makeRackUnit(key) };
+      Merge.unlockGeneral(key);
+      R.rack[i] = null;
+      SFX.play('levelup');
+      return { verdict, text: `凑对唤醒 · ${R.rack[j].unit.def.name} 已入召唤架` };
+    }
+    if (b.type === 'unit') {
+      b.unit.level = Math.min(b.unit.maxLevel, b.unit.level + 1);
+      if (verdict === 'general-level') b.unit.exp = 0;
+      R.rack[i] = null;
+      SFX.play('merge');
+      return { verdict, text: `合成升级 · ${b.unit.def.name} Lv${b.unit.level}` };
+    }
+    b.lv = (b.lv || 1) + 1;
+    R.rack[i] = null;
+    SFX.play('merge');
+    return { verdict, text: `合成升级 · ${Merge.itemChar(b)} Lv${b.lv}` };
+  },
+
   /* 把 a 放到 (col,row)。
      a: {board: Tower} | {ch: '悟', slot: 0}
      b: 目标格已有单位（可为 null）。返回 {action, unit?} */
