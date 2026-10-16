@@ -544,3 +544,94 @@ body {
   background: #2e2440; border-color: #5a4872; color: #cfc2e4;
   box-shadow: 0 4px 0 #1a1428, 0 8px 16px #0008;
 }
+
+/* ============================================================
+ * M7 十项优化：提前叫波 / Boss 警报 / 屏震红闪 / 命运三选一 / 索敌
+ * ============================================================ */
+
+/* ---------- 提前叫波（备战期，右上角） ---------- */
+#btn-callwave {
+  position: absolute; top: 102px; right: 16px; z-index: 6;
+  padding: 12px 24px; border-radius: 999px; cursor: pointer;
+  font-size: 23px; font-weight: 900; letter-spacing: 2px;
+  color: #5a3a10; background: linear-gradient(#ffd867, #e8a63c);
+  border: 3px solid #a97e22;
+  box-shadow: 0 4px 0 #7a5410, 0 0 18px #e8b64c66;
+  touch-action: manipulation;
+}
+#btn-callwave:active { transform: translateY(3px); box-shadow: 0 1px 0 #7a5410; }
+#btn-callwave #callwave-bonus { font-size: 16px; font-weight: 900; color: #8a5a14; margin-left: 6px; }
+
+/* ---------- 波次横幅：Boss 波红色警报 ---------- */
+#wave-banner.boss { animation: bannerIn 2.6s ease forwards; }
+#wave-banner.boss #wave-banner-main {
+  color: #ff5f6b;
+  text-shadow: 0 4px 0 #6b1414, 0 8px 24px #000, 0 0 34px #ff5f6b88;
+  animation: bossPulse 0.6s ease-in-out 3;
+}
+#wave-banner.boss #wave-banner-sub { color: #ffb0b8; }
+@keyframes bossPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* ---------- 扣心红闪 ---------- */
+#dmg-flash {
+  position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, #ff000000 38%, #ff2d2d99 100%);
+}
+#dmg-flash.on { animation: dmgflash 0.45s ease-out; }
+@keyframes dmgflash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- 波间命运三选一 ---------- */
+#mod-bar {
+  position: absolute; left: 24px; right: 24px; top: 28%; z-index: 9;
+  background: #1d1630f7; border: 3px solid #8a6fd0; border-radius: 18px;
+  padding: 16px 18px 18px; color: #f3ead6;
+  box-shadow: 0 14px 44px #000c, 0 0 40px #8a6fd044;
+}
+#mod-bar .mod-title {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 36px; color: #ffd867; letter-spacing: 10px; text-align: center;
+  text-shadow: 0 3px 0 #6b3f14; margin-bottom: 12px;
+}
+#mod-bar .mod-cards { display: flex; gap: 12px; }
+#mod-bar .mod-card {
+  flex: 1; min-width: 0; cursor: pointer; border-radius: 14px;
+  padding: 16px 10px 14px; text-align: center;
+  background: #2a2140; border: 3px solid #5a4872;
+  transition: transform .08s, border-color .08s;
+}
+#mod-bar .mod-card:active { transform: translateY(3px); border-color: #e8b64c; }
+#mod-bar .mod-name {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 32px; font-weight: 900; color: #e8b64c; line-height: 1;
+}
+#mod-bar .mod-desc { font-size: 17px; color: #d9cdb4; margin-top: 8px; line-height: 1.45; }
+#mod-bar .mod-stack { display: block; margin-top: 8px; font-size: 14px; font-weight: 900; color: #9fd8ff; }
+
+/* ---------- 塔详情：索敌模式行 + 本塔伤害 ---------- */
+#sel-panel .sel-mode-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+#sel-panel .sel-mode-row .sm-label { font-size: 17px; color: #b9a8d4; white-space: nowrap; }
+#sel-panel .sel-mode {
+  padding: 4px 16px; border-radius: 999px; cursor: pointer;
+  font-size: 17px; font-weight: 900;
+  border: 2px solid #5a4872; background: #2e2440; color: #cfc2e4;
+  touch-action: manipulation;
+}
+#sel-panel .sel-mode.on { border-color: #e8b64c; background: #40351c; color: #ffd867; }
+#sel-panel .sel-dmg { margin-top: 8px; font-size: 17px; font-weight: 700; color: #9fd8ff; }
+
+/* ---------- 存档码面板 ---------- */
+#save-code {
+  width: 100%; height: 130px; margin-top: 12px; padding: 10px 12px;
+  border-radius: 12px; resize: none; outline: none;
+  background: #17111f; border: 2px solid #5a4872; color: #9fd8ff;
+  font-size: 14px; line-height: 1.5; word-break: break-all;
+  user-select: text; -webkit-user-select: text;
+}
+#save-code:focus { border-color: #e8b64c; box-shadow: 0 0 12px #e8b64c44; }
+.save-hint { margin-top: 10px; font-size: 15px; color: #b9a8d4; line-height: 1.6; }

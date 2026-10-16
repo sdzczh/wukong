@@ -89,6 +89,9 @@ const SFX = {
                     setTimeout(() => this.tone(1480, 0.12, 'sine', 0.09), 70); break;
       case 'danger': this.tone(196, 0.1, 'square', 0.07);
                     setTimeout(() => this.tone(196, 0.1, 'square', 0.06), 160); break;
+      /* boss 波警报：三声下行汽笛 */
+      case 'alarm': [880, 660, 440].forEach((f, i) =>
+                      setTimeout(() => this.tone(f, 0.22, 'sawtooth', 0.10, -120), i * 190)); break;
     }
   },
 };

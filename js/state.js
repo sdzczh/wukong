@@ -35,7 +35,23 @@ const R = {
   equips: null,       // 未佩戴装备库存 [{fam,lv}]
   gearArm: -1,        // 待佩戴的库存装备索引（-1 无）：点塔即佩戴
   sigRun: 0,          // 本局专属碎片收获数（结算展示）
+  runKind: 'normal',  // 本局类型：normal | daily | weekly
+  mods: null,         // 波间词条累计 {atk,rate,peach,interest,exp,aura,cd,sell}（resetRun 初始化）
+  modOffer: null,     // 待选词条（3 个 id），非 null 时暂停开波
+  weekly: null,       // 每周异变生效的规则名列表（展示用）
+  rules: null,        // 本局全局规则倍率（newRules 初始化）
+  dmgStats: null,     // 每塔伤害统计 {towerId: {name, dmg, color}}
+  nextTowerId: 1,     // 塔唯一 id 计数
 };
+
+function newMods() { return { atk: 0, rate: 0, peach: 0, interest: 0, exp: 0, aura: 0, cd: 0, sell: 0 }; }
+function newRules() {
+  return {
+    enemyHpMul: 1, enemySpdMul: 1, peachAwardMul: 1, summonCostDelta: 0,
+    interestMul: 1, expMul: 1, shovelDelta: 0, godChanceAdd: 0,
+    weeklyNames: [],
+  };
+}
 
 function resetRun() {
   R.state = 'battle';
@@ -69,4 +85,12 @@ function resetRun() {
   R.equips = [];
   R.gearArm = -1;
   R.sigRun = 0;
+  R.runKind = 'normal';
+  R.mods = newMods();
+  R.modOffer = null;
+  R.rules = newRules();
+  R.weekly = null;
+  R.dmgStats = {};     // 每塔伤害统计 {towerId: dmg}（resetRun 初始化）
+  R.nextTowerId = 1;
+  if (typeof Bonds !== 'undefined' && Bonds.reset) Bonds.reset();
 }

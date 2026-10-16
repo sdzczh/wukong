@@ -2,6 +2,21 @@
    攻击特效经 sweep/beam 统一入口：普通塔走默认样式，神将走 def.atkfx 数据样式 */
 const FX = {
   floats: [], tracers: [], arcs: [], rings: [], sparks: [],
+  _shT: 0, _shDur: 0, _shMag: 0,   // 屏震：剩余时长 / 总时长 / 最大振幅
+
+  /* 触发屏震（重复触发取更强，幅度随时间线性衰减） */
+  shake(mag, dur) {
+    if (this._shT <= 0 || mag >= this._shMag) {
+      this._shMag = mag;
+      this._shDur = dur;
+      this._shT = dur;
+    }
+  },
+  shakeOffset() {
+    const a = this._shDur > 0 ? this._shMag * Math.max(0, this._shT / this._shDur) : 0;
+    if (a <= 0.1) return { x: 0, y: 0 };
+    return { x: (Math.random() * 2 - 1) * a, y: (Math.random() * 2 - 1) * a };
+  },
 
   float(text, x, y, color, size) {
     this.floats.push({ text, x, y, life: 0.9, color: color || '#ffd867', size: size || 17 });
@@ -77,6 +92,7 @@ const FX = {
   },
 
   update(dt) {
+    if (this._shT > 0) this._shT -= dt;
     for (const f of this.floats) { f.life -= dt; f.y -= 36 * dt; }
     this.floats = this.floats.filter(f => f.life > 0);
     for (const t of this.tracers) t.life -= dt;

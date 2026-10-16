@@ -8,9 +8,13 @@ class Tower {
     this.level = 1;
     this.cd = 0; this.animT = 0;
     this.gear = null;   // 佩戴的装备 {fam,lv}（专属经 Save 自动生效，不占此槽）
+    this.mode = 'first';          // 索敌：first 最先 / near 最近 / strong 最强 / last 最后
+    this.tid = R.nextTowerId++;   // 伤害统计用唯一 id
   }
 
   get isGeneral() { return !!this.def.general; }
+
+  static modeName = { first: '最先', near: '最近', strong: '最强', last: '最后' };
 
   /* 无尽征战：神将等级不设上限 */
   get maxLevel() {
@@ -25,7 +29,8 @@ class Tower {
   get atk() {
     const might = R.mightT > 0 ? CONFIG.drops.mightMul : 1;
     const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
-    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * (1 + this.gearMods.atkMul));
+    return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent
+      * (1 + this.gearMods.atkMul) * (1 + Bonds.bonus().atk) * (1 + R.mods.atk * CONFIG.waveMods.steps.atk));
   }
   get rangePx() {
     // 非光环单位享受当局射程地板：任何已开放格都摸得到路径
@@ -42,17 +47,22 @@ class Tower {
         m += t.def.auraRate + (t.def.auraLvStep || 0) * (t.level - 1);
       }
     }
-    return m;
+    return m + R.mods.aura * CONFIG.waveMods.steps.aura;
   }
 
   inRange(e) { return Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx; }
 
-  /* 默认索敌：最接近基地的敌人（路径 progress 最大者） */
+  /* 索敌：按 this.mode 选取（默认最先 = 路径 progress 最大者） */
   pickTarget(enemies) {
-    let best = null;
+    let best = null, bestVal = 0;
     for (const e of enemies) {
       if (!e.alive || !this.inRange(e)) continue;
-      if (!best || e.s > best.s) best = e;
+      let v;
+      if (this.mode === 'near') v = -Math.hypot(e.x - this.x, e.y - this.y);
+      else if (this.mode === 'strong') v = e.hp;
+      else if (this.mode === 'last') v = -e.s;
+      else v = e.s;
+      if (!best || v > bestVal) { best = e; bestVal = v; }
     }
     return best;
   }
@@ -66,7 +76,9 @@ class Tower {
     const target = this.pickTarget(enemies);
     if (!target) return;
     const haste = this.hasteDur > 0 ? (this.hasteMul || 1.3) : 1;
-    this.cd = 1 / (this.def.rate * this.auraMul() * haste * (1 + this.gearMods.rateMul));
+    const bonds = Bonds.bonus();
+    this.cd = 1 / (this.def.rate * this.auraMul() * haste * (1 + this.gearMods.rateMul)
+      * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate));
     this.animT = 0.14;
     this.fire(target, enemies);
   }

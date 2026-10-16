@@ -214,6 +214,63 @@ const CONFIG = {
   /* 无尽模式（通关第 10 波后可选择进入）：波次无限，每 shovelEvery 波奖励 1 把铲子 */
   endless: { shovelEvery: 5 },
 
+  /* 提前叫波：备战期点按钮立即开下一波，按剩余秒数给桃 */
+  callWave: { perSec: 2 },
+
+  /* 精英词缀怪：中后期概率出现，血量/奖励更高，携带一个词缀 */
+  elite: {
+    fromWave: 6, chance: 0.22,        // 第 6 波起，每只普通怪 22% 概率升级为精英
+    hpMul: 2.2, rewardMul: 2, expMul: 2,
+    affixes: {
+      split: { char: '裂', name: '分裂', color: '#e8b64c', desc: '死亡时分裂出 2 只小分身' },
+      shield:{ char: '盾', name: '护盾', color: '#6fa8e8', desc: '护盾值一半血量，5 秒后重生成' },
+      heal:  { char: '疗', name: '治疗', color: '#6fc08a', desc: '持续治疗周围敌人' },
+      swift: { char: '疾', name: '急速', color: '#f0a8cc', desc: '移动速度 +60%' },
+    },
+  },
+
+  /* 波间命运三选一：每 every 波过波后弹出，3 选 1 全局词条（可叠加） */
+  waveMods: {
+    every: 3, pick: 3,
+    steps: { atk: 0.10, rate: 0.08, exp: 0.25, cd: 0.10, peach: 1, interest: 1, aura: 0.05, sell: 2 },
+    pool: [
+      { id: 'atk',      name: '淬锋', desc: '全体攻击 +10%' },
+      { id: 'rate',     name: '疾风', desc: '全体攻速 +8%' },
+      { id: 'peach',    name: '聚宝', desc: '击杀额外 +1 蟠桃' },
+      { id: 'interest', name: '钱庄', desc: '过波息钱 +1/波' },
+      { id: 'exp',      name: '悟道', desc: '神将经验 +25%' },
+      { id: 'aura',     name: '战鼓', desc: '战鼓光环加成 +5%' },
+      { id: 'cd',       name: '凝神', desc: '神将技冷却 -10%' },
+      { id: 'sell',     name: '回春', desc: '出售返还 +2 桃' },
+      { id: 'heart',    name: '续命', desc: '立即 +2 心' },
+      { id: 'shovel',   name: '拓荒', desc: '立即 +2 铲' },
+    ],
+  },
+
+  /* 每周异变：同周同盘 + 3 条全局规则，结算计每周最佳 */
+  weekly: {
+    pick: 3,
+    pool: [
+      { id: 'spd',      name: '急魂夜行', desc: '敌方移速 +15%', rule: { enemySpdMul: 1.15 } },
+      { id: 'hp',       name: '厚甲幽都', desc: '敌方血量 +20%', rule: { enemyHpMul: 1.20 } },
+      { id: 'peach',    name: '丰收之年', desc: '桃收益 +30%',   rule: { peachAwardMul: 1.30 } },
+      { id: 'cheap',    name: '字价低廉', desc: '召唤费 -2',     rule: { summonCostDelta: -2 } },
+      { id: 'interest', name: '聚财之道', desc: '息钱翻倍',      rule: { interestMul: 2 } },
+      { id: 'fragile',  name: '脆弱之体', desc: '敌人受伤 +25%', rule: { enemyHpMul: 0.8 } },
+      { id: 'wisdom',   name: '悟性超凡', desc: '神将经验 +50%', rule: { expMul: 1.5 } },
+      { id: 'dig',      name: '地脉丰饶', desc: '开局 +4 铲',    rule: { shovelDelta: 4 } },
+      { id: 'god',      name: '神将降临', desc: '神将字概率 +6%', rule: { godChanceAdd: 0.06 } },
+    ],
+  },
+
+  /* 羁绊：同阵营神将登场 N 名触发团队增益（2 名 / 3 名两档） */
+  bonds: [
+    { name: '三吒同心', color: '#d66a4a', keys: ['nezha', 'jinzha', 'muzha'], stat: 'rate', tiers: [0.08, 0.15], desc: '全体攻速' },
+    { name: '天庭威仪', color: '#d6b24a', keys: ['yudi', 'wangmu', 'yangjian'], stat: 'atk', tiers: [0.08, 0.15], desc: '全体攻击' },
+    { name: '取经之路', color: '#c98a2e', keys: ['wukong', 'wuneng', 'wujing'], stat: 'exp', tiers: [0.3, 0.6], desc: '神将经验' },
+    { name: '散仙结盟', color: '#7a6fd0', keys: ['yanwang', 'change', 'lijing'], stat: 'cd', tiers: [0.08, 0.15], desc: '技能冷却' },
+  ],
+
   /* 局外成长：修炼天赋（魂晶购买，永久生效） */
   talents: {
     costs: [15, 25, 40, 60, 90],

@@ -48,6 +48,7 @@ const Merge = {
     Grid.tiles[row][col].tower = u;
     R.towers.push(u);
     if (u.isGeneral) Gear.onGeneralBorn(u);   // 局外专属随身提示
+    Bonds.invalidate();                        // 神将增减 → 羁绊重算
     return u;
   },
 
@@ -58,6 +59,7 @@ const Merge = {
       Grid.tiles[u.row][u.col].tower = null;
     }
     if (R.selected === u) { R.selected = null; RackUI.hideSel(); }
+    Bonds.invalidate();
   },
 
   /* 判定 aChar/aLevel（拖动方的字/单位）放到 b 上的结果。
@@ -154,8 +156,9 @@ const Merge = {
     }
   },
 
-  /* 出售返还：普通字塔 sellRefund，神将 sellRefund + 4×等级 */
+  /* 出售返还：普通字塔 sellRefund，神将 sellRefund + 4×等级；「回春」词条每层 +2 */
   sellValue(u) {
-    return CONFIG.economy.sellRefund + (u.isGeneral ? 4 * u.level : 0);
+    const mod = R.mods.sell * CONFIG.waveMods.steps.sell;
+    return CONFIG.economy.sellRefund + mod + (u.isGeneral ? 4 * u.level : 0);
   },
 };

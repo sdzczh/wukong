@@ -7,11 +7,13 @@ const Skills = {
   cast(g) {
     const fn = this[g.key];
     if (fn) fn(g);
-    const cdMul = Math.min(0.6, Gear.modsOf(g).cdMul);   // 灵犀 + 专属：技冷却缩减（封顶 60%）
+    // 技冷却缩减：灵犀/专属 + 羁绊 + 波间词条「凝神」（合计封顶 85%）
+    const cdMul = Math.min(0.85, Gear.modsOf(g).cdMul + Bonds.bonus().cd + R.mods.cd * CONFIG.waveMods.steps.cd);
     g.skillT = g.def.skill.cd * (g.key === 'wukong' ? Talents.gloryCdMul() : 1) * (1 - cdMul);
     const tile = Grid.tile;
     FX.float('✦ ' + g.def.skill.name, g.x, g.y - tile * 0.95, CONFIG.rarityColors[g.def.rarity] || '#ffd867', 16);
     FX.ring(g.x, g.y, tile * 1.1, CONFIG.rarityColors[g.def.rarity] || '#ffd867');
+    FX.shake(4, 0.22);
     SFX.play('skill');
   },
 

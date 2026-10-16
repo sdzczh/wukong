@@ -10,11 +10,14 @@ const Game = {
     Panels.showMenu();
     HUD.refresh();
   },
-  startRun(seedKey) {
-    // 每日轮回传日期种子（当天全员同图同卡池）；普通局恢复随机种子
+  startRun(seedKey, kind) {
+    kind = kind || 'normal';
+    // 每日轮回/每周异变传种子（同图同卡池）；普通局恢复随机种子
     RNG.seed(seedKey || ((Date.now() >>> 0) || 1));
     resetRun();
-    R.daily = seedKey || null;
+    R.runKind = kind;
+    R.daily = kind === 'daily' ? (seedKey || null) : null;
+    if (kind === 'weekly') Weekly.apply();   // 本周 3 条全局规则并入 R.rules
     Director.reset();
     rollRoute();                // 每局随机路线
     Grid.buildTiles();          // 重建棋盘：新路线 + 随机开放格 + 恢复「封」字锁定
@@ -27,13 +30,21 @@ const Game = {
     RackUI.dealStartChars();
     HUD.refresh();
     GearUI.refresh();
-    HUD.toast(R.daily ? '每日轮回：今日全场同图，比谁走得更远' : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
+    HUD.toast(kind === 'weekly'
+      ? '每周异变：' + R.weekly.map(p => p.name).join(' · ')
+      : R.daily ? '每日轮回：今日全场同图，比谁走得更远'
+      : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
   },
 
   /* 每日轮回：按日期种子开局（固定路线与抽卡序列） */
   startDaily() {
     const d = new Date();
-    this.startRun(d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate());
+    this.startRun(d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(), 'daily');
+  },
+
+  /* 每周异变：按 ISO 周种子开局 + 3 条全局规则，结算计每周最佳 */
+  startWeekly() {
+    this.startRun(Weekly.seedKey(), 'weekly');
   },
   pause() {
     if (R.state !== 'battle') return;
@@ -59,6 +70,11 @@ const Game = {
       // 每日轮回：只记录当日的最佳波次
       if (!s.daily || s.daily.key !== R.daily) s.daily = { key: R.daily, best: 0 };
       s.daily.best = Math.max(s.daily.best, R.wave);
+    }
+    if (R.runKind === 'weekly') {
+      const wk = Weekly.key();
+      if (!s.weekly || s.weekly.key !== wk) s.weekly = { key: wk, best: 0 };
+      s.weekly.best = Math.max(s.weekly.best, R.wave);
     }
     Save.write();
     SFX.play(win ? 'win' : 'lose');
@@ -189,7 +205,9 @@ function tick(dt) {
 function render(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.setTransform(view.k, 0, 0, view.k, view.ox, view.oy);
+  // 屏震：整体画面在逻辑坐标上随机偏移
+  const sh = FX.shakeOffset();
+  ctx.setTransform(view.k, 0, 0, view.k, view.ox + sh.x * view.k, view.oy + sh.y * view.k);
 
   drawBackground(now);
   drawTiles();
@@ -701,13 +719,16 @@ window.addEventListener('resize', resize);
 Bus.on('togglePause', () => { R.state === 'battle' ? Game.pause() : Game.resume(); });
 
 Bus.on('enemyKilled', e => {
-  R.peaches += e.def.reward;
+  // 击杀收益：精英 ×奖励倍率，每周「丰收」×桃倍率，波间「聚宝」+固定值
+  const peachMul = (e.rewardMul || 1) * (R.rules ? R.rules.peachAwardMul : 1);
+  const reward = Math.max(1, Math.round(e.def.reward * peachMul + R.mods.peach * CONFIG.waveMods.steps.peach));
+  R.peaches += reward;
   R.kills += 1;
   SFX.play('die');
   if (R.kills % 3 === 0) SFX.play('coin');
-  FX.float('+' + e.def.reward + ' 桃', e.x, e.y - Grid.tile * 0.2, '#ffd867', 15);
+  FX.float('+' + reward + ' 桃', e.x, e.y - Grid.tile * 0.2, '#ffd867', 15);
   const src = e.lastHitBy;
-  if (src && src.isGeneral) src.gainExp(e.def.exp || 1);
+  if (src && src.isGeneral) src.gainExp((e.def.exp || 1) * (e.expMul || 1));
   if (src && src.key === 'wukong') { Save.data.wukongKills++; Save.write(); }
   let dropChance = e.type === 'boss' ? CONFIG.drops.bossChance : CONFIG.drops.chance;
   // 无尽征战掉率衰减：第 10 波后每波 ×0.85，掉落运气不再是续命主力
@@ -724,6 +745,8 @@ Bus.on('leak', e => {
   const base = Grid.center(CONFIG.base.col, CONFIG.base.row);
   FX.ring(base.x, base.y, Grid.tile * 0.5, '#ff6b81');
   FX.float('-' + e.def.dmg + ' 心', base.x, base.y - Grid.tile * 0.8, '#ff6b81', 19);
+  FX.shake(9, 0.5);          // 扣心屏震
+  HUD.flashDamage();         // 屏幕边缘红闪
   SFX.play('leak');
   if (R.hearts > 0 && R.hearts <= 3) SFX.play('danger');
   HUD.refresh();
@@ -731,25 +754,28 @@ Bus.on('leak', e => {
 });
 
 Bus.on('waveStart', n => {
+  const boss = n % 5 === 0;
   const sub = R.endless
-    ? (n % 5 === 0 ? '无尽征战，鬼将亲至！' : '无尽征战，敌势无穷！')
-    : (n % 5 === 0 ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '魂行黄泉，忘却轮回，杀！'));
-  HUD.showBanner('第 ' + n + ' 波', sub);
-  SFX.play('horn');
+    ? (boss ? '无尽征战，鬼将亲至！' : '无尽征战，敌势无穷！')
+    : (boss ? '鬼将亲至，小心应对！' : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '魂行黄泉，忘却轮回，杀！'));
+  HUD.showBanner('第 ' + n + ' 波', sub, boss);
+  SFX.play(boss ? 'alarm' : 'horn');
   HUD.refresh();
 });
 
 Bus.on('waveClear', n => {
   const reward = CONFIG.economy.waveRewardBase + n;
   R.peaches += reward;
-  // 息钱：持桃生息（每 10 桃 +1，单波上限），神将每波保底 +1 经验
-  const interest = Math.min(CONFIG.economy.interestCap, Math.floor(R.peaches / CONFIG.economy.interestEvery));
+  // 息钱：持桃生息（每 10 桃 +1，单波上限；每周「聚财」翻倍、词条「钱庄」抬上限）
+  const cap = CONFIG.economy.interestCap + R.mods.interest * CONFIG.waveMods.steps.interest;
+  const interest = Math.min(cap, Math.floor(R.peaches / CONFIG.economy.interestEvery * (R.rules ? R.rules.interestMul : 1)));
   if (interest > 0) R.peaches += interest;
   // 神将保底经验仅限前十波（无尽里靠击杀强度吃饭，配合随级递增的经验线）
   if (!R.endless) for (const t of R.towers) if (t.isGeneral) t.gainExp(1);
   HUD.refresh();
   SFX.play('waveclear');
   HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃${interest ? `，息钱 +${interest} 桃` : ''}`);
+  if (n >= CONFIG.waveMods.every && n % CONFIG.waveMods.every === 0) WaveMods.offer();   // 命运三选一
   if (n < CONFIG.waveCount) return;
   if (R.endless) {
     // 无尽补给：每 shovelEvery 波产出 1 把铲子
@@ -852,6 +878,7 @@ HUD.init();
 RackUI.init();
 GearUI.init();
 Panels.init();
+WaveMods.init();
 resize();
 // 首次启动先录名号，之后回主菜单
 if (User.has()) Game.toMenu();
@@ -862,9 +889,10 @@ requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
 window.GAME = {
-  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input,
+  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input, FX, SFX, Bonds, Weekly, WaveMods, Skills,
   startRun: () => Game.startRun(),
   startDaily: () => Game.startDaily(),
+  startWeekly: () => Game.startWeekly(),
   offerEndless: () => Game.offerEndless(),
   enterEndless: () => Game.enterEndless(),
   place: (c, r, key) => {
@@ -918,11 +946,42 @@ window.GAME = {
   setTimeScale: x => { R.timeScale = x; },
   step: seconds => { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) tick(STEP); },
   render: () => render(performance.now() / 1000),
+  /* --- M7 十项优化调试入口 --- */
+  callWave: () => {
+    const b = Director.callNow();
+    if (b > 0) { R.peaches += b; HUD.refresh(); }
+    return b;
+  },
+  pickMod: i => WaveMods.pick(i),
+  modOffer: () => R.modOffer,
+  applyMod: id => { WaveMods.apply(id); return { ...R.mods }; },
+  bonds: () => Bonds.bonus(),
+  weeklyInfo: () => ({ key: Weekly.key(), picks: Weekly.picksFor(Weekly.key()).map(p => p.id) }),
+  spawnElite: (affix, type) => {
+    const e = new Enemy(type || 'ghost', 1);
+    e.s = Grid.totalLen * 0.25;
+    e.pos();
+    e.makeElite(affix || undefined);
+    R.enemies.push(e);
+    return e;
+  },
+  setMods: m => Object.assign(R.mods, m),
+  exportSave: () => Save.exportCode(),
+  importSave: code => Save.importCode(code),
+  setTowerMode: (c, r, mode) => {
+    const t = Grid.tiles[r] && Grid.tiles[r][c] && Grid.tiles[r][c].tower;
+    if (!t) return false;
+    t.mode = mode;
+    return t.mode;
+  },
+  dmgStats: () => JSON.parse(JSON.stringify(R.dmgStats)),
   snapshot: () => ({
     state: R.state, wave: R.wave, hearts: R.hearts, peaches: R.peaches,
     kills: R.kills, enemies: R.enemies.filter(e => e.alive).length,
     towers: R.towers.length, rack: R.rack.map(x => x ? (x.type === 'char' ? x.ch : x.unit.def.char + ':' + x.unit.level) : null),
     pityMiss: R.pityMiss, shovelLeft: R.shovelLeft, crystalsEarned: R.crystalsEarned,
+    runKind: R.runKind, mods: { ...R.mods }, modOffer: R.modOffer,
+    bonds: Bonds.bonus().active.map(a => a.name + a.count),
     save: { ...Save.data },
   }),
 };

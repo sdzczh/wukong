@@ -47,7 +47,8 @@ const RackUI = {
 
   /* ---------- 召唤 ---------- */
   summonCost() {
-    return Math.max(5, CONFIG.summon.base + CONFIG.summon.step * R.summonsDone - Talents.summonDiscount());
+    const rule = R.rules ? R.rules.summonCostDelta : 0;
+    return Math.max(5, CONFIG.summon.base + CONFIG.summon.step * R.summonsDone - Talents.summonDiscount() + rule);
   },
 
   /* 神将字集合（两两配对） */
@@ -62,7 +63,7 @@ const RackUI = {
 
   /* 单张卡：神将字恒 Lv1；普通字随波次概率出 Lv2/Lv3（自走棋式） */
   _rollDraftCard(godSet) {
-    const godChance = CONFIG.summon.godChance + Talents.godChanceBonus();
+    const godChance = CONFIG.summon.godChance + Talents.godChanceBonus() + (R.rules ? R.rules.godChanceAdd : 0);
     const ch = RNG.next() < godChance
       ? RNG.pickWeighted(this._godWeights())
       : RNG.pickWeighted(Object.entries(CONFIG.normalCharWeights));
@@ -236,7 +237,7 @@ const RackUI = {
       const body = isGod
         ? `神将字 · 与「${this._pairOf(item.ch)}」凑对唤醒神将，或拖出棋盘成灵字塔`
         : `${towerName}字卡 · 放到棋盘即成 ${towerName} Lv${lv}`;
-      const sellVal = CONFIG.summon.sellBase + lv;
+      const sellVal = CONFIG.summon.sellBase + lv + R.mods.sell * CONFIG.waveMods.steps.sell;
       this.itemPanel.innerHTML =
         `<div class="sel-head"><span class="sel-char" style="color:${isGod ? '#7a4e86' : '#4a3b52'}">${item.ch}</span>` +
         `<span class="sel-name">${isGod ? '神将字' : towerName + '字卡'}</span><span class="sel-lv">Lv.${lv}</span>` +
@@ -376,18 +377,34 @@ const RackUI = {
     if (d.pairHint) rows.push(`与「${d.pairHint.with}」合成 ${d.pairHint.general}`);
     if (d.desc) rows.push(d.desc);
 
+    // 索敌模式行（光环塔不攻击，不显示）
+    const modeRow = d.kind === 'aura' ? '' :
+      `<div class="sel-mode-row"><span class="sm-label">索敌</span>` +
+      ['first', 'near', 'strong', 'last'].map(m =>
+        `<button class="sel-mode${t.mode === m ? ' on' : ''}" data-mode="${m}">${Tower.modeName[m]}</button>`).join('') +
+      `</div>`;
+    // 本塔伤害统计行
+    const st = R.dmgStats[t.tid];
+    const dmgRow = st && st.dmg > 0 ? `<div class="sel-dmg">本局伤害 ${Math.round(st.dmg)}</div>` : '';
+
     this.selPanel.innerHTML =
       `<div class="sel-head"><span class="sel-char" style="color:${d.color || '#4a3b52'}">${d.char}</span>` +
       `<span class="sel-name">${d.name}</span><span class="sel-lv">Lv.${t.level}</span>` +
       (d.rarity ? `<span class="sel-rarity" style="background:${CONFIG.rarityColors[d.rarity]}">${d.rarity}</span>` : '') +
       `<button class="sel-close">×</button></div>` +
       `<div class="sel-body">${rows.map(s => `<div>${s}</div>`).join('')}</div>` +
+      dmgRow + modeRow +
       (t.gear ? `<button class="sel-gear-off">卸下 ${Gear.equipName(t.gear)}</button>` : '') +
       `<button class="sel-sell">出售 +${Merge.sellValue(t)} 桃</button>`;
     this.selPanel.classList.remove('hidden');
     this.selPanel.querySelector('.sel-close').addEventListener('click', () => { SFX.play('click'); this.hideSel(); });
     const offBtn = this.selPanel.querySelector('.sel-gear-off');
     if (offBtn) offBtn.addEventListener('click', () => { Gear.unequip(t); this.showSel(t); });
+    this.selPanel.querySelectorAll('.sel-mode').forEach(btn => btn.addEventListener('click', () => {
+      t.mode = btn.dataset.mode;
+      SFX.play('click');
+      this.showSel(t);   // 重渲染高亮
+    }));
     this.selPanel.querySelector('.sel-sell').addEventListener('click', () => this.sellSelected());
   },
 

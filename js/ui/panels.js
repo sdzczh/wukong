@@ -76,24 +76,78 @@ const Panels = {
     const d = new Date();
     const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
     const dailyBest = (s.daily && s.daily.key === key) ? s.daily.best : 0;
+    const wk = Weekly.key();
+    const weeklyBest = (s.weekly && s.weekly.key === wk) ? s.weekly.best : 0;
     this._fill(
       '无敌悟空',
       `道友「${s.username || '无名氏'}」· 文字合成塔防 · 地府篇`,
-      `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}<br>今日轮回最佳　${dailyBest}　波`,
+      `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}<br>` +
+      `今日轮回最佳　${dailyBest}　波　｜　本周异变最佳　${weeklyBest}　波<br>` +
+      `<span class="settle-break">本周异变　${Weekly.summary()}</span>`,
       [
         { text: '开 始 战 斗', fn: () => Game.startRun() },
         { text: '每 日 轮 回', fn: () => Game.startDaily(), ghost: true },
+        { text: '每 周 异 变', fn: () => Game.startWeekly(), ghost: true },
         { text: '修 炼', fn: () => TalentUI.show('menu'), ghost: true },
         { text: '装 备 库', fn: () => GearUI.show('menu'), ghost: true },
         { text: '图 鉴', fn: () => Codex.show('menu'), ghost: true },
+        { text: '存 档 码', fn: () => this.showSaveCode(), ghost: true },
         { text: '改 名 号', fn: () => this.showNameEntry(() => this.showMenu()), ghost: true },
       ]
     );
   },
 
+  /* 存档码面板：导出当前存档 / 粘贴导入覆盖 */
+  showSaveCode() {
+    this.title.textContent = '存 档 码';
+    this.sub.textContent = '复制存档码可在其他设备恢复进度';
+    this.stats.innerHTML =
+      '<textarea id="save-code" spellcheck="false" readonly></textarea>' +
+      '<div class="save-hint">点下方「复 制」后发送给新设备；在「导 入」框粘贴对方存档码可覆盖当前进度</div>';
+    this.btns.innerHTML = '';
+    const ta = this.stats.querySelector('#save-code');
+    ta.value = Save.exportCode();
+    ta.addEventListener('focus', () => ta.select());
+
+    const mk = (text, fn, ghost) => {
+      const el = document.createElement('button');
+      el.className = 'btn' + (ghost ? ' ghost' : '');
+      el.textContent = text;
+      el.addEventListener('click', () => { SFX.play('click'); fn(); });
+      this.btns.appendChild(el);
+      return el;
+    };
+    mk('复 制', () => {
+      ta.removeAttribute('readonly');
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      ta.setAttribute('readonly', '');
+      HUD.toast('存档码已复制');
+    });
+    mk('导 入', () => {
+      const code = prompt('粘贴存档码（将覆盖当前进度）：');
+      if (code == null) return;
+      const err = Save.importCode(code);
+      if (err) { HUD.toast('导入失败：' + err); return; }
+      HUD.toast('导入成功 · 存档已更新');
+      this.showMenu();
+    }, true);
+    mk('返 回', () => this.showMenu(), true);
+    this.overlay.classList.remove('hidden');
+  },
+
   showPause() {
+    const bondsLine = Bonds.list().length
+      ? `<br>${Bonds.list().map(a => `${a.name}(${a.count}人) ${a.desc}+${Math.round(a.v * 100)}%`).join('　｜　')}`
+      : '';
+    const weeklyLine = R.weekly
+      ? `<br>本周异变　${R.weekly.map(p => p.name).join(' · ')}`
+      : '';
+    const modsLine = R.mods && Object.values(R.mods).some(v => v > 0)
+      ? `<br>波间词条　${CONFIG.waveMods.pool.filter(p => R.mods[p.id] > 0).map(p => `${p.name}×${R.mods[p.id]}`).join(' × ')}`
+      : '';
     this._fill(
-      '暂 停', '黄泉为路，幽冥作甲', '',
+      '暂 停', '黄泉为路，幽冥作甲', bondsLine + weeklyLine + modsLine,
       [
         { text: '继 续', fn: () => Game.resume() },
         { text: '修 炼', fn: () => TalentUI.show('pause'), ghost: true },
@@ -123,12 +177,23 @@ const Panels = {
     const dailyLine = R.daily
       ? `<br>今日轮回最佳　${(Save.data.daily && Save.data.daily.key === R.daily) ? Save.data.daily.best : R.wave}　波`
       : '';
+    const weeklyLine = R.weekly
+      ? `<br>本周异变最佳　${(Save.data.weekly && Save.data.weekly.key === Weekly.key()) ? Save.data.weekly.best : R.wave}　波`
+      : '';
     const sigLine = R.sigRun > 0 ? `<br>本局专属碎片　+${R.sigRun}　（已入库，主菜单「装备库」合成）` : '';
+    // 每塔伤害前三
+    const tops = Object.values(R.dmgStats)
+      .sort((a, b) => b.dmg - a.dmg).slice(0, 3)
+      .filter(t => t.dmg > 0);
+    const dmgLine = tops.length
+      ? `<br><span class="settle-break">伤害榜　</span>` +
+        tops.map((t, i) => `<span style="color:${t.color}">${['一', '二', '三'][i]}·${t.name} ${Math.round(t.dmg)}</span>`).join('　')
+      : '';
     const stats =
       `本局波次　${R.wave}　｜　击杀　${R.kills}` +
       `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
       `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + sigLine;
+      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + weeklyLine + sigLine + dmgLine;
     this._fill(title, sub, stats, [
       { text: '再 来 一 局', fn: () => Game.startRun() },
       { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },

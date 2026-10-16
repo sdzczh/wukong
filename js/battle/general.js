@@ -14,10 +14,13 @@ class General extends Tower {
   /* 专属装备等级（局外装备库合成升级，唤醒时自动随身） */
   get sigLv() { return Gear.sigLvOf(this.key); }
 
-  /* 击杀经验：满升级线升 1 级，最高 maxLevel */
+  /* 击杀经验：满升级线升 1 级，最高 maxLevel。
+     加成：羁绊（取经之路）× 每周规则 × 波间词条「悟道」 */
   gainExp(n) {
     if (this.level >= this.maxLevel) return;
-    this.exp += n;
+    const mul = (1 + Bonds.bonus().exp) * (R.rules ? R.rules.expMul : 1)
+      * (1 + R.mods.exp * CONFIG.waveMods.steps.exp);
+    this.exp += n * mul;
     while (this.level < this.maxLevel) {
       const need = this.expNeed;
       if (this.exp < need) break;
