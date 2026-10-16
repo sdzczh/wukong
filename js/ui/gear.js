@@ -3,22 +3,49 @@
 
 const GearUI = {
   statLabel: { atkMul: '攻击', rateMul: '攻速', rangeMul: '射程', cdMul: '技冷却' },
+  open: false,   // 装备栏开合（顶栏「装」按钮切换；开局/回菜单复位）
 
   init() {
     this.bar = document.getElementById('gear-bar');
+    this.btn = document.getElementById('btn-gear');
     this.bar.addEventListener('click', e => {
       const part = e.target.closest('.gp-part');
       if (part) { SFX.ensure(); Gear.forge(part.dataset.fam); return; }
       const inv = e.target.closest('.gp-inv');
       if (inv) { SFX.ensure(); this.tapInv(+inv.dataset.i); }
     });
+    this.btn.addEventListener('click', () => {
+      SFX.ensure(); SFX.play('click');
+      if (R.state !== 'battle' && R.state !== 'paused') return;
+      if (R.draft && R.draft.length) { HUD.toast('先选完召唤的牌'); return; }
+      this.open = !this.open;
+      this.refresh();
+    });
+  },
+
+  /* 有部件可合成 / 有装备可再合成 → 顶栏按钮亮金提示 */
+  _canAct() {
+    const need = CONFIG.gear.forgeNeed;
+    for (const fam in CONFIG.gear.families) if ((R.parts[fam] || 0) >= need) return true;
+    for (const it of R.equips) {
+      if (it.lv >= CONFIG.gear.maxLv) continue;
+      let n = 0;
+      for (const x of R.equips) if (x.fam === it.fam && x.lv === it.lv) n++;
+      if (n >= need) return true;
+    }
+    return false;
   },
 
   /* 部件合成后的提示文本（点部件 = 合成） */
   refresh() {
     if (!this.bar) return;
-    if ((R.state !== 'battle' && R.state !== 'paused') || (R.draft && R.draft.length)) {
-      this.bar.classList.add('hidden');   // 选牌条弹出时让位
+    const inBattle = R.state === 'battle' || R.state === 'paused';
+    if (this.btn) {
+      this.btn.classList.toggle('on', inBattle && this.open);
+      this.btn.classList.toggle('can', inBattle && this._canAct());
+    }
+    if (!inBattle || (R.draft && R.draft.length) || !this.open) {
+      this.bar.classList.add('hidden');   // 未开 / 选牌中 / 非战斗：收起
       return;
     }
     const fams = CONFIG.gear.families;

@@ -736,3 +736,14 @@ body {
 .bless-chip.bought .bc-price b { color: #7fa383; }
 .bless-chip.bought .bc-sub { color: #7fa383; }
 .bless-chip.bought:active { transform: none; }
+
+/* ---------- 顶栏「装」按钮：开合态 + 可合成金边提示 ---------- */
+#btn-gear.on {
+  background: #40351c; border-color: #e8b64c; color: #ffd867;
+  box-shadow: 0 0 12px #e8b64c66;
+}
+#btn-gear.can {
+  border-color: #e8b64c;
+  box-shadow: 0 0 10px #e8b64c55;
+}
+#btn-gear.can.on { box-shadow: 0 0 14px #e8b64c88; }

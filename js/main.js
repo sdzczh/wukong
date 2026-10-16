@@ -9,6 +9,8 @@ const Game = {
     R.state = 'menu';
     Panels.showMenu();
     HUD.refresh();
+    GearUI.open = false;        // 装备栏复位（如中途弃赛回菜单）
+    GearUI.refresh();
     WaveMods.render();          // 收起波间三选一（如中途弃选回菜单）
   },
   startRun(seedKey, kind) {
@@ -30,6 +32,7 @@ const Game = {
     RackUI.discardDraft();
     RackUI.dealStartChars();
     HUD.refresh();
+    GearUI.open = false;        // 装备栏默认收起，顶栏「装」按钮开合
     GearUI.refresh();
     WaveMods.render();          // 复位波间三选一（隐藏上一局残留）
     HUD.toast(kind === 'weekly'
@@ -953,6 +956,8 @@ window.GAME = {
   setWukongKills: n => { Save.data.wukongKills = n; Save.write(); },
   giveParts: (fam, n) => { R.parts[fam] = (R.parts[fam] || 0) + (n || 1); GearUI.refresh(); },
   giveEquip: (fam, lv) => { R.equips.push({ fam, lv: lv || 1 }); GearUI.refresh(); },
+  gearToggle: () => { GearUI.open = !GearUI.open; GearUI.refresh(); return GearUI.open; },
+  gearOpen: () => GearUI.open,
   giveShard: (key, n) => {
     Save.data.shards = Save.data.shards || {};
     Save.data.shards[key] = (Save.data.shards[key] || 0) + (n || 1);

@@ -206,6 +206,7 @@ const RackUI = {
     if (!this.draftBar) return;
     if (!R.draft || R.draft.length === 0 || R.state !== 'battle') {
       this.draftBar.classList.add('hidden');
+      GearUI.refresh();   // 选牌收起：装备栏按开合态恢复（原先依赖掉落事件才恢复）
       return;
     }
     this.draftBar.classList.remove('hidden');
