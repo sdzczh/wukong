@@ -12,6 +12,7 @@ class Projectile {
     this.glow = opts.glow != null ? opts.glow : 6;
     this.trail = opts.trail || null;      // 拖尾颜色
     this.impact = !!opts.impact;          // 命中：小冲击环 + 火花
+    this.oh = opts.oh || null;            // 命中附加包：染毒/减速/削甲/溅射（腐蛊/霜华）
     this.trailT = 0;
     this.spin = 0;
     this.dead = false;
@@ -25,6 +26,7 @@ class Projectile {
     const step = this.speed * dt;
     if (d <= Math.max(step, 7)) {
       if (this.target && this.target.alive) {
+        if (this.oh) Tower.applyOnHit(this.oh, this.target, this.dmg);   // 附加先于伤害：削甲本击即生效
         this.target.takeDamage(this.dmg, this.src);
         SFX.play('hit');
         if (this.impact) {

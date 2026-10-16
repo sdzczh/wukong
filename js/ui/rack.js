@@ -456,6 +456,24 @@ const RackUI = {
     if (d.pairHint) rows.push(`与「${d.pairHint.with}」合成 ${d.pairHint.general}`);
     if (d.desc) rows.push(d.desc);
 
+    // 二选一进阶（毒/雷/冰/锤 达 Lv3 开放，花费蟠桃，择一路不可更改）
+    let advRow = '';
+    const advSet = !t.isGeneral && CONFIG.advances && CONFIG.advances[t.key];
+    if (advSet && t.adv) {
+      const a = t.advDef();
+      advRow = `<div class="sel-adv-done"><span class="sel-adv-name" style="color:${d.color}">${a.name}</span><span class="sel-adv-desc">${a.desc}</span></div>`;
+    } else if (advSet && t.level >= 3) {
+      const afford = R.peaches >= CONFIG.advances.cost;
+      advRow =
+        `<div class="sel-adv-row">` +
+        ['a', 'b'].map(k =>
+          `<button class="sel-adv" data-adv="${k}"><span class="sel-adv-name" style="color:${d.color}">${advSet[k].name}</span><span class="sel-adv-desc">${advSet[k].desc}</span></button>`).join('') +
+        `</div>` +
+        `<div class="sel-adv-cost${afford ? '' : ' no'}">进阶花费 ${CONFIG.advances.cost} 蟠桃 · 择一路不可更改${afford ? '' : '（蟠桃不足）'}</div>`;
+    } else if (advSet) {
+      advRow = `<div class="sel-adv-cost">升至 Lv3 可二选一进阶</div>`;
+    }
+
     // 索敌模式行（光环塔不攻击，不显示）
     const modeRow = d.kind === 'aura' ? '' :
       `<div class="sel-mode-row"><span class="sm-label">索敌</span>` +
@@ -472,11 +490,22 @@ const RackUI = {
       (d.rarity ? `<span class="sel-rarity" style="background:${CONFIG.rarityColors[d.rarity]}">${d.rarity}</span>` : '') +
       `<button class="sel-close">×</button></div>` +
       `<div class="sel-body">${rows.map(s => `<div>${s}</div>`).join('')}</div>` +
-      dmgRow + modeRow +
+      advRow + dmgRow + modeRow +
       (t.gear ? `<button class="sel-gear-off">卸下 ${Gear.equipName(t.gear)}</button>` : '') +
       `<button class="sel-sell">出售 +${Merge.sellValue(t)} 桃</button>`;
     this.selPanel.classList.remove('hidden');
     this.selPanel.querySelector('.sel-close').addEventListener('click', () => { SFX.play('click'); this.hideSel(); });
+    this.selPanel.querySelectorAll('.sel-adv').forEach(btn => btn.addEventListener('click', () => {
+      if (R.peaches < CONFIG.advances.cost) { HUD.toast(`进阶需 ${CONFIG.advances.cost} 桃，蟠桃不足`); SFX.play('click'); return; }
+      R.peaches -= CONFIG.advances.cost;
+      t.adv = btn.dataset.adv;
+      const a = t.advDef();
+      FX.ring(t.x, t.y, Grid.tile * 0.9, '#ffd867', { life: 0.6, width: 4, grow: 40 });
+      FX.float(a.name + '！', t.x, t.y - Grid.tile * 0.8, '#ffd867', 18);
+      SFX.play('merge');
+      HUD.refresh();
+      this.showSel(t);
+    }));
     const offBtn = this.selPanel.querySelector('.sel-gear-off');
     if (offBtn) offBtn.addEventListener('click', () => { Gear.unequip(t); this.showSel(t); });
     this.selPanel.querySelectorAll('.sel-mode').forEach(btn => btn.addEventListener('click', () => {

@@ -59,9 +59,11 @@ const CONFIG = {
   },
 
   // 普通字 → 塔 key
-  charToTower: { '枪': 'spear', '棍': 'staff', '弓': 'bow', '营': 'camp' },
-  // 抽字权重（普通字合计 76，神将字合计权重 42）
-  normalCharWeights: { '枪': 20, '棍': 16, '弓': 20, '营': 20 },
+  charToTower: { '枪': 'spear', '棍': 'staff', '弓': 'bow', '营': 'camp',
+                 '毒': 'poison', '雷': 'thunder', '冰': 'frost', '锤': 'metal' },
+  // 抽字权重（普通字合计 128，神将字合计权重 42）
+  normalCharWeights: { '枪': 20, '棍': 16, '弓': 20, '营': 20,
+                       '毒': 13, '雷': 13, '冰': 13, '锤': 13 },
   godCharWeights: {
     '悟': 3, '空': 2, '能': 3, '净': 3, '哪': 2, '吒': 3,
     '金': 3, '木': 3, '杨': 2, '戬': 2, '王': 3, '母': 2,
@@ -87,6 +89,27 @@ const CONFIG = {
   towerMaxLevel: 5,
   towerLevelMul: { atk: 0.4, range: 0.15 },
 
+  /* 普通塔进阶（2.0 扩系）：Lv3 后花蟠桃二选一，永久改特性（存于单位 adv 字段，'a' | 'b'） */
+  advances: {
+    cost: 12,
+    poison: {
+      a: { name: '蚀骨毒', desc: '毒素每秒伤害 ×1.6，可叠 4 层', poisonMul: 1.6, poisonCap: 4 },
+      b: { name: '瘴疫',   desc: '攻击溅射：目标周围敌人受 40% 伤害并染一半毒', splash: { r: 1.1, mul: 0.4, poison: 0.5 } },
+    },
+    thunder: {
+      a: { name: '连环雷', desc: '闪电跳跃目标 3 → 5 个', chainN: 5 },
+      b: { name: '霹雳',   desc: '专注主目标：200% 伤害并眩晕 0.3 秒', focusMul: 2.0, stun: 0.3 },
+    },
+    frost: {
+      a: { name: '严寒',   desc: '减速 25% → 45%，持续 3 秒', slowF: 0.55, slowDur: 3 },
+      b: { name: '冰晶爆', desc: '攻速 -15%；攻击溅射 50%，20% 概率冰冻 0.5 秒', rateMul: 0.85, splash: { r: 1.2, mul: 0.5 }, freeze: 0.2 },
+    },
+    metal: {
+      a: { name: '碎甲锤', desc: '每击削甲 1 → 2，上限 5 → 8', shredN: 2, shredCap: 8 },
+      b: { name: '重金锤', desc: '攻击 +60%，攻速 -20%', atkMul: 1.6, rateMul: 0.8 },
+    },
+  },
+
   // 普通字塔（Lv1 基准）
   towers: {
     bow:   { char: '弓', name: '木弓', atk: 10, rate: 1.1, range: 3.5, kind: 'arrow',
@@ -97,6 +120,23 @@ const CONFIG = {
              desc: '横扫：攻击目标及相邻 2 个敌人' },
     camp:  { char: '营', name: '战营', atk: 0, rate: 0, range: 2.2, kind: 'aura', auraRate: 0.15, auraLvStep: 0.05,
              desc: '战鼓：周围 2 格友塔攻速 +15%（每级扩圈、攻速再 +5%，自身不攻击）' },
+
+    /* ---------- 2.0 扩系四塔（毒/雷/冰/锤）：Lv3 可花桃二选一进阶 ---------- */
+    poison: { char: '毒', name: '腐蛊', atk: 6, rate: 1.0, range: 3.2, kind: 'arrow', color: '#7aa84e',
+              poison: { dps: 4, dur: 3, cap: 3 },
+              atkfx: { color: '#8fc45e', size: 5, shape: 'ink', glow: 7, trail: '#6a9440' },
+              desc: '腐毒：命中染毒，每秒 4 点持续伤害（无视护甲），可叠 3 层' },
+    thunder:{ char: '雷', name: '雷煞', atk: 13, rate: 0.6, range: 3.0, kind: 'chain', color: '#b88fe8',
+              chain: { n: 3, fall: 0.75 },
+              desc: '连环雷：闪电在至多 3 个敌人间跳跃，逐跳伤害 -25%' },
+    frost:  { char: '冰', name: '霜华', atk: 8, rate: 1.0, range: 3.2, kind: 'arrow', color: '#6fb4e0',
+              slowHit: { f: 0.75, dur: 1.8 },
+              atkfx: { color: '#a8dcf5', size: 5, shape: 'drop', glow: 7, trail: '#7ab8e0', impact: true },
+              desc: '霜寒：命中减速 25%，持续 1.8 秒' },
+    metal:  { char: '锤', name: '重锤', atk: 20, rate: 0.55, range: 2.4, kind: 'cleave', cleave: 2, color: '#c0a05a',
+              shred: { n: 1, cap: 5 },
+              atkfx: { style: 'sweep', color: '#c8a85a', r: 1.15, width: 10, glow: 8, impact: 'ring' },
+              desc: '碎甲：重锤砸地波及 2 敌，命中削减护甲 1（至多 5 层）' },
 
     /* ---------- 神将（两字合成；Lv1 基准，每级攻击×1.6；技能 M3 启用） ---------- */
     wukong:  { char: '悟空', name: '孙悟空', general: true, rarity: '橙', pair: ['悟', '空'], color: '#c98a2e',

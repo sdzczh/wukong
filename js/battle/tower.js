@@ -31,7 +31,9 @@ class Tower {
     const talent = 1 + Talents.atkBonus() + (this.key === 'wukong' ? Talents.gloryAtk() : 0);
     const dread = bossDreadMul();   // 玄甲鬼将威压：存活时全军攻击 -25%
     const legend = 1 + (R.mods.latk || 0) * CONFIG.waveMods.legendSteps.latk;   // 传说·天罡战气
+    const adv = this.advDef();
     return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * dread * legend
+      * (adv && adv.atkMul ? adv.atkMul : 1)   // 进阶·重金锤攻击修正
       * genPassiveAtkMul(this)   // 神将星级攻击加成 + 满星天威/督战光环
       * (1 + this.gearMods.atkMul) * (1 + Bonds.bonus().atk) * (1 + R.mods.atk * CONFIG.waveMods.steps.atk));
   }
@@ -55,6 +57,62 @@ class Tower {
   }
 
   inRange(e) { return Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx; }
+
+  /* 二选一进阶：返回当前进阶定义（未进阶/无配置返回 null） */
+  advDef() {
+    if (!this.adv || this.isGeneral) return null;
+    const set = CONFIG.advances && CONFIG.advances[this.key];
+    return set ? (set[this.adv] || null) : null;
+  }
+
+  /* 命中附加包：毒染毒 / 冰减速冻结 / 锤削甲 / 进阶溅射（无附加返回 null） */
+  buildOnHit() {
+    const def = this.def, adv = this.advDef();
+    const oh = { src: this };
+    if (def.poison) {
+      let mul = 1, cap = def.poison.cap;
+      if (adv && adv.poisonMul) mul = adv.poisonMul;
+      if (adv && adv.poisonCap) cap = adv.poisonCap;
+      oh.poison = { dps: def.poison.dps * mul, dur: def.poison.dur, cap };
+    }
+    if (def.slowHit) {
+      let f = def.slowHit.f, dur = def.slowHit.dur;
+      if (adv && adv.slowF) f = adv.slowF;
+      if (adv && adv.slowDur) dur = adv.slowDur;
+      oh.slow = { f, dur };
+      if (adv && adv.freeze) oh.freeze = adv.freeze;
+    }
+    if (def.shred) {
+      let n = def.shred.n, cap = def.shred.cap;
+      if (adv && adv.shredN) n = adv.shredN;
+      if (adv && adv.shredCap) cap = adv.shredCap;
+      oh.shred = { n, cap };
+    }
+    if (adv && adv.splash) oh.splash = { r: adv.splash.r, mul: adv.splash.mul, poison: adv.splash.poison || 0 };
+    return (oh.poison || oh.slow || oh.shred || oh.splash) ? oh : null;
+  }
+
+  /* 命中附加统一入口（弹道命中与近战挥砍共用）：削甲先于本击伤害生效 */
+  static applyOnHit(oh, e, dmg) {
+    if (!oh || !e || !e.alive) return;
+    if (oh.poison) e.applyPoison(oh.poison.dps, oh.poison.dur, oh.poison.cap, oh.src);
+    if (oh.slow) e.applySlow(oh.slow.f, oh.slow.dur);
+    if (oh.freeze && RNG.next() < oh.freeze) {
+      e.applyStun(0.5);
+      FX.float('冰封', e.x, e.y - Grid.tile * 0.5, '#a8e0ff', 14);
+    }
+    if (oh.shred) e.applyShred(oh.shred.n, oh.shred.cap);
+    if (oh.splash) {
+      const r = Grid.tile * oh.splash.r;
+      for (const o of R.enemies) {
+        if (!o.alive || o === e) continue;
+        if (Math.hypot(o.x - e.x, o.y - e.y) > r) continue;
+        o.takeDamage(Math.max(1, Math.round(dmg * oh.splash.mul)), oh.src);
+        if (oh.splash.poison && oh.poison) o.applyPoison(oh.poison.dps * oh.splash.poison, oh.poison.dur, oh.poison.cap, oh.src);
+      }
+      FX.ring(e.x, e.y, r, oh.poison ? '#7aa84e' : '#a8e0ff', { life: 0.3, width: 2.5, grow: 26 });
+    }
+  }
 
   /* 索敌：按 this.mode 选取（默认最先 = 路径 progress 最大者）；隐匿遁形者跳过（满星杨戬·天目可破隐） */
   pickTarget(enemies) {
@@ -82,7 +140,9 @@ class Tower {
     if (!target) return;
     const haste = this.hasteDur > 0 ? (this.hasteMul || 1.3) : 1;
     const bonds = Bonds.bonus();
+    const adv = this.advDef();
     this.cd = 1 / (this.def.rate * this.auraMul() * haste * genPassiveRateMul(this)   // 满星木吒·连环
+      * (adv && adv.rateMul ? adv.rateMul : 1)   // 进阶攻速修正（重金锤 -20% / 冰晶爆 -15%）
       * (1 + this.gearMods.rateMul)
       * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate)
       * (1 + (R.mods.lrate || 0) * CONFIG.waveMods.legendSteps.lrate)   // 传说·神行法
@@ -102,6 +162,8 @@ class Tower {
     const af = this.def.atkfx || null;
     if (this.def.kind === 'arrow') {
       const opts = { src: this };
+      const oh = this.buildOnHit();   // 毒染毒 / 冰减速（进阶溅射走 applyOnHit）
+      if (oh) opts.oh = oh;
       if (af) {
         opts.color = af.color; opts.size = af.size; opts.shape = af.shape;
         opts.glow = af.glow; opts.trail = af.trail; opts.impact = af.impact;
@@ -135,13 +197,46 @@ class Tower {
       hits.forEach(e => e.takeDamage(dmg, this));
       FX.beam(this.x, this.y, ang, this.rangePx, af || { color: '#e0905c' });
       SFX.play('shoot');
+    } else if (this.def.kind === 'chain') {
+      // 连环雷：闪电在敌人间跳跃，逐跳伤害衰减；进阶霹雳 = 专注主目标 + 眩晕
+      const adv = this.advDef();
+      const focus = !!(adv && adv.focusMul);
+      let n = focus ? 1 : (this.def.chain ? this.def.chain.n : 3);
+      if (adv && adv.chainN) n = adv.chainN;
+      const fall = this.def.chain ? this.def.chain.fall : 0.75;
+      let cur = target, d = focus ? Math.round(dmg * adv.focusMul) : dmg;
+      const hit = new Set([cur]);
+      let px = this.x, py = this.y - Grid.tile * 0.2;
+      for (let i = 0; i < n && cur; i++) {
+        const oh = this.buildOnHit();
+        if (oh) Tower.applyOnHit(oh, cur, d);
+        cur.takeDamage(d, this);
+        if (focus && cur.alive) cur.applyStun(adv.stun || 0.3);
+        FX.tracer(px, py, Math.atan2(cur.y - py, cur.x - px), Math.hypot(cur.x - px, cur.y - py), this.def.color, { life: 0.22, width: 3, glow: 8 });
+        px = cur.x; py = cur.y;
+        let next = null, nd = 1e9;
+        for (const e of enemies) {
+          if (!e.alive || hit.has(e)) continue;
+          const dd = Math.hypot(e.x - cur.x, e.y - cur.y);
+          if (dd <= Grid.tile * 2.2 && dd < nd) { next = e; nd = dd; }
+        }
+        if (!next) break;
+        cur = next; hit.add(cur);
+        d = Math.max(1, Math.round(d * fall));
+      }
+      FX.spark(target.x, target.y, this.def.color, 4);
+      SFX.play('shoot');
     } else if (this.def.kind === 'cleave') {
       const ang = Math.atan2(target.y - this.y, target.x - this.x);
       const near = enemies
         .filter(e => e.alive && Math.hypot(e.x - target.x, e.y - target.y) <= Grid.tile * 1.1)
         .sort((a, b) => Math.hypot(a.x - target.x, a.y - target.y) - Math.hypot(b.x - target.x, b.y - target.y))
         .slice(0, this.def.cleave);
-      near.forEach(e => e.takeDamage(dmg, this));
+      const oh = this.buildOnHit();   // 碎甲先于本击伤害生效
+      near.forEach(e => {
+        if (oh) Tower.applyOnHit(oh, e, dmg);
+        e.takeDamage(dmg, this);
+      });
       FX.sweep(this.x, this.y, ang, Grid.tile, af, target);
       SFX.play('hit');
     }
@@ -207,6 +302,7 @@ class Tower {
 
   static colors = {
     bow: '#8a5a2e', spear: '#a84a3e', staff: '#7a4e86', camp: '#4e7a52',
+    poison: '#7aa84e', thunder: '#b88fe8', frost: '#6fb4e0', metal: '#c0a05a',
   };
 }
 

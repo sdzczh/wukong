@@ -19,6 +19,8 @@ class Enemy {
     this.summonT = 3;                           // 唤魂：下次召小鬼
     this.stealth = false; this.stealthT = CONFIG.bossStealth.off;   // 隐匿：现形先行
     this.enraged = false;                       // 狂暴：半血触发一次
+    this.poisT = 0; this.poisDps = 0; this.poisAcc = 0; this.poisStacks = 0; this.poisSrc = null;   // 腐毒叠层
+    this.shredN = 0;                            // 碎甲层数（削基础护甲）
     if (type === 'boss' && bossKind) {
       const bp = CONFIG.bossPool.find(b => b.id === bossKind);
       if (bp) {
@@ -27,6 +29,7 @@ class Enemy {
         if (bp.color) this.tint = bp.color;
       }
     }
+    this.baseArmor = this.armor;   // 碎甲按基础护甲扣减（鬼将覆写后记录）
     this.pos();
   }
 
@@ -136,6 +139,26 @@ class Enemy {
         return;
       }
     }
+    // 腐毒：持续跳字（无视护甲），眩晕/减速不影响毒素生效
+    if (this.poisT > 0) {
+      this.poisT -= dt;
+      this.poisAcc += this.poisDps * dt;
+      if (this.poisAcc >= 1) {
+        const dm = Math.floor(this.poisAcc);
+        this.poisAcc -= dm;
+        this.hp -= dm;
+        this.flash = 0.08;
+        this.creditDmg(this.poisSrc, dm);
+        FX.float(String(dm), this.x - Grid.tile * 0.25, this.y - Grid.tile * 0.5, '#a8e07a', 13);
+        if (this.hp <= 0) {
+          this.alive = false;
+          this.lastHitBy = this.poisSrc;
+          if (this.elite && this.affix === 'split') this._split();
+          Bus.emit('enemyKilled', this);
+          return;
+        }
+      }
+    }
     if (this.stun > 0) { this.stun -= dt; return; }
     if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slowF = 1; }
     this.s += this.speedPx * this.slowF * dt;
@@ -156,15 +179,7 @@ class Enemy {
     let eff = Math.max(1, dmg - (ignoreArmor ? 0 : (this.armor || 0)));
     // 伤害统计：按实际输出计（含被护盾吸收部分）
     const out = eff;
-    if (src && src.tid) {
-      const st = R.dmgStats[src.tid] || (R.dmgStats[src.tid] = {
-        name: '', dmg: 0,
-        color: src.isGeneral ? (CONFIG.rarityColors[src.def.rarity] || '#e8933c')
-                             : (Tower.colors[src.key] || '#7a6fd0'),
-      });
-      st.name = src.def.name + (src.level > 1 ? ' Lv' + src.level : '');
-      st.dmg += out;
-    }
+    this.creditDmg(src, out);
     // 精英护盾先于生命值吸收（破盾后开始 5 秒重生成计时）
     if (this.shield > 0) {
       const absorbed = Math.min(this.shield, eff);
@@ -205,6 +220,37 @@ class Enemy {
 
   applyStun(t) { this.stun = Math.max(this.stun, t); }
   applySlow(factor, t) { this.slowF = Math.min(this.slowF, factor); this.slowT = Math.max(this.slowT, t); }
+
+  /* 腐毒叠层：新层累加 dps、时长取最大；到上限后不再叠（时长照常刷新） */
+  applyPoison(dps, dur, cap, src) {
+    if (!this.alive) return;
+    if (this.poisStacks < cap) { this.poisStacks++; this.poisDps += dps; }
+    this.poisT = Math.max(this.poisT, dur);
+    this.poisSrc = src;
+  }
+
+  /* 碎甲：削减基础护甲（不回退；同一目标叠至上限） */
+  applyShred(n, cap) {
+    if (!this.alive) return;
+    const before = this.shredN;
+    this.shredN = Math.min(cap, this.shredN + n);
+    if (this.shredN > before) {
+      this.armor = Math.max(0, this.baseArmor - this.shredN);
+      FX.float('碎甲', this.x, this.y - Grid.tile * 0.72, '#d8c89a', 12);
+    }
+  }
+
+  /* 伤害统计归属（直伤/毒跳共用） */
+  creditDmg(src, out) {
+    if (!src || !src.tid || !out) return;
+    const st = R.dmgStats[src.tid] || (R.dmgStats[src.tid] = {
+      name: '', dmg: 0,
+      color: src.isGeneral ? (CONFIG.rarityColors[src.def.rarity] || '#e8933c')
+                           : (Tower.colors[src.key] || '#7a6fd0'),
+    });
+    st.name = src.def.name + (src.level > 1 ? ' Lv' + src.level : '');
+    st.dmg += out;
+  }
 
   draw(ctx, now) {
     const tile = Grid.tile;
@@ -298,6 +344,16 @@ class Enemy {
       ctx.font = `900 ${Math.round(size * 0.34)}px sans-serif`;
       ctx.fillStyle = '#7fc4ff';
       ctx.fillText('❄', this.x + size * 0.42, this.y - size * 0.5);
+    }
+    // 腐毒：中毒标记（左上绿字，叠层数显示小数字）
+    if (this.poisT > 0) {
+      ctx.font = `900 ${Math.round(size * 0.34)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
+      ctx.fillStyle = '#9ade6a';
+      ctx.fillText('毒', this.x - size * 0.48, this.y - size * 0.5);
+      if (this.poisStacks > 1) {
+        ctx.font = `900 ${Math.round(size * 0.24)}px sans-serif`;
+        ctx.fillText('×' + this.poisStacks, this.x - size * 0.48, this.y - size * 0.18);
+      }
     }
     // 隐匿：遁形提示（略提亮，隐了也得知道为啥打不着）
     if (this.stealth) {
