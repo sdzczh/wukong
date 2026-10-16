@@ -19,7 +19,8 @@ const ACHS = [
   { id: 'wk100',    name: '金箍初鸣', title: '悟空同行', desc: '孙悟空累计击杀 100', test: s => (s.wukongKills || 0) >= 100 },
   /* —— 图鉴收集 —— */
   { id: 'cx16',   name: '识字百人', title: '集字生',   desc: '图鉴收集 16 个字',       test: s => Object.keys((s.codex && s.codex.chars) || {}).length >= 16 },
-  { id: 'cx23',   name: '字海拾遗', title: '藏经阁主', desc: '图鉴集齐全部 23 个字',    test: s => Object.keys((s.codex && s.codex.chars) || {}).length >= 23 },
+  { id: 'cx23',   name: '字海拾遗', title: '藏经阁主', desc: '图鉴收集 23 个字',       test: s => Object.keys((s.codex && s.codex.chars) || {}).length >= 23 },
+  { id: 'cx27',   name: '包罗万象', title: '万象阁主', desc: '图鉴集齐全部 27 个字',    test: s => Object.keys((s.codex && s.codex.chars) || {}).length >= 27 },
   { id: 'lv2x5',  name: '熔铸成钢', title: '锻字匠',   desc: '5 个字历史最高达到 Lv2', test: s => Object.values((s.codex && s.codex.charLv) || {}).filter(v => v >= 2).length >= 5 },
   { id: 'lv3x1',  name: '点石成金', title: '点金手',   desc: '1 个字历史最高达到 Lv3', test: s => Object.values((s.codex && s.codex.charLv) || {}).filter(v => v >= 3).length >= 1 },
   { id: 'lv3x5',  name: '登峰造极', title: '极字宗师', desc: '5 个字历史最高达到 Lv3', test: s => Object.values((s.codex && s.codex.charLv) || {}).filter(v => v >= 3).length >= 5 },
