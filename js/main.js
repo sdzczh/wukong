@@ -990,9 +990,13 @@ const Input = {
       ? String(item.unit.key).startsWith('ling:')
       : !CONFIG.charToTower[aChar];
     if (item.type === 'unit' && item.unit.isGeneral) {
-      HUD.toast((item.unit.star || 0) < CONFIG.generalStars.max
+      const gu = item.unit;
+      // 满星后：未满级仍可同级升级（无尽恒可）；满星满级则不再提示可以升级
+      HUD.toast((gu.star || 0) < CONFIG.generalStars.max
         ? '场上和架上都没有第二张同名神将可升星'
-        : '已满星，场上也没有同级同名神将可升级');
+        : gu.level < gu.maxLevel
+          ? '已满星，场上和架上都没有同名同级神将可升级'
+          : '已满星满级，无法再合成');
     } else if (isLing) {
       const ph = Merge.pairHintOf(aChar);
       HUD.toast(ph ? `场上没有「${ph.with}」字塔，架上也没有「${ph.with}」字可凑对` : '场上和架上都没有可配对的目标');

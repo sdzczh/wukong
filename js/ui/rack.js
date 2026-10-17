@@ -246,12 +246,17 @@ const RackUI = {
     R.armedSlot = -1;
     if (item.type === 'unit') {
       const u = item.unit;
+      // 升级指引按星/级区分：未满星→升星；满星未满级→同级升级；满星满级→不再提示可升级
+      const upHint = !u.isGeneral ? ''
+        : (u.star || 0) < CONFIG.generalStars.max ? '；拖到同名神将上可升星'
+        : u.level < u.maxLevel ? '；拖到同名同级神将上可升级'
+        : '（已满星满级）';
       this.itemPanel.innerHTML =
         `<div class="sel-head"><span class="sel-char" style="color:${u.def.color || '#4a3b52'}">${u.def.char}</span>` +
         `<span class="sel-name">${u.def.name}</span><span class="sel-lv">Lv.${u.level}</span>` +
         (u.isGeneral && u.star > 0 ? `<span class="sel-star${u.starMaxed ? ' maxed' : ''}">${'★'.repeat(u.star)}${'☆'.repeat(CONFIG.generalStars.max - u.star)}</span>` : '') +
         `<button class="sel-close">×</button></div>` +
-        `<div class="sel-body">已铲回架子的单位，拖到棋盘可继续作战${u.isGeneral ? '；拖到同名神将上可升星' : ''}</div>` +
+        `<div class="sel-body">已铲回架子的单位，拖到棋盘可继续作战${upHint}</div>` +
         `<button class="item-sell">出售 +${Merge.sellValue(u)} 桃</button>`;
       this.itemPanel.querySelector('.item-sell').addEventListener('click', () => {
         R.peaches += Merge.sellValue(u);
