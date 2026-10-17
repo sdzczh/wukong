@@ -9,6 +9,8 @@ const RNG = (() => {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
   function int(n) { return Math.floor(next() * n); }
+  function state() { return s; }              // 断点续战：取/回随机流位置
+  function setState(v) { s = (v >>> 0) || 1; }
   /* pairs: [[key, weight], ...] */
   function pickWeighted(pairs) {
     let total = 0;
@@ -17,5 +19,5 @@ const RNG = (() => {
     for (const p of pairs) { r -= p[1]; if (r <= 0) return p[0]; }
     return pairs[pairs.length - 1][0];
   }
-  return { seed, next, int, pickWeighted };
+  return { seed, next, int, pickWeighted, state, setState };
 })();

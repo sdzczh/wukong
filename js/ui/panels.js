@@ -110,6 +110,19 @@ const Panels = {
     );
     this.card.classList.add('menu');
 
+    // 有残局：最上方给「继续上局」（绿色按钮，与开局 CTA 区分）
+    const runInfo = (typeof RunSave !== 'undefined') ? RunSave.info() : null;
+    if (runInfo) {
+      const rc = document.createElement('button');
+      rc.className = 'btn menu-cta resume';
+      const waveTxt = runInfo.kind.indexOf('讨伐') === 0
+        ? `第 ${runInfo.wave + 1} 阵` : `第 ${runInfo.wave + 1} 波`;
+      rc.innerHTML = '<span class="mc-main">继 续 上 局</span>' +
+        `<span class="mc-sub">${runInfo.kind} · ${waveTxt} · 心 ${runInfo.hearts}/${runInfo.heartsMax} · 桃 ${runInfo.peaches} · 场上 ${runInfo.towers}</span>`;
+      rc.addEventListener('click', () => { SFX.play('click'); RunSave.resume(); });
+      this.btns.appendChild(rc);
+    }
+
     // 主行动：开始战斗
     const cta = document.createElement('button');
     cta.className = 'btn menu-cta';
@@ -211,7 +224,7 @@ const Panels = {
         { text: '图 鉴', fn: () => Codex.show('pause'), ghost: true },
         { text: '风云榜', fn: () => RankUI.show('pause'), ghost: true },
         { text: '重新开始', fn: () => Game.startRun(), ghost: true },
-        { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
+        { text: '回主菜单', fn: () => Game.toMenu(true), ghost: true },
       ]
     );
   },

@@ -4,7 +4,9 @@ const ctx = canvas.getContext('2d');
 
 const Game = {
   /* ---------- 运行控制 ---------- */
-  toMenu() {
+  /* abandon=true：局中主动弃局回菜单（清残局快照）；启动进菜单/结算页返回不清 */
+  toMenu(abandon) {
+    if (abandon && typeof RunSave !== 'undefined') RunSave.clear();
     resetRun();
     R.state = 'menu';
     Panels.showMenu();
@@ -13,8 +15,9 @@ const Game = {
     GearUI.refresh();
     WaveMods.render();          // 收起波间三选一（如中途弃选回菜单）
   },
-  startRun(seedKey, kind, pvp) {
+  startRun(seedKey, kind, pvp, opts) {
     kind = kind || 'normal';
+    const resume = !!(opts && opts.resume);   // 断点续战：同种子重放棋盘后由 RunSave.apply 覆写
     // 每日轮回/每周异变/PVP 讨伐传种子（同图同卡池）；普通局恢复随机种子
     const seed = seedKey || ((Date.now() >>> 0) || 1);
     RNG.seed(seed);
@@ -46,14 +49,15 @@ const Game = {
     GearUI.open = false;        // 装备栏默认收起，顶栏「装」按钮开合
     GearUI.refresh();
     WaveMods.render();          // 复位波间三选一（隐藏上一局残留）
-    HUD.toast(kind === 'pvp'
+    if (!resume) HUD.toast(kind === 'pvp'
       ? `讨伐「${pvp.name}」：${R.pvpCount} 阵镇守军，破阵即胜（军饷 +${CONFIG.pvp.startPeaches} 桃）`
       : kind === 'weekly'
         ? '每周异变：' + R.weekly.map(p => p.name).join(' · ')
         : R.daily ? '每日轮回：今日全场同图，比谁走得更远'
         : R.ghosts ? '金框虚线为上局阵容占位建议，照位摆字即可复刻布防'
         : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
-    TutUI.maybeStart();   // 新手三步引导（仅未完成时弹）
+    if (!resume) TutUI.maybeStart();   // 新手三步引导（仅未完成时弹；恢复局不再打扰）
+    if (!resume && typeof RunSave !== 'undefined') RunSave.checkpoint();   // 断点续战：开局备战期先落一份（恢复局由 RunSave.apply 后统一落盘）
   },
 
   /* 异步 PVP：按镇守者原图种子开局，镇守阵容铸为镜像阵 */
@@ -122,6 +126,7 @@ const Game = {
     if (R.state === 'over') return;
     R.state = 'over';
     R.lastWin = win;
+    if (typeof RunSave !== 'undefined') RunSave.clear();   // 已终局，残局不再保留
     if (RackUI.draftBar) RackUI.discardDraft();
     R.crystalsEarned += R.wave * 10 + R.kills;
     if (R.pvp) R.crystalsEarned += win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals;
@@ -186,6 +191,7 @@ const Game = {
     this.resume();
     HUD.toast(`无尽征战开始！每 ${CONFIG.endless.shovelEvery} 波奖励 1 把铲子`);
     HUD.refresh();
+    if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 无尽抉择落定，立刻落盘
   },
 
   /* 灵宝掉落（自动拾取） */
@@ -1164,10 +1170,14 @@ Bus.on('waveClear', n => {
     : `第 ${n} 波已肃清，过波奖励 +${reward} 桃${interest ? `，息钱 +${interest} 桃` : ''}`);
   if (R.pvp) {
     if (n >= R.pvpCount) setTimeout(() => { if (R.state === 'battle') Game.gameOver(true); }, 600);
+    if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 断点续战：阵间落盘
     return;   // 讨伐无命运三选一 / 无尽流程
   }
   if (n >= CONFIG.waveMods.every && n % CONFIG.waveMods.every === 0) WaveMods.offer();   // 命运三选一
-  if (n < CONFIG.waveCount) return;
+  if (n < CONFIG.waveCount) {
+    if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 断点续战：波间备战落盘（含待选词条）
+    return;
+  }
   if (R.endless) {
     // 无尽补给：每 shovelEvery 波产出 1 把铲子
     if (n % CONFIG.endless.shovelEvery === 0) {
@@ -1175,7 +1185,9 @@ Bus.on('waveClear', n => {
       setTimeout(() => { HUD.toast(`无尽补给：铲子 +1（现有 ${R.shovelLeft}）`); SFX.play('coin'); }, 1600);
       HUD.refresh();
     }
+    if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 断点续战：无尽波间落盘
   } else {
+    if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 先落盘（offerEndless 会转 paused）
     Game.offerEndless();
   }
 });
@@ -1274,6 +1286,7 @@ GearUI.init();
 Panels.init();
 WaveMods.init();
 BlessUI.init();
+RunSave.boot();   // 断点续战：备战期定时/切后台/关页前落盘
 resize();
 // 首次启动先录名号，之后回主菜单
 if (User.has()) Game.toMenu();

@@ -875,6 +875,14 @@ body {
 .btn.menu-cta .mc-main { font-size: 33px; font-weight: 900; letter-spacing: 10px; text-indent: 10px; }
 .btn.menu-cta .mc-sub { font-size: 15px; font-weight: 700; color: #8a5c14; letter-spacing: 3px; }
 .btn.menu-cta:active { animation: none; }
+
+/* 断点续战：继续上局（玉色，弱于开局 CTA 的金色主行动） */
+.btn.menu-cta.resume {
+  animation: none; background: linear-gradient(#9dc47e, #6f9a52);
+  border-color: #5c7a3e; box-shadow: 0 4px 0 #3c5226, 0 8px 16px #0008;
+}
+.btn.menu-cta.resume .mc-main { font-size: 26px; letter-spacing: 8px; text-indent: 8px; color: #223618; }
+.btn.menu-cta.resume .mc-sub { color: #2f4222; }
 @keyframes ctaBreath {
   0%, 100% { box-shadow: 0 4px 0 #7a5410, 0 8px 16px #0008; }
   50% { box-shadow: 0 4px 0 #7a5410, 0 8px 16px #0008, 0 0 26px #e8b64c88; }
