@@ -13,20 +13,30 @@ const Game = {
     GearUI.refresh();
     WaveMods.render();          // 收起波间三选一（如中途弃选回菜单）
   },
-  startRun(seedKey, kind) {
+  startRun(seedKey, kind, pvp) {
     kind = kind || 'normal';
-    // 每日轮回/每周异变传种子（同图同卡池）；普通局恢复随机种子
-    RNG.seed(seedKey || ((Date.now() >>> 0) || 1));
+    // 每日轮回/每周异变/PVP 讨伐传种子（同图同卡池）；普通局恢复随机种子
+    const seed = seedKey || ((Date.now() >>> 0) || 1);
+    RNG.seed(seed);
     resetRun();
+    R.runSeed = seed;
     R.runKind = kind;
     R.daily = kind === 'daily' ? (seedKey || null) : null;
     if (kind === 'weekly') Weekly.apply();   // 本周 3 条全局规则并入 R.rules
+    if (kind === 'pvp' && pvp) {
+      R.pvp = pvp;
+      const built = Pvp.build(pvp);
+      R.pvpWaves = built.waves;
+      R.pvpDefs = built.defs;
+      R.pvpCount = built.waves.length;
+      R.peaches += CONFIG.pvp.startPeaches;   // 讨伐军饷
+    }
     Director.reset();
     rollRoute();                // 每局随机路线
     Grid.buildTiles();          // 重建棋盘：新路线 + 随机开放格 + 恢复「封」字锁定
     calibrateRangeFloor();      // 按最远离径开放格校准当局射程地板
     Grid.buildPath();           // 路径像素随新路线重算
-    R.ghosts = this.buildGhosts(kind, seedKey || null);   // 上局阵容占位建议
+    R.ghosts = kind === 'pvp' ? null : this.buildGhosts(kind, seedKey || null);   // 上局阵容占位建议
     R.state = 'battle';
     Panels.hide();
     RackUI.hideSel();
@@ -36,12 +46,20 @@ const Game = {
     GearUI.open = false;        // 装备栏默认收起，顶栏「装」按钮开合
     GearUI.refresh();
     WaveMods.render();          // 复位波间三选一（隐藏上一局残留）
-    HUD.toast(kind === 'weekly'
-      ? '每周异变：' + R.weekly.map(p => p.name).join(' · ')
-      : R.daily ? '每日轮回：今日全场同图，比谁走得更远'
-      : R.ghosts ? '金框虚线为上局阵容占位建议，照位摆字即可复刻布防'
-      : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
+    HUD.toast(kind === 'pvp'
+      ? `讨伐「${pvp.name}」：${R.pvpCount} 阵镇守军，破阵即胜（军饷 +${CONFIG.pvp.startPeaches} 桃）`
+      : kind === 'weekly'
+        ? '每周异变：' + R.weekly.map(p => p.name).join(' · ')
+        : R.daily ? '每日轮回：今日全场同图，比谁走得更远'
+        : R.ghosts ? '金框虚线为上局阵容占位建议，照位摆字即可复刻布防'
+        : '点击架子上的字放到棋盘；铲子可开垦「封」字地块或把单位铲回架子');
     TutUI.maybeStart();   // 新手三步引导（仅未完成时弹）
+  },
+
+  /* 异步 PVP：按镇守者原图种子开局，镇守阵容铸为镜像阵 */
+  startPvp(def) {
+    if (!def || !def.lineup || !def.lineup.length) { HUD.toast('镇守阵容为空'); return; }
+    this.startRun(def.seed || ((Date.now() >>> 0) || 1), 'pvp', def);
   },
 
   /* 每日轮回：按日期种子开局（固定路线与抽卡序列） */
@@ -106,10 +124,15 @@ const Game = {
     R.lastWin = win;
     if (RackUI.draftBar) RackUI.discardDraft();
     R.crystalsEarned += R.wave * 10 + R.kills;
+    if (R.pvp) R.crystalsEarned += win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals;
     const s = Save.data;
     s.crystals += R.crystalsEarned;
     s.totalKills += R.kills;
-    s.bestWave = Math.max(s.bestWave, R.wave);
+    if (R.runKind !== 'pvp') s.bestWave = Math.max(s.bestWave, R.wave);   // 讨伐仅 1-3 阵，不计历史最高波
+    if (R.runKind === 'pvp') {
+      if (win) s.pvpWins = (s.pvpWins || 0) + 1;
+      else s.pvpLosses = (s.pvpLosses || 0) + 1;
+    }
     if (R.daily) {
       // 每日轮回：只记录当日的最佳波次
       if (!s.daily || s.daily.key !== R.daily) s.daily = { key: R.daily, best: 0 };
@@ -122,28 +145,32 @@ const Game = {
       s.weekly.best = Math.max(s.weekly.best, R.wave);
       s.weeklyDone = (s.weeklyDone || 0) + 1;
     }
-    // 上局阵容快照：字/等级/索敌/离路环距/伤害（下局开局给占位建议；每日/每周同种子可直接复刻位）
-    const pathSet = new Set();
-    for (let r = 0; r < Grid.rows; r++) for (let c = 0; c < Grid.cols; c++) {
-      if (Grid.tiles[r][c].type === 'path') pathSet.add(c + ',' + r);
+    if (R.runKind !== 'pvp') {
+      // 上局阵容快照：字/等级/索敌/离路环距/伤害（下局开局给占位建议；每日/每周同种子可直接复刻位）
+      const pathSet = new Set();
+      for (let r = 0; r < Grid.rows; r++) for (let c = 0; c < Grid.cols; c++) {
+        if (Grid.tiles[r][c].type === 'path') pathSet.add(c + ',' + r);
+      }
+      const lineup = {
+        kind: R.runKind, seed: R.runSeed || R.daily || (R.runKind === 'weekly' ? Weekly.seedKey() : null),
+        wave: R.wave, ts: Date.now(),
+        items: R.towers.map(u => {
+          let ring = 99;
+          for (const p of pathSet) {
+            const [pc, pr] = p.split(',').map(Number);
+            ring = Math.min(ring, Math.max(Math.abs(pc - u.col), Math.abs(pr - u.row)));
+          }
+          return { ch: u.def.char, god: !!u.isGeneral, lv: u.level, star: u.star || 0, mode: u.mode || 'first', ring,
+                   col: u.col, row: u.row,
+                   dmg: (R.dmgStats[u.tid] || { dmg: 0 }).dmg };
+        }),
+      };
+      if (lineup.items.length) s.lastLineup = lineup;
     }
-    const lineup = {
-      kind: R.runKind, seed: R.daily || (R.runKind === 'weekly' ? Weekly.seedKey() : null), ts: Date.now(),
-      items: R.towers.map(u => {
-        let ring = 99;
-        for (const p of pathSet) {
-          const [pc, pr] = p.split(',').map(Number);
-          ring = Math.min(ring, Math.max(Math.abs(pc - u.col), Math.abs(pr - u.row)));
-        }
-        return { ch: u.def.char, god: !!u.isGeneral, lv: u.level, star: u.star || 0, mode: u.mode || 'first', ring,
-                 col: u.col, row: u.row,
-                 dmg: (R.dmgStats[u.tid] || { dmg: 0 }).dmg };
-      }),
-    };
-    if (lineup.items.length) s.lastLineup = lineup;
     Ach.check();   // 成就结算：波次/击杀/收集等持久数据齐了再判（解锁即写档）
     Save.write();
-    if (typeof RankUI !== 'undefined') RankUI.submitRun();   // 全服风云榜：每局结算自动上传（失败不影响单机）
+    if (typeof RankUI !== 'undefined' && R.runKind !== 'pvp') RankUI.submitRun();   // 风云榜：常规局自动上传
+    if (typeof Pvp !== 'undefined' && R.pvp) Pvp.report(win);                        // 守方战绩上报
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
   },
@@ -1104,6 +1131,13 @@ Bus.on('waveStart', n => {
   }
   const boss = n % 5 === 0;
   const bp = boss ? CONFIG.bossPool[(Math.ceil(n / 5) - 1) % CONFIG.bossPool.length] : null;
+  if (R.pvp) {
+    const last = n >= R.pvpCount;
+    HUD.showBanner('第 ' + n + ' 阵', `讨伐「${R.pvp.name}」${last ? ' · 破阵在此一举' : ' · 镇守军来袭'}`, last);
+    SFX.play(last ? 'alarm' : 'horn');
+    HUD.refresh();
+    return;
+  }
   const sub = R.endless
     ? (boss ? `无尽征战，${bp.name}亲至！` : '无尽征战，敌势无穷！')
     : (boss ? `${bp.name}亲至，小心应对！` : (n === 1 ? '黄泉为路，幽冥作甲，众魂出击！' : '魂行黄泉，忘却轮回，杀！'));
@@ -1125,7 +1159,13 @@ Bus.on('waveClear', n => {
   if (!R.endless) for (const t of R.towers) if (t.isGeneral) t.gainExp(1);
   HUD.refresh();
   SFX.play('waveclear');
-  HUD.toast(`第 ${n} 波已肃清，过波奖励 +${reward} 桃${interest ? `，息钱 +${interest} 桃` : ''}`);
+  HUD.toast(R.pvp
+    ? `第 ${n} 阵已破，镇守军溃散！过阵奖励 +${reward} 桃${interest ? `，息钱 +${interest} 桃` : ''}`
+    : `第 ${n} 波已肃清，过波奖励 +${reward} 桃${interest ? `，息钱 +${interest} 桃` : ''}`);
+  if (R.pvp) {
+    if (n >= R.pvpCount) setTimeout(() => { if (R.state === 'battle') Game.gameOver(true); }, 600);
+    return;   // 讨伐无命运三选一 / 无尽流程
+  }
   if (n >= CONFIG.waveMods.every && n % CONFIG.waveMods.every === 0) WaveMods.offer();   // 命运三选一
   if (n < CONFIG.waveCount) return;
   if (R.endless) {

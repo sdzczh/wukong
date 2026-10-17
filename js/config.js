@@ -294,6 +294,17 @@ const CONFIG = {
   bossStealth: { on: 2, off: 3 },   // 隐匿：遁形/现形时长（秒）
   bossEnrageSpd: 1.6,      // 狂暴：半血后移速乘数
 
+  /* 异步 PVP：镇守阵容 → 入侵镜像阵（镇守/讨伐） */
+  pvp: {
+    startPeaches: 60,        // 讨伐开局额外军饷
+    winCrystals: 50,         // 破阵魂晶
+    loseCrystals: 10,        // 败北安慰魂晶
+    maxUnits: 12,            // 镇守阵容最多收录 12 座
+    unitsPerWave: 4,         // 每阵 4 座 → 最多 3 阵
+    baseHp: 42,              // 镜像单位基础血（随镇守者波次/等级/星级放大）
+    groupMul: [0.85, 1.1, 1.45],   // 第 1/2/3 阵强度系数
+  },
+
   waveCount: 10,
   waveHpGrowth: 1.14,
   // 前期保护：前 earlyWaveCount 波敌人血量乘 earlyWaveHpEase（给新玩家上手缓冲）

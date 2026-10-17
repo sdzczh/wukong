@@ -1,14 +1,18 @@
 #!/usr/bin/env node
-/* 无敌悟空 · 静态站 + 全服风云榜（零依赖）
+/* 无敌悟空 · 静态站 + 全服风云榜 + 异步 PVP（零依赖）
  *
  * 用途：替换 `python3 -m http.server 80`，在同一个 80 端口同时提供
  *   1) /opt/wukong-td 下的游戏静态文件；
  *   2) GET  /api/board?kind=daily|weekly   全服今日/本周榜（前 20）；
- *   3) POST /api/score {name,wave,kills,kind,endless}  上传本局战绩。
+ *   3) POST /api/score {name,wave,kills,kind,endless}  上传本局战绩；
+ *   4) GET  /api/pvp/list?name=            镇守阵列表 + 我的守成记录；
+ *   5) POST /api/pvp/defense {name,wave,seed,lineup}  上传/覆盖镇守阵；
+ *   6) POST /api/pvp/result {attacker,defender,win,wave}  讨伐结算。
  *
  * 榜单口径：按北京时间自然日 / ISO 周（周一为界）分桶，每人只留最佳波次
- * （同波次取击杀多者，再同则先到先排）。数据落盘到站点目录外的
- * /opt/wukong-td-api/data.json，避免被静态服务直接下载。
+ * （同波次取击杀多者，再同则先到先排）。PVP 只存阵容快照（字/等级/星级）
+ * 与原地图种子，战斗全部在讨伐方本地跑，镇守者无需在线。
+ * 数据落盘到站点目录外的 /opt/wukong-td-api/data.json，避免被静态服务直接下载。
  *
  * 可调环境变量：PORT（默认 80）、HOST、WK_ROOT（静态根）、WK_DATA（数据目录）。
  */
@@ -26,6 +30,9 @@ const DATA_DIR = path.resolve(process.env.WK_DATA || path.join(__dirname, '..', 
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const MAX_BOARD = 20;
 const MAX_NAMES_PER_PERIOD = 500;
+const MAX_DEFENSES = 300;
+const MAX_PVP_UNITS = 12;
+const PVP_PAGE = 40;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -78,12 +85,18 @@ function loadDb() {
   try {
     const raw = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     if (raw && typeof raw === 'object') {
-      return { v: 1, daily: raw.daily || {}, weekly: raw.weekly || {} };
+      // 镇守名册用无原型对象，避免玩家名踩到 __proto__ 之类的键
+      const defenses = Object.create(null);
+      const src = raw.pvp && raw.pvp.defenses;
+      if (src && typeof src === 'object') {
+        for (const k of Object.keys(src)) defenses[k] = src[k];
+      }
+      return { v: 1, daily: raw.daily || {}, weekly: raw.weekly || {}, pvp: { defenses } };
     }
   } catch (e) {
-    if (e.code !== 'ENOENT') log('读取榜单数据失败：' + e.message);
+    if (e.code !== 'ENOENT') log('读取数据失败：' + e.message);
   }
-  return { v: 1, daily: {}, weekly: {} };
+  return { v: 1, daily: {}, weekly: {}, pvp: { defenses: Object.create(null) } };
 }
 
 let db = loadDb();
@@ -154,6 +167,68 @@ function buildBoard(kind, name) {
     rows: all.slice(0, MAX_BOARD).map((r, i) => Object.assign({ rank: i + 1 }, r)),
     me: meIdx >= 0 ? { rank: meIdx + 1, wave: all[meIdx].wave, kills: all[meIdx].kills } : null,
   };
+}
+
+/* ---------- PVP ---------- */
+function cleanChar(v) {
+  let s = String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, '').trim();
+  return Array.from(s).slice(0, 2).join('');
+}
+
+function cleanLineup(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const u of arr) {
+    if (out.length >= MAX_PVP_UNITS) break;
+    if (!u || typeof u !== 'object') continue;
+    const ch = cleanChar(u.ch);
+    if (!ch) continue;
+    const lv = toInt(u.lv);
+    const star = toInt(u.star);
+    out.push({
+      ch,
+      god: !!u.god,
+      lv: lv >= 1 && lv <= 99 ? lv : 1,
+      star: star >= 0 && star <= 3 ? star : 0,
+    });
+  }
+  return out;
+}
+
+function pvpPublic(rec) {
+  if (!rec) return null;
+  return {
+    name: rec.name,
+    wave: rec.wave,
+    seed: rec.seed,
+    lineup: rec.lineup || [],
+    wins: rec.wins || 0,
+    losses: rec.losses || 0,
+    ts: rec.t || 0,
+    log: (rec.log || []).slice(0, 10),
+  };
+}
+
+function buildPvpList(name) {
+  const all = Object.keys(db.pvp.defenses)
+    .filter(n => n !== name)
+    .map(n => pvpPublic(db.pvp.defenses[n]))
+    .filter(Boolean)
+    .sort((a, b) => b.wins - a.wins || b.ts - a.ts || a.name.localeCompare(b.name));
+  return {
+    ok: true,
+    updated: Date.now(),
+    total: all.length,
+    mine: pvpPublic(db.pvp.defenses[name]),
+    list: all.slice(0, PVP_PAGE),
+  };
+}
+
+function capDefenses() {
+  const names = Object.keys(db.pvp.defenses);
+  if (names.length <= MAX_DEFENSES) return;
+  names.sort((a, b) => (db.pvp.defenses[a].t || 0) - (db.pvp.defenses[b].t || 0));
+  while (names.length > MAX_DEFENSES) delete db.pvp.defenses[names.shift()];
 }
 
 /* ---------- HTTP 帮助 ---------- */
@@ -255,6 +330,80 @@ async function handleScore(req, res, ip) {
   });
 }
 
+/* ---------- PVP API ---------- */
+function handlePvpList(req, res, url, ip) {
+  if (!allow(ip, 'pvpList', 120, 60 * 1000)) return json(res, 429, { ok: false, error: '请求太频繁' });
+  const name = cleanName(url.searchParams.get('name') || '');
+  return json(res, 200, buildPvpList(name));
+}
+
+async function handlePvpDefense(req, res, ip) {
+  if (!allow(ip, 'pvpDef', 12, 10 * 60 * 1000)) {
+    return json(res, 429, { ok: false, error: '上传太频繁，稍后再试' });
+  }
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, 8192));
+  } catch (e) {
+    return json(res, 400, { ok: false, error: '请求体无效' });
+  }
+  if (!body || typeof body !== 'object') return json(res, 400, { ok: false, error: '请求体无效' });
+
+  const name = cleanName(body.name);
+  if (!name) return json(res, 400, { ok: false, error: '名号无效' });
+  const wave = toInt(body.wave);
+  if (!(wave >= 1 && wave <= 999)) return json(res, 400, { ok: false, error: '波次无效' });
+  const seed = toInt(body.seed);
+  if (!(seed >= 0 && seed <= 4294967295)) return json(res, 400, { ok: false, error: '地图种子无效' });
+  const lineup = cleanLineup(body.lineup);
+  if (!lineup.length) return json(res, 400, { ok: false, error: '镇守阵容为空' });
+
+  const prev = db.pvp.defenses[name] || {};
+  db.pvp.defenses[name] = {
+    name, wave, seed, lineup,
+    wins: prev.wins || 0,
+    losses: prev.losses || 0,
+    log: (prev.log || []).slice(0, 10),
+    t: Date.now(),
+  };
+  capDefenses();
+  saveDb();
+  return json(res, 200, { ok: true, mine: pvpPublic(db.pvp.defenses[name]) });
+}
+
+async function handlePvpResult(req, res, ip) {
+  if (!allow(ip, 'pvpResult', 40, 10 * 60 * 1000)) {
+    return json(res, 429, { ok: false, error: '上报太频繁，稍后再试' });
+  }
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, 4096));
+  } catch (e) {
+    return json(res, 400, { ok: false, error: '请求体无效' });
+  }
+  if (!body || typeof body !== 'object') return json(res, 400, { ok: false, error: '请求体无效' });
+
+  const attacker = cleanName(body.attacker);
+  const defender = cleanName(body.defender);
+  if (!attacker || !defender) return json(res, 400, { ok: false, error: '名号无效' });
+  if (attacker === defender) return json(res, 400, { ok: false, error: '不能讨伐自己' });
+  const rec = db.pvp.defenses[defender];
+  if (!rec) return json(res, 404, { ok: false, error: '该镇守阵已下线' });
+
+  const win = !!body.win;   // 讨伐方是否破阵成功
+  const wave = toInt(body.wave);
+  if (win) rec.losses = (rec.losses || 0) + 1;   // 攻方胜 → 守方被破
+  else rec.wins = (rec.wins || 0) + 1;           // 攻方败 → 守方守成
+  rec.log = [{
+    a: attacker,
+    w: win,
+    n: wave >= 1 && wave <= 999 ? wave : 0,
+    t: Date.now(),
+  }].concat(rec.log || []).slice(0, 10);
+  saveDb();
+  return json(res, 200, { ok: true, wins: rec.wins, losses: rec.losses });
+}
+
 /* ---------- 静态文件 ---------- */
 function serveStatic(req, res, pathname) {
   let rel;
@@ -310,6 +459,26 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (url.pathname === '/api/pvp/list') {
+    if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method not allowed' });
+    return handlePvpList(req, res, url, ip);
+  }
+  if (url.pathname === '/api/pvp/defense') {
+    if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method not allowed' });
+    handlePvpDefense(req, res, ip).catch(e => {
+      log('镇守上传异常：' + e.message);
+      if (!res.headersSent) json(res, 500, { ok: false, error: 'server error' });
+    });
+    return;
+  }
+  if (url.pathname === '/api/pvp/result') {
+    if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method not allowed' });
+    handlePvpResult(req, res, ip).catch(e => {
+      log('讨伐上报异常：' + e.message);
+      if (!res.headersSent) json(res, 500, { ok: false, error: 'server error' });
+    });
+    return;
+  }
   if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res, url.pathname);
   return json(res, 405, { ok: false, error: 'method not allowed' });
 });
@@ -317,7 +486,7 @@ const server = http.createServer((req, res) => {
 ensurePeriod();
 prunePeriods();
 server.listen(PORT, HOST, () => {
-  log(`wukong-td 服务已启动：${HOST}:${PORT} · 静态 ${ROOT} · 榜单 ${DATA_FILE}`);
+  log(`wukong-td 服务已启动：${HOST}:${PORT} · 静态 ${ROOT} · 数据 ${DATA_FILE}`);
 });
 
 function shutdown(sig) {

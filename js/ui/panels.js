@@ -95,6 +95,8 @@ const Panels = {
     const sigN = Object.keys(s.sigGear || {}).length;
     const shardSum = Object.values(s.shards || {}).reduce((a, b) => a + b, 0);
     const gearSub = sigN ? `神兵 ${sigN}/12 · 碎片 ${shardSum}` : `碎片 ${shardSum} · 三件合成`;
+    const pvpN = (s.pvpWins || 0) + (s.pvpLosses || 0);
+    const pvpSub = pvpN ? `讨伐 ${s.pvpWins || 0} 胜 · ${s.pvpLosses || 0} 负` : '异步 PVP · 以阵镇守';
 
     this._fill(
       '无敌悟空',
@@ -112,7 +114,7 @@ const Panels = {
     cta.addEventListener('click', () => { SFX.play('click'); Game.startRun(); });
     this.btns.appendChild(cta);
 
-    // 副入口 2×3 网格：角标直接带今日/本周战绩与成长进度
+    // 副入口 2×4 网格：角标直接带今日/本周战绩与成长进度
     const grid = document.createElement('div');
     grid.className = 'menu-grid';
     const tiles = [
@@ -121,8 +123,9 @@ const Panels = {
       ['修炼', `魂晶 ${s.crystals}`, false, () => TalentUI.show('menu')],
       ['装备库', gearSub, false, () => GearUI.show('menu')],
       ['图鉴', `已识 ${cxDone}/${cxTotal}`, false, () => Codex.show('menu')],
+      ['镇守讨伐', pvpSub, false, () => PvpUI.show('menu')],
+      ['风云榜', '全服今日 / 本周最佳', false, () => RankUI.show('menu')],
       ['存档码', '换机迁移', false, () => this.showSaveCode()],
-      ['风云榜', '全服今日 / 本周最佳', false, () => RankUI.show('menu'), true],
     ];
     for (const [name, sub, fresh, fn, wide] of tiles) {
       const el = document.createElement('button');
@@ -219,8 +222,12 @@ const Panels = {
 
   showSettle(win) {
     const reward = R.crystalsEarned;
-    const title = win ? '大 捷' : (R.endless ? '壮 烈 战 殁' : '殿 破');
-    const sub = win ? '幽魂尽散，轮回重明' : (R.endless ? `无尽征战止步于第 ${R.wave} 波` : '魂落黄泉，殿陷敌手');
+    const pvp = R.pvp;
+    const title = pvp ? (win ? '破 阵' : '折 戟')
+      : win ? '大 捷' : (R.endless ? '壮 烈 战 殁' : '殿 破');
+    const sub = pvp
+      ? (win ? `镇守军尽破，讨伐「${pvp.name}」功成` : `止步第 ${R.wave} 阵，讨伐「${pvp.name}」未果`)
+      : win ? '幽魂尽散，轮回重明' : (R.endless ? `无尽征战止步于第 ${R.wave} 波` : '魂落黄泉，殿陷敌手');
     const dailyLine = R.daily
       ? `<br>今日轮回最佳　${(Save.data.daily && Save.data.daily.key === R.daily) ? Save.data.daily.best : R.wave}　波`
       : '';
@@ -248,18 +255,42 @@ const Panels = {
     const rankLine = rs && rs.id === R.runId && rs.state === 'ok'
       ? `<br><span class="settle-rank">风云榜　今日第 ${rs.dayRank || '—'} · 本周第 ${rs.weekRank || '—'}</span>`
       : '';
-    const stats =
-      `本局波次　${R.wave}　｜　击杀　${R.kills}` +
-      `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
-      `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-      `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine + rankLine;
-    this._fill(title, sub, stats, [
-      { text: '再 来 一 局', fn: () => Game.startRun() },
-      { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
-      { text: '装 备 库', fn: () => GearUI.show('settle'), ghost: true },
-      { text: '图 鉴', fn: () => Codex.show('settle'), ghost: true },
-      { text: '风云榜', fn: () => RankUI.show('settle'), ghost: true },
-      { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
-    ]);
+    // 异步 PVP：本尊讨伐累计 + 守方最新守成/被破
+    const pvpLine = pvp ? (() => {
+      const pr = (typeof Pvp !== 'undefined') ? Pvp.lastResult : null;
+      let line = `<br><span class="settle-rank">讨伐战绩　本尊 ${Save.data.pvpWins || 0} 胜 · ${Save.data.pvpLosses || 0} 负</span>` +
+        `<br><span class="settle-break">镇守方「${pvp.name}」</span>`;
+      if (pr && pr.id === R.runId) {
+        if (pr.state === 'ok') line += `　守成 ${pr.wins} · 被破 ${pr.losses}`;
+        else if (pr.state === 'sending') line += `　战报同步中…`;
+        else line += `　战报未送达（守方记录未更新）`;
+      }
+      return line;
+    })() : '';
+    const stats = pvp
+      ? `本局阵数　${R.wave}/${R.pvpCount}　｜　击杀　${R.kills}` +
+        `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
+        `<span class="settle-break">（阵数 ${R.wave * 10} ＋ 击杀 ${R.kills} ＋ 讨伐 ${win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
+        `<br>现有魂晶　${Save.data.crystals}` + pvpLine + sigLine + achLine + dmgLine
+      : `本局波次　${R.wave}　｜　击杀　${R.kills}` +
+        `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
+        `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
+        `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine + rankLine;
+    const buttons = pvp
+      ? [
+          { text: '再 讨 一 阵', fn: () => Game.startPvp(pvp) },
+          { text: '镇 守 讨 伐', fn: () => PvpUI.show('settle'), ghost: true },
+          { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
+          { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
+        ]
+      : [
+          { text: '再 来 一 局', fn: () => Game.startRun() },
+          { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
+          { text: '装 备 库', fn: () => GearUI.show('settle'), ghost: true },
+          { text: '图 鉴', fn: () => Codex.show('settle'), ghost: true },
+          { text: '风云榜', fn: () => RankUI.show('settle'), ghost: true },
+          { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
+        ];
+    this._fill(title, sub, stats, buttons);
   },
 };

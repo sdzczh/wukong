@@ -35,6 +35,8 @@ const ACHS = [
   /* —— 历练 —— */
   { id: 'daily1',  name: '日日常新', title: '守日人', desc: '完成 1 局每日轮回', test: s => (s.dailyDone || 0) >= 1 },
   { id: 'weekly1', name: '七日之约', title: '应约者', desc: '完成 1 局每周异变', test: s => (s.weeklyDone || 0) >= 1 },
+  { id: 'pvp1',    name: '初破镇守', title: '讨伐先锋', desc: '讨伐成功 1 次', test: s => (s.pvpWins || 0) >= 1 },
+  { id: 'pvp5',    name: '五阵连破', title: '破阵将军', desc: '讨伐成功 5 次', test: s => (s.pvpWins || 0) >= 5 },
   { id: 'tut',     name: '初入幽冥', title: '新晋行者', desc: '完成新手引导',   test: s => s.tut === 1 },
 ];
 

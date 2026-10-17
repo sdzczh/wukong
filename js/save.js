@@ -23,6 +23,8 @@ const Save = {
       equipForged: 0,                     // 累计锻造装备件数（合成与升级都计，成就）
       dailyDone: 0,                       // 完成每日轮回局数（成就）
       weeklyDone: 0,                      // 完成每周异变局数（成就）
+      pvpWins: 0,                         // 讨伐成功次数（成就）
+      pvpLosses: 0,                       // 讨伐失利次数
       ach: {},                            // 成就达成表 {id: 时间戳}
       title: '',                          // 当前佩戴称号（对应成就 id，''=未佩戴）
     };

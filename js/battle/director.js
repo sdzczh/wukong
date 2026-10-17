@@ -3,7 +3,7 @@ const Director = {
   waves: [], cur: null, spawnIdx: 0, timer: 0, intermission: 0,
 
   reset() {
-    this.waves = buildWaves();
+    this.waves = R.pvp ? (R.pvpWaves || []) : buildWaves();   // 讨伐：镇守镜像阵替代常规波次
     this.cur = null; this.spawnIdx = 0; this.timer = 0; this.intermission = 0;
   },
 
@@ -19,6 +19,7 @@ const Director = {
 
     if (!this.cur) {
       if (R.wave === 0) { this.startWave(1); return; }
+      if (R.pvp && R.wave >= R.pvpCount) return;              // 讨伐末阵已破，等结算不再出新阵
       if (R.wave >= CONFIG.waveCount && !R.endless) return;   // 已通关（由 waveClear 触发结算）
       if (R.modOffer) return;                                 // 波间词条待选：暂停开下一波
       this.intermission -= dt;
@@ -58,6 +59,7 @@ const Director = {
   callNow() {
     if (R.state !== 'battle' || this.cur) return 0;
     if (R.modOffer) return 0;
+    if (R.pvp && R.wave >= R.pvpCount) return 0;
     if (R.wave >= CONFIG.waveCount && !R.endless) return 0;
     const bonus = Math.round(Math.max(0, this.intermission) * CONFIG.callWave.perSec);
     this.intermission = 0;

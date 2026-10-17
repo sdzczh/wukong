@@ -1040,3 +1040,74 @@ body {
 #overlay-stats .rank-empty { padding: 40px 10px; text-align: center; font-size: 17px; color: #9a8fb4; line-height: 1.7; }
 #overlay-stats .rank-note { font-size: 13px; color: #8a7f9e; line-height: 1.6; margin-top: 10px; }
 .settle-rank { color: #9fd8ff; font-weight: 700; }
+
+/* ============================================================
+ * 镇守讨伐：异步 PVP 面板
+ * ============================================================ */
+#overlay-stats .pvp-me { text-align: center; font-size: 15px; color: #cfc2e4; padding: 2px 0 6px; }
+#overlay-stats .pvp-me-name { color: #ffd867; font-weight: 900; }
+#overlay-stats .pvp-rename {
+  margin-left: 8px; padding: 1px 10px; border-radius: 999px; cursor: pointer;
+  font-size: 13px; color: #b9a8d4; background: #2e2440; border: 1px solid #5a4872;
+}
+#overlay-stats .pvp-notice {
+  margin: 4px auto 8px; padding: 6px 12px; border-radius: 10px; text-align: center;
+  font-size: 14px; color: #ffd867; background: #3a3018; border: 1px solid #8a5c14;
+}
+#overlay-stats .pvp-sec {
+  margin: 14px 0 8px; text-align: center; font-size: 14px; font-weight: 700;
+  letter-spacing: 6px; text-indent: 6px; color: #8a7f9e;
+}
+#overlay-stats .pvp-my {
+  background: #2a2140; border: 2px solid #443657; border-radius: 14px; padding: 10px 14px;
+}
+#overlay-stats .pvp-my-top { font-size: 14px; color: #b9a8d4; margin-bottom: 7px; }
+#overlay-stats .pvp-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+#overlay-stats .pvp-chip {
+  display: inline-flex; align-items: baseline; gap: 3px; padding: 2px 8px;
+  border-radius: 8px; background: #1e1830; border: 1px solid #443657;
+  font-weight: 900; font-size: 16px;
+}
+#overlay-stats .pvp-chip small { font-size: 10px; color: #9a8fb4; font-weight: 700; }
+#overlay-stats .pvp-chip.god {
+  border-color: #8a5c14; background: #33280f; box-shadow: 0 0 6px #e8b64c33;
+}
+#overlay-stats .pvp-chip.god small { color: #ffd867; }
+#overlay-stats .pvp-chip.more { color: #9a8fb4; font-size: 13px; }
+#overlay-stats .pvp-publish {
+  display: block; width: 100%; margin-top: 10px; padding: 8px 10px; cursor: pointer;
+  border-radius: 10px; border: 2px solid #7a5410;
+  background: linear-gradient(#ffd867, #e8b64c); color: #3a2606;
+  font-weight: 900; font-size: 16px; letter-spacing: 4px; text-indent: 4px;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#overlay-stats .pvp-publish:active { transform: translateY(2px); box-shadow: 0 1px 0 #7a5410; }
+#overlay-stats .pvp-hint { font-size: 12px; color: #8a7f9e; margin-top: 6px; line-height: 1.6; }
+#overlay-stats .pvp-empty {
+  padding: 18px 10px; text-align: center; font-size: 14px; color: #9a8fb4; line-height: 1.7;
+  background: #241c36; border: 1px dashed #443657; border-radius: 12px;
+}
+#overlay-stats .pvp-record { text-align: center; font-size: 14px; color: #b9a8d4; margin-top: 8px; }
+#overlay-stats .pvp-record b { color: #ffd867; font-size: 16px; }
+#overlay-stats .pvp-logs { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; }
+#overlay-stats .pvp-log { font-size: 12px; color: #8a7f9e; text-align: center; }
+#overlay-stats .pvp-row {
+  display: flex; align-items: stretch; gap: 10px; margin-top: 8px; padding: 9px 12px;
+  background: #2a2140; border: 2px solid #443657; border-radius: 14px;
+}
+#overlay-stats .pvp-row-main { flex: 1; min-width: 0; }
+#overlay-stats .pvp-row-head { display: flex; align-items: baseline; gap: 8px; }
+#overlay-stats .pvp-row-name {
+  font-weight: 900; font-size: 17px; color: #f3ead6;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#overlay-stats .pvp-row-wave { flex: none; font-size: 12px; color: #b9a8d4; }
+#overlay-stats .pvp-row-sub { font-size: 12px; color: #9a8fb4; margin: 2px 0 5px; }
+#overlay-stats .pvp-fight {
+  flex: none; align-self: center; padding: 10px 14px; cursor: pointer;
+  border-radius: 12px; border: 2px solid #7a5410;
+  background: linear-gradient(#ffd867, #e8b64c); color: #3a2606;
+  font-weight: 900; font-size: 16px; letter-spacing: 2px;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#overlay-stats .pvp-fight:active { transform: translateY(2px); box-shadow: 0 1px 0 #7a5410; }

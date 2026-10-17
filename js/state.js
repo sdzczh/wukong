@@ -35,7 +35,12 @@ const R = {
   equips: null,       // 未佩戴装备库存 [{fam,lv}]
   gearArm: -1,        // 待佩戴的库存装备索引（-1 无）：点塔即佩戴
   sigRun: 0,          // 本局专属碎片收获数（结算展示）
-  runKind: 'normal',  // 本局类型：normal | daily | weekly
+  runKind: 'normal',  // 本局类型：normal | daily | weekly | pvp
+  runSeed: 0,         // 本局地图/抽卡随机种子（PVP 镇守阵复刻同图用）
+  pvp: null,          // 讨伐中的镇守阵 {name,wave,seed,lineup,wins,losses}
+  pvpWaves: null,     // 镇守镜像阵（Director 用）
+  pvpDefs: null,      // 镜像敌军定义 {pvp0...}
+  pvpCount: 0,        // 镜像阵数
   mods: null,         // 波间词条累计 {atk,rate,peach,interest,exp,aura,cd,sell}（resetRun 初始化）
   modOffer: null,     // 待选词条（3 个 id），非 null 时暂停开波
   shovelBuys: 0,      // 当局花桃补铲数（补铲价递增）
@@ -92,6 +97,11 @@ function resetRun() {
   R.gearArm = -1;
   R.sigRun = 0;
   R.runKind = 'normal';
+  R.runSeed = 0;
+  R.pvp = null;
+  R.pvpWaves = null;
+  R.pvpDefs = null;
+  R.pvpCount = 0;
   R.mods = newMods();
   R.modOffer = null;
   R.shovelBuys = 0;

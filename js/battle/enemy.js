@@ -1,8 +1,9 @@
 /* 敌人：沿路径移动的魂系单位（elite = 精英词缀怪；bossKind = 鬼将池轮换种类） */
 class Enemy {
   constructor(type, hpMul, bossKind) {
-    const d = CONFIG.enemies[type];
+    const d = CONFIG.enemies[type] || (R.pvpDefs && R.pvpDefs[type]) || CONFIG.enemies.ghost;
     this.type = type; this.def = d;
+    this.pvp = !!d.pvp;                 // 讨伐镜像：金环标记
     const ruleMul = R.rules ? R.rules.enemyHpMul : 1;
     this.maxHp = Math.round(d.hp * hpMul * ruleMul);
     this.hp = this.maxHp;
@@ -282,6 +283,18 @@ class Enemy {
       ctx.setLineDash([4, 9]);
       ctx.beginPath();
       ctx.arc(this.x, this.y + bob * 0.5, size * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 讨伐镜像：金环标记（与精英彩环、Boss 甲环区分）
+    if (this.pvp) {
+      ctx.strokeStyle = 'rgba(232,182,76,0.65)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([3, 7]);
+      ctx.lineDashOffset = now * 26;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y + bob * 0.5, size * 0.74, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
