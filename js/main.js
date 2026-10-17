@@ -895,7 +895,7 @@ const Input = {
     if (!item) { R.armedSlot = -1; RackUI.refresh(); return; }
     let res;
     if (item.type === 'unit') {
-      res = Merge.placeOnto({ board: item.unit }, c, r);
+      res = Merge.placeOnto({ board: item.unit, fromRack: true }, c, r);
       if (res.action !== 'fail') R.rack[slot] = null;
     } else {
       res = Merge.placeOnto({ ch: item.ch, slot, lv: item.lv || 1 }, c, r);
@@ -903,7 +903,8 @@ const Input = {
       // swap：placeOnto 已把棋盘单位换回架子
     }
     if (res.action === 'fail') {
-      HUD.toast(res.reason === 'merge-level' ? '需要两个同字同级的单位才能合成，可拖到空格摆放' : '这里不能摆放');
+      HUD.toast(res.reason === 'maxed' ? '已满级（满星）无法再合成 · 可拖到空格摆放或长按出售'
+        : res.reason === 'merge-level' ? '需要两个同字同级的单位才能合成，可拖到空格摆放' : '这里不能摆放');
       if (armed) return;   // 点选模式保留 armed，等待下一次点格
     } else {
       R.armedSlot = -1;    // 放置成功不弹详情，避免遮挡（点塔仍可查看）
@@ -1029,10 +1030,12 @@ const Input = {
       return;
     }
     if (item.type === 'char') {
-      // 字上棋盘（占该单位格），单位回架
+      // 字上棋盘（占该单位格），单位回架；字卡等级随行（与空格落子同口径，防满级卡落地成 1 级）
       const c = unit.col, r = unit.row;
+      const lv = item.lv || 1;
       Merge.removeUnit(unit);
-      Merge.makeUnit(Merge.towerKeyOfChar(item.ch), c, r);
+      const u = Merge.makeUnit(Merge.towerKeyOfChar(item.ch), c, r);
+      if (lv > 1) { u.level = Math.min(u.maxLevel, lv); Merge.recordChar(item.ch, u.level); }
       R.rack[slotIdx] = { type: 'unit', unit };
       SFX.play('place');
     }

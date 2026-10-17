@@ -150,7 +150,7 @@ const Merge = {
   },
 
   /* 把 a 放到 (col,row)。
-     a: {board: Tower} | {ch: '悟', slot: 0}
+     a: {board: Tower} | {board: Tower, fromRack: true}（架上单位）| {ch: '悟', slot: 0}
      b: 目标格已有单位（可为 null）。返回 {action, unit?} */
   placeOnto(a, col, row) {
     const b = Grid.inBounds(col, row) ? Grid.tiles[row][col].tower : null;
@@ -204,7 +204,10 @@ const Merge = {
       return { action: 'pair', unit: g };
     }
     // swap：仅棋盘↔棋盘换位（两塔都在棋盘，交换格子）
-    if (aUnit) {
+    // 架上单位（fromRack）col/row 是离架前的旧坐标，绝不能走换位——
+    // 否则棋盘塔会被搬到旧坐标（架上唤醒的神将旧坐标是 (0,0) 不可放格），
+    // 看起来就是「满级单位一合成变成了架旁的 1 级单位」
+    if (aUnit && !a.fromRack) {
       const ac = aUnit.col, ar = aUnit.row, bc = b.col, br = b.row;
       Merge.removeUnit(aUnit); Merge.removeUnit(b);
       const na = Merge.makeUnit(aUnit, bc, br);
@@ -213,7 +216,11 @@ const Merge = {
       SFX.play('place');
       return { action: 'swap', unit: na };
     }
-    // 架子字 → 棋盘塔：不同级/不同字不再弹塔回架（防误操作），视为不可合成
+    // 架子卡/架上单位 → 棋盘塔：不同级/不同字不再弹塔回架（防误操作），视为不可合成
+    // 同字且目标已满级：给明确提示（神将走到这必已满星）
+    if (aChar === b.def.char && b.level >= b.maxLevel) {
+      return { action: 'fail', reason: 'maxed' };
+    }
     return { action: 'fail', reason: 'merge-level' };
   },
 
