@@ -36,7 +36,7 @@ const RunSave = {
       : o.runKind === 'pvp' ? `讨伐「${o.pvpName || '?'}」`
       : o.endless ? '无尽征战' : '常规局';
     return { kind, wave: o.wave || 0, peaches: o.peaches | 0, hearts: o.hearts | 0,
-             heartsMax: o.heartsMax || 10, towers: o.towers.length };
+             heartsMax: o.heartsMax || 10, towers: o.towers.length, idle: !!o.idle };
   },
 
   /* ---------- 快照（仅备战期：无在场敌军波，恢复语义 = 回本波备战） ---------- */
@@ -61,6 +61,7 @@ const RunSave = {
       blessTaught: !!R.blessTaught, shovelTaught: !!R.shovelTaught,
       mightT: R.mightT || 0, battleTime: R.battleTime || 0,
       rangeFloor: R.rangeFloor || 0,
+      idle: !!R.idle, idleMs: R.idleMs || 0,   // 挂机托管态：恢复后自动续挂
       masteryCounted: R.masteryCounted ? [...R.masteryCounted] : [],
       mods: R.mods, modOffer: R.modOffer || null,
       parts: R.parts, equips: R.equips, sigRun: R.sigRun || 0,
@@ -102,7 +103,7 @@ const RunSave = {
       const next = (R.wave || 0) + 1;
       HUD.toast(R.pvp
         ? `已恢复讨伐 · 第 ${next}/${R.pvpCount} 阵备战`
-        : `已恢复上局 · 第 ${next} 波备战`);
+        : `已恢复上局 · 第 ${next} 波备战${R.idle ? '（挂机继续）' : ''}`);
       return true;
     } catch (e) {
       this.resuming = false;
@@ -134,6 +135,8 @@ const RunSave = {
     R.mightT = o.mightT || 0;
     R.battleTime = o.battleTime || 0;
     R.rangeFloor = o.rangeFloor || 0;
+    R.idle = !!o.idle;                 // 挂机态跟着残局走（apply 末尾续挂）
+    R.idleMs = o.idleMs || 0;
     R.mods = Object.assign(newMods(), o.mods || {});
     R.modOffer = o.modOffer || null;
     R.parts = Object.assign({ feng: 0, ji: 0, yuan: 0, ling: 0 }, o.parts || {});
@@ -203,6 +206,8 @@ const RunSave = {
     if (R.pvp && R.wave >= R.pvpCount) {
       setTimeout(() => { if (R.state === 'battle') Game.gameOver(true); }, 600);
     }
+    // 挂机残局：恢复后自动续挂（静音 + 屏幕常亮 + 托管节拍）
+    if (R.idle && typeof AutoBot !== 'undefined') AutoBot.reactivate();
   },
 
   restoreTower(s) {

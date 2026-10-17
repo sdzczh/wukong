@@ -118,7 +118,7 @@ const Panels = {
       const waveTxt = runInfo.kind.indexOf('讨伐') === 0
         ? `第 ${runInfo.wave + 1} 阵` : `第 ${runInfo.wave + 1} 波`;
       rc.innerHTML = '<span class="mc-main">继 续 上 局</span>' +
-        `<span class="mc-sub">${runInfo.kind} · ${waveTxt} · 心 ${runInfo.hearts}/${runInfo.heartsMax} · 桃 ${runInfo.peaches} · 场上 ${runInfo.towers}</span>`;
+        `<span class="mc-sub">${runInfo.kind} · ${waveTxt} · 心 ${runInfo.hearts}/${runInfo.heartsMax} · 桃 ${runInfo.peaches} · 场上 ${runInfo.towers}${runInfo.idle ? ' · 挂机中' : ''}</span>`;
       rc.addEventListener('click', () => { SFX.play('click'); RunSave.resume(); });
       this.btns.appendChild(rc);
     }
@@ -288,6 +288,10 @@ const Panels = {
       }
       return line;
     })() : '';
+    // 挂机时长（托管局专属；不上风云榜的提示也在这里）
+    const idleLine = (R.idleMs > 30000 || R.idle)
+      ? `<br>挂机时长　${(typeof AutoBot !== 'undefined' && AutoBot.fmtMs) ? AutoBot.fmtMs(R.idleMs || 0) : Math.round((R.idleMs || 0) / 1000) + ' 秒'}　<span style="color:#8a7f9a">（托管局不上风云榜）</span>`
+      : '';
     const stats = pvp
       ? `本局阵数　${R.wave}/${R.pvpCount}　｜　击杀　${R.kills}` +
         `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
@@ -296,7 +300,7 @@ const Panels = {
       : `本局波次　${R.wave}　｜　击杀　${R.kills}` +
         `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
         `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-        `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine + rankLine;
+        `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + idleLine + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine + rankLine;
     const buttons = pvp
       ? [
           { text: '再 讨 一 阵', fn: () => Game.startPvp(pvp) },

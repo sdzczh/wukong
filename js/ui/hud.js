@@ -46,6 +46,13 @@ const HUD = {
       this.refresh();
     });
 
+    // 挂机托管：仅无尽征战备战/交战中可见
+    const idleBtn = document.getElementById('btn-idle');
+    if (idleBtn) idleBtn.addEventListener('click', () => {
+      SFX.ensure(); SFX.play('click');
+      AutoBot.toggle();
+    });
+
     this.refreshSound();
     this.refresh();
   },
@@ -76,6 +83,14 @@ const HUD = {
     if (canCall) {
       const bonus = Math.round(Director.intermission * CONFIG.callWave.perSec);
       this.callBonus.textContent = '+' + bonus + ' 桃';
+    }
+    // 挂机「挂」按钮：仅无尽征战的对局中显示，开启后金色高亮
+    const idleBtn = document.getElementById('btn-idle');
+    if (idleBtn) {
+      const canIdle = R.state === 'battle' && R.endless && !R.pvp;
+      idleBtn.classList.toggle('hidden', !canIdle);
+      idleBtn.classList.toggle('on', !!R.idle);
+      idleBtn.title = R.idle ? '挂机中：自动召唤/合成/叫波（任意操作即暂停）' : '挂机托管：自动召唤/合成/摆位/叫波（挂机局不上榜）';
     }
     RackUI.refresh();
     BlessUI.refresh();

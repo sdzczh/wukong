@@ -2,6 +2,7 @@
 const SFX = {
   ctx: null,
   bgm: null,
+  mute: false,   // 挂机托管静音（不动用户的音效开关偏好）
   ensure() {
     if (!this.ctx) {
       try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
@@ -30,14 +31,14 @@ const SFX = {
     this.refreshBgm();
   },
 
-  /* 跟随音效开关：开 → 低音量常驻，关 → 淡出 */
+  /* 跟随音效开关：开 → 低音量常驻，关 → 淡出（挂机静音时同样淡出） */
   refreshBgm() {
     if (!this.bgm || !this.ctx) return;
-    const target = Save.data.sound ? 0.05 : 0.0001;
+    const target = (Save.data.sound && !this.mute) ? 0.05 : 0.0001;
     this.bgm.g.gain.setTargetAtTime(target, this.ctx.currentTime, 1.0);
   },
   tone(freq, dur, type, vol, slide) {
-    if (!Save.data.sound || !this.ctx) return;
+    if (this.mute || !Save.data.sound || !this.ctx) return;
     type = type || 'sine'; vol = vol || 0.12; slide = slide || 0;
     const t = this.ctx.currentTime;
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -50,7 +51,7 @@ const SFX = {
     o.start(t); o.stop(t + dur + 0.02);
   },
   noise(dur, vol) {
-    if (!Save.data.sound || !this.ctx) return;
+    if (this.mute || !Save.data.sound || !this.ctx) return;
     dur = dur || 0.08; vol = vol || 0.1;
     const len = Math.floor(this.ctx.sampleRate * dur);
     const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);

@@ -91,6 +91,14 @@ body {
 .hud-btn.off { color: #5a4f6e; }
 .hud-btn.on { border-color: #e8b64c; background: #4a3a1ae0; }
 
+/* 挂机「挂」：窄一档防顶栏溢出；托管中金色脉动提示 */
+#btn-idle { width: 48px; font-size: 22px; }
+#btn-idle.on { animation: idlePulse 1.6s ease-in-out infinite; }
+@keyframes idlePulse {
+  0%, 100% { box-shadow: 0 0 3px 0 #e8b64c55; }
+  50% { box-shadow: 0 0 12px 2px #e8b64caa; }
+}
+
 /* ---------- 实时 DPS 面板 ---------- */
 #dps-panel {
   position: absolute; top: 104px; left: 12px; z-index: 4;

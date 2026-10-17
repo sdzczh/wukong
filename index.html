@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>无敌悟空 · 文字塔防</title>
-<link rel="stylesheet" href="css/style.css?v=20261017e">
+<link rel="stylesheet" href="css/style.css?v=20261017f">
 </head>
 <body>
 <div id="stage">
@@ -17,6 +17,7 @@
     <div id="wave-label" class="pill">备战中</div>
     <div class="pill pill-heart">♥<span id="heart-num">10</span></div>
     <button id="btn-fast" class="hud-btn" title="战斗加速">1×</button>
+    <button id="btn-idle" class="hud-btn hidden" title="挂机托管：自动召唤/合成/摆位/叫波（挂机局不上榜）">挂</button>
     <button id="btn-dps" class="hud-btn" title="伤害榜：实时 DPS 排行">伤</button>
     <button id="btn-gear" class="hud-btn" title="装备栏：部件 ×3 合成装备，点装备再点塔佩戴">装</button>
     <button id="btn-sound" class="hud-btn" title="音效开关">♪</button>
@@ -111,41 +112,42 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261017e"></script>
-<script src="js/rng.js?v=20261017e"></script>
-<script src="js/save.js?v=20261017e"></script>
-<script src="js/cloud.js?v=20261017e"></script>
-<script src="js/user.js?v=20261017e"></script>
-<script src="js/talents.js?v=20261017e"></script>
-<script src="js/gear.js?v=20261017e"></script>
-<script src="js/bonds.js?v=20261017e"></script>
-<script src="js/weekly.js?v=20261017e"></script>
-<script src="js/mods.js?v=20261017e"></script>
-<script src="js/audio.js?v=20261017e"></script>
-<script src="js/state.js?v=20261017e"></script>
-<script src="js/grid.js?v=20261017e"></script>
-<script src="js/ui/fx.js?v=20261017e"></script>
-<script src="js/battle/enemy.js?v=20261017e"></script>
-<script src="js/battle/projectile.js?v=20261017e"></script>
-<script src="js/battle/tower.js?v=20261017e"></script>
-<script src="js/battle/general.js?v=20261017e"></script>
-<script src="js/battle/merge.js?v=20261017e"></script>
-<script src="js/battle/skill.js?v=20261017e"></script>
-<script src="js/battle/pvp.js?v=20261017e"></script>
-<script src="js/battle/director.js?v=20261017e"></script>
-<script src="js/ui/hud.js?v=20261017e"></script>
-<script src="js/ui/dps.js?v=20261017e"></script>
-<script src="js/ui/tut.js?v=20261017e"></script>
-<script src="js/ui/rack.js?v=20261017e"></script>
-<script src="js/ui/gear.js?v=20261017e"></script>
-<script src="js/ach.js?v=20261017e"></script>
-<script src="js/ui/panels.js?v=20261017e"></script>
-<script src="js/ui/rank.js?v=20261017e"></script>
-<script src="js/ui/pvpui.js?v=20261017e"></script>
-<script src="js/ui/codex.js?v=20261017e"></script>
-<script src="js/ui/talent.js?v=20261017e"></script>
-<script src="js/ui/bless.js?v=20261017e"></script>
-<script src="js/runsave.js?v=20261017e"></script>
-<script src="js/main.js?v=20261017e"></script>
+<script src="js/config.js?v=20261017f"></script>
+<script src="js/rng.js?v=20261017f"></script>
+<script src="js/save.js?v=20261017f"></script>
+<script src="js/cloud.js?v=20261017f"></script>
+<script src="js/user.js?v=20261017f"></script>
+<script src="js/talents.js?v=20261017f"></script>
+<script src="js/gear.js?v=20261017f"></script>
+<script src="js/bonds.js?v=20261017f"></script>
+<script src="js/weekly.js?v=20261017f"></script>
+<script src="js/mods.js?v=20261017f"></script>
+<script src="js/audio.js?v=20261017f"></script>
+<script src="js/state.js?v=20261017f"></script>
+<script src="js/grid.js?v=20261017f"></script>
+<script src="js/ui/fx.js?v=20261017f"></script>
+<script src="js/battle/enemy.js?v=20261017f"></script>
+<script src="js/battle/projectile.js?v=20261017f"></script>
+<script src="js/battle/tower.js?v=20261017f"></script>
+<script src="js/battle/general.js?v=20261017f"></script>
+<script src="js/battle/merge.js?v=20261017f"></script>
+<script src="js/battle/skill.js?v=20261017f"></script>
+<script src="js/battle/pvp.js?v=20261017f"></script>
+<script src="js/battle/director.js?v=20261017f"></script>
+<script src="js/ui/hud.js?v=20261017f"></script>
+<script src="js/ui/dps.js?v=20261017f"></script>
+<script src="js/ui/tut.js?v=20261017f"></script>
+<script src="js/ui/rack.js?v=20261017f"></script>
+<script src="js/ui/gear.js?v=20261017f"></script>
+<script src="js/ach.js?v=20261017f"></script>
+<script src="js/ui/panels.js?v=20261017f"></script>
+<script src="js/ui/rank.js?v=20261017f"></script>
+<script src="js/ui/pvpui.js?v=20261017f"></script>
+<script src="js/ui/codex.js?v=20261017f"></script>
+<script src="js/ui/talent.js?v=20261017f"></script>
+<script src="js/ui/bless.js?v=20261017f"></script>
+<script src="js/runsave.js?v=20261017f"></script>
+<script src="js/autobot.js?v=20261017f"></script>
+<script src="js/main.js?v=20261017f"></script>
 </body>
 </html>

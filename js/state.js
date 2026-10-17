@@ -52,6 +52,8 @@ const R = {
   rules: null,        // 本局全局规则倍率（newRules 初始化）
   dmgStats: null,     // 每塔伤害统计 {towerId: {name, dmg, color}}
   nextTowerId: 1,     // 塔唯一 id 计数
+  idle: false,        // 无尽挂机托管中（仅无尽征战可开；手动操作即暂停）
+  idleMs: 0,          // 本局累计挂机时长（毫秒，真实时间）
 };
 
 function newMods() { return { atk: 0, rate: 0, peach: 0, interest: 0, exp: 0, aura: 0, cd: 0, sell: 0, latk: 0, lrate: 0, lslow: 0, lgold: 0 }; }
@@ -115,5 +117,7 @@ function resetRun() {
   R.battleTime = 0;    // 交战累计秒（开波计时，波间不计，DPS 面板用）
   R.ghosts = null;     // 上局阵容占位建议 [{c,r,ch,god,lv}]（首波备战期显示）
   R.nextTowerId = 1;
+  R.idle = false;      // 挂机托管不跨局延续
+  R.idleMs = 0;
   if (typeof Bonds !== 'undefined' && Bonds.reset) Bonds.reset();
 }

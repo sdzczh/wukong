@@ -127,6 +127,7 @@ const Game = {
     R.state = 'over';
     R.lastWin = win;
     if (typeof RunSave !== 'undefined') RunSave.clear();   // 已终局，残局不再保留
+    if (typeof AutoBot !== 'undefined') AutoBot.onGameOver();   // 挂机终局：解除静音/屏幕常亮（标记保留给结算展示）
     if (RackUI.draftBar) RackUI.discardDraft();
     R.crystalsEarned += R.wave * 10 + R.kills;
     if (R.pvp) R.crystalsEarned += win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals;
@@ -150,8 +151,9 @@ const Game = {
       s.weekly.best = Math.max(s.weekly.best, R.wave);
       s.weeklyDone = (s.weeklyDone || 0) + 1;
     }
-    if (R.runKind !== 'pvp') {
+    if (R.runKind !== 'pvp' && !R.idle) {
       // 上局阵容快照：字/等级/索敌/离路环距/伤害（下局开局给占位建议；每日/每周同种子可直接复刻位）
+      // 挂机局阵容非玩家手摆，不覆盖
       const pathSet = new Set();
       for (let r = 0; r < Grid.rows; r++) for (let c = 0; c < Grid.cols; c++) {
         if (Grid.tiles[r][c].type === 'path') pathSet.add(c + ',' + r);
@@ -174,7 +176,7 @@ const Game = {
     }
     Ach.check();   // 成就结算：波次/击杀/收集等持久数据齐了再判（解锁即写档）
     Save.write();
-    if (typeof RankUI !== 'undefined' && R.runKind !== 'pvp') RankUI.submitRun();   // 风云榜：常规局自动上传
+    if (typeof RankUI !== 'undefined' && R.runKind !== 'pvp' && !R.idle) RankUI.submitRun();   // 风云榜：常规局自动上传（挂机局不上榜）
     if (typeof Pvp !== 'undefined' && R.pvp) Pvp.report(win);                        // 守方战绩上报
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
@@ -279,6 +281,7 @@ function frame(now) {
   let dt = (now - last) / 1000;
   last = now;
   if (dt > 0.25) dt = 0.25;
+  if (R.idle && R.state === 'battle') R.idleMs = (R.idleMs || 0) + dt * 1000;   // 挂机时长按真实时间累计（后台由 AutoBot.drive 补）
   acc += dt * R.timeScale;
   if (acc > STEP * 12) acc = STEP * 12;   // 高倍速下设备跟不上时不螺旋死亡，宁可慢放
   while (acc >= STEP) { tick(STEP); acc -= STEP; }
@@ -1287,6 +1290,7 @@ Panels.init();
 WaveMods.init();
 BlessUI.init();
 RunSave.boot();   // 断点续战：备战期定时/切后台/关页前落盘
+AutoBot.boot();   // 无尽挂机：托管思考节拍 + 后台驱动 + 手动操作即暂停
 resize();
 // 首次启动先录名号，之后回主菜单
 if (User.has()) Game.toMenu();
@@ -1298,7 +1302,10 @@ requestAnimationFrame(frame);
 
 /* ---------- 调试/自动化验收 API ---------- */
 window.GAME = {
-  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input, FX, SFX, Bonds, Weekly, WaveMods, Skills,
+  R, CONFIG, Grid, Director, Bus, Merge, RackUI, User, Input, FX, SFX, Bonds, Weekly, WaveMods, Skills, AutoBot,
+  toggleIdle: () => AutoBot.toggle(),
+  idleOn: () => AutoBot.activate(),
+  idleOff: () => AutoBot.pause(),
   startRun: () => Game.startRun(),
   startDaily: () => Game.startDaily(),
   startWeekly: () => Game.startWeekly(),
