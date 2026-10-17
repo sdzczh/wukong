@@ -143,6 +143,7 @@ const Game = {
     if (lineup.items.length) s.lastLineup = lineup;
     Ach.check();   // 成就结算：波次/击杀/收集等持久数据齐了再判（解锁即写档）
     Save.write();
+    if (typeof RankUI !== 'undefined') RankUI.submitRun();   // 全服风云榜：每局结算自动上传（失败不影响单机）
     SFX.play(win ? 'win' : 'lose');
     setTimeout(() => Panels.showSettle(win), 900);
   },

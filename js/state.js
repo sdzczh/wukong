@@ -60,6 +60,7 @@ function newRules() {
 
 function resetRun() {
   R.state = 'battle';
+  R.runId = (R.runId || 0) + 1;   // 本局标识（榜单上传结果与结算页对齐）
   R.heartsMax = Talents.heartsCap();
   R.hearts = Math.min(R.heartsMax, CONFIG.base.hearts + Talents.heartsBonus());
   R.peaches = CONFIG.economy.startPeaches + Talents.startPeachBonus();
