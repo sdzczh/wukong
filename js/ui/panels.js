@@ -58,6 +58,25 @@ const Panels = {
 
   hide() { this.overlay.classList.add('hidden'); },
 
+  /* 版本更新公告：首次打开当前版本时弹一次（独立 localStorage 记忆，不进存档码/云同步）
+     force=true 调试预览。关闭即回主菜单。 */
+  maybeShowUpdate(force) {
+    const rel = CONFIG.release;
+    if (!rel || !rel.ver) return false;
+    let seen = '';
+    try { seen = localStorage.getItem('wukong_seen_ver') || ''; } catch (e) {}
+    if (!force && seen === rel.ver) return false;
+    const items = (rel.notes || []).map(n =>
+      `<div class="upd-item"><span class="upd-t">${n.t}</span><span class="upd-d">${n.d}</span></div>`).join('');
+    this._fill('更 新 公 告', `版本 ${rel.ver} · ${rel.date || ''}`, items, [
+      { text: '知 道 了', fn: () => {
+        try { localStorage.setItem('wukong_seen_ver', rel.ver); } catch (e) {}
+        if (R.state === 'menu') this.showMenu(); else this.hide();
+      } },
+    ]);
+    return true;
+  },
+
   /* 名号录入（首次启动 / 菜单改名） */
   showNameEntry(cb) {
     this.card.classList.remove('menu');

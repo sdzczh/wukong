@@ -1292,9 +1292,9 @@ BlessUI.init();
 RunSave.boot();   // 断点续战：备战期定时/切后台/关页前落盘
 AutoBot.boot();   // 无尽挂机：托管思考节拍 + 后台驱动 + 手动操作即暂停
 resize();
-// 首次启动先录名号，之后回主菜单
-if (User.has()) Game.toMenu();
-else Panels.showNameEntry(() => Game.toMenu());
+// 首次启动先录名号，之后回主菜单；当前版本第一次打开 → 主菜单上弹更新公告
+if (User.has()) { Game.toMenu(); Panels.maybeShowUpdate(); }
+else Panels.showNameEntry(() => { Game.toMenu(); Panels.maybeShowUpdate(); });
 // 预加载展示字体（canvas 逐帧重绘，就绪后自然生效）；静态层的「封/关/轮回殿」字样需就绪后重画一次
 document.fonts.load('64px "Ma Shan Zheng"').then(invalidateStatic, invalidateStatic);
 if (document.fonts.ready && document.fonts.ready.then) document.fonts.ready.then(invalidateStatic);

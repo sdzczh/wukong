@@ -693,6 +693,17 @@ body {
 }
 #overlay-btns { margin-top: 28px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
 
+/* ---------- 版本更新公告（首次打开当前版本时弹） ---------- */
+#overlay-stats .upd-item {
+  margin: 10px 0; padding: 10px 14px; text-align: left;
+  background: #2a2140; border: 1px solid #443657; border-radius: 12px;
+}
+#overlay-stats .upd-t {
+  display: block; font-size: 17px; font-weight: 900; color: #ffd867;
+  letter-spacing: 2px; margin-bottom: 3px;
+}
+#overlay-stats .upd-d { font-size: 14px; color: #b9aed4; line-height: 1.6; }
+
 .btn {
   min-width: 300px; padding: 14px 34px; border-radius: 999px; cursor: pointer;
   font-size: 26px; font-weight: 900; letter-spacing: 4px;
