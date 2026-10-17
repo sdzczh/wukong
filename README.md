@@ -68,7 +68,7 @@ node server.js                                        # 默认 80 端口，静�
 PORT=8088 WK_ROOT=./dist WK_DATA=/tmp/wukong-api node server.js   # 本地测试
 ```
 
-线上部署（塔防项目已授权直传）：`bash scripts/deploy-80.sh` —— 上传文件、写 systemd 单元、放行 80、内网自测，约 30 秒。外网验收 `curl -I http://43.99.15.109/`。
+线上部署：`bash scripts/deploy-80.sh` —— 上传文件、写 systemd 单元、放行 80、内网自测，约 30 秒。外网验收 `curl -I http://43.99.15.109/`。
 
 | 接口 | 方法 | 说明 |
 | --- | --- | --- |
