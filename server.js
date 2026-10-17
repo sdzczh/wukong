@@ -24,6 +24,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { URL } = require('url');
 
 const PORT = Number(process.env.PORT || 80);
@@ -470,7 +471,27 @@ async function handleCloudPut(req, res, ip) {
 }
 
 /* ---------- 静态文件 ---------- */
-function serveStatic(req, res, pathname) {
+/* 跨境链路（香港 → 大陆）晚高峰单连接常被丢包限到 2~8KB/s：
+   1) 文本类资源 gzip 压缩（内存缓存压缩结果，一次压缩反复用，体积约 ×0.28）；
+   2) 带 ?v= 戳的资源与字体发 immutable 一年缓存——同戳重访零下载，升戳才重拉；
+   3) keep-alive 拉长到 30s，跨境高 RTT 下复用连接避免反复慢启动。 */
+const GZIP_EXT = new Set(['.html', '.css', '.js', '.json', '.svg', '.txt', '.webmanifest']);
+const LONG_CACHE_EXT = new Set(['.woff2', '.woff', '.ttf', '.otf', '.png', '.jpg', '.jpeg', '.webp', '.ico']);
+const gzipCache = new Map();   // abs path → Buffer（压缩后）
+
+function gzipOf(abs) {
+  let buf = gzipCache.get(abs);
+  if (buf) return buf;
+  buf = zlib.gzipSync(fs.readFileSync(abs), { level: 6 });
+  gzipCache.set(abs, buf);
+  if (gzipCache.size > 64) {   // 防御性上限：64 个文件 ≈ 数 MB，够全部静态文件
+    const first = gzipCache.keys().next().value;
+    gzipCache.delete(first);
+  }
+  return buf;
+}
+
+function serveStatic(req, res, pathname, url) {
   let rel;
   try {
     rel = decodeURIComponent(pathname);
@@ -490,12 +511,31 @@ function serveStatic(req, res, pathname) {
   fs.stat(abs, (err, st) => {
     if (err || !st.isFile()) return json(res, 404, { ok: false, error: 'not found' });
     const ext = path.extname(abs).toLowerCase();
-    res.writeHead(200, {
+    // 缓存策略：html 永远协商；带 v 戳或字体图片长缓存；其余 1 小时
+    const hasV = !!(url && url.searchParams && url.searchParams.has('v'));
+    let cacheControl = 'public, max-age=3600';
+    if (ext === '.html') cacheControl = 'no-cache';
+    else if (hasV || LONG_CACHE_EXT.has(ext)) cacheControl = 'public, max-age=31536000, immutable';
+    const acceptGz = GZIP_EXT.has(ext) && /gzip/.test(String(req.headers['accept-encoding'] || ''));
+    let body = null;
+    if (acceptGz) {
+      try { body = gzipOf(abs); } catch (e) { body = null; }
+    }
+    const headers = {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Content-Length': st.size,
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
+      'Cache-Control': cacheControl,
       'X-Content-Type-Options': 'nosniff',
-    });
+    };
+    if (body) {
+      headers['Content-Encoding'] = 'gzip';
+      headers['Content-Length'] = body.length;
+      headers['Vary'] = 'Accept-Encoding';
+      res.writeHead(200, headers);
+      if (req.method === 'HEAD') return res.end();
+      return res.end(body);
+    }
+    headers['Content-Length'] = st.size;
+    res.writeHead(200, headers);
     if (req.method === 'HEAD') return res.end();
     const stream = fs.createReadStream(abs);
     stream.on('error', () => res.destroy());
@@ -555,9 +595,13 @@ const server = http.createServer((req, res) => {
     }
     return json(res, 405, { ok: false, error: 'method not allowed' });
   }
-  if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res, url.pathname);
+  if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res, url.pathname, url);
   return json(res, 405, { ok: false, error: 'method not allowed' });
 });
+
+/* 跨境高 RTT：拉长 keep-alive，浏览器整页 38 个文件可复用同批连接，避免反复慢启动 */
+server.keepAliveTimeout = 30000;
+server.headersTimeout = 35000;
 
 ensurePeriod();
 prunePeriods();
