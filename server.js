@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 无敌悟空 · 静态站 + 全服风云榜 + 异步 PVP（零依赖）
+/* 无敌悟空 · 静态站 + 全服风云榜 + 异步 PVP + 云存档（零依赖）
  *
  * 用途：替换 `python3 -m http.server 80`，在同一个 80 端口同时提供
  *   1) /opt/wukong-td 下的游戏静态文件；
@@ -7,11 +7,14 @@
  *   3) POST /api/score {name,wave,kills,kind,endless}  上传本局战绩；
  *   4) GET  /api/pvp/list?name=            镇守阵列表 + 我的守成记录；
  *   5) POST /api/pvp/defense {name,wave,seed,lineup}  上传/覆盖镇守阵；
- *   6) POST /api/pvp/result {attacker,defender,win,wave}  讨伐结算。
+ *   6) POST /api/pvp/result {attacker,defender,win,wave}  讨伐结算；
+ *   7) GET  /api/cloud?code=               读取设备码绑定的云存档；
+ *   8) POST /api/cloud {code,name,data}    上传/覆盖云存档。
  *
  * 榜单口径：按北京时间自然日 / ISO 周（周一为界）分桶，每人只留最佳波次
  * （同波次取击杀多者，再同则先到先排）。PVP 只存阵容快照（字/等级/星级）
- * 与原地图种子，战斗全部在讨伐方本地跑，镇守者无需在线。
+ * 与原地图种子，战斗全部在讨伐方本地跑，镇守者无需在线。云存档以 8 位
+ * 设备码为唯一钥匙（不含 I/O/0/1，防误读），限 64KB、2000 槽位。
  * 数据落盘到站点目录外的 /opt/wukong-td-api/data.json，避免被静态服务直接下载。
  *
  * 可调环境变量：PORT（默认 80）、HOST、WK_ROOT（静态根）、WK_DATA（数据目录）。
@@ -33,6 +36,8 @@ const MAX_NAMES_PER_PERIOD = 500;
 const MAX_DEFENSES = 300;
 const MAX_PVP_UNITS = 12;
 const PVP_PAGE = 40;
+const MAX_CLOUD_SLOTS = 2000;
+const CLOUD_CODE_RE = /^[A-HJ-NP-Z2-9]{8}$/;   // 去掉 I/O/0/1，避免手抄混淆
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -91,12 +96,16 @@ function loadDb() {
       if (src && typeof src === 'object') {
         for (const k of Object.keys(src)) defenses[k] = src[k];
       }
-      return { v: 1, daily: raw.daily || {}, weekly: raw.weekly || {}, pvp: { defenses } };
+      const cloud = Object.create(null);
+      if (raw.cloud && typeof raw.cloud === 'object') {
+        for (const k of Object.keys(raw.cloud)) cloud[k] = raw.cloud[k];
+      }
+      return { v: 1, daily: raw.daily || {}, weekly: raw.weekly || {}, pvp: { defenses }, cloud };
     }
   } catch (e) {
     if (e.code !== 'ENOENT') log('读取数据失败：' + e.message);
   }
-  return { v: 1, daily: {}, weekly: {}, pvp: { defenses: Object.create(null) } };
+  return { v: 1, daily: {}, weekly: {}, pvp: { defenses: Object.create(null) }, cloud: Object.create(null) };
 }
 
 let db = loadDb();
@@ -229,6 +238,19 @@ function capDefenses() {
   if (names.length <= MAX_DEFENSES) return;
   names.sort((a, b) => (db.pvp.defenses[a].t || 0) - (db.pvp.defenses[b].t || 0));
   while (names.length > MAX_DEFENSES) delete db.pvp.defenses[names.shift()];
+}
+
+/* ---------- 云存档 ---------- */
+function cleanCloudCode(v) {
+  const s = String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return CLOUD_CODE_RE.test(s) ? s : '';
+}
+
+function capCloud() {
+  const keys = Object.keys(db.cloud);
+  if (keys.length <= MAX_CLOUD_SLOTS) return;
+  keys.sort((a, b) => (db.cloud[a].t || 0) - (db.cloud[b].t || 0));
+  while (keys.length > MAX_CLOUD_SLOTS) delete db.cloud[keys.shift()];
 }
 
 /* ---------- HTTP 帮助 ---------- */
@@ -404,6 +426,49 @@ async function handlePvpResult(req, res, ip) {
   return json(res, 200, { ok: true, wins: rec.wins, losses: rec.losses });
 }
 
+/* ---------- 云存档 API ---------- */
+function handleCloudGet(req, res, url, ip) {
+  if (!allow(ip, 'cloudGet', 40, 10 * 60 * 1000)) return json(res, 429, { ok: false, error: '请求太频繁' });
+  const code = cleanCloudCode(url.searchParams.get('code'));
+  if (!code) return json(res, 400, { ok: false, error: '设备码格式无效' });
+  const rec = db.cloud[code];
+  if (!rec) return json(res, 404, { ok: false, error: '云端存档不存在' });
+  return json(res, 200, {
+    ok: true,
+    code,
+    name: rec.name || '',
+    updated: rec.t || 0,
+    data: rec.data,
+  });
+}
+
+async function handleCloudPut(req, res, ip) {
+  if (!allow(ip, 'cloudPut', 60, 10 * 60 * 1000)) {
+    return json(res, 429, { ok: false, error: '上传太频繁，稍后再试' });
+  }
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, 65536));
+  } catch (e) {
+    return json(res, 400, { ok: false, error: '请求体无效或存档过大' });
+  }
+  if (!body || typeof body !== 'object') return json(res, 400, { ok: false, error: '请求体无效' });
+  const code = cleanCloudCode(body.code);
+  if (!code) return json(res, 400, { ok: false, error: '设备码格式无效' });
+  const data = body.data;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return json(res, 400, { ok: false, error: '存档内容无效' });
+  }
+  if (!('bestWave' in data) && !('crystals' in data)) {
+    return json(res, 400, { ok: false, error: '存档内容无效' });
+  }
+  const name = cleanName(body.name || data.username || '');
+  db.cloud[code] = { name, t: Date.now(), data };
+  capCloud();
+  saveDb();
+  return json(res, 200, { ok: true, code, updated: db.cloud[code].t });
+}
+
 /* ---------- 静态文件 ---------- */
 function serveStatic(req, res, pathname) {
   let rel;
@@ -478,6 +543,17 @@ const server = http.createServer((req, res) => {
       if (!res.headersSent) json(res, 500, { ok: false, error: 'server error' });
     });
     return;
+  }
+  if (url.pathname === '/api/cloud') {
+    if (req.method === 'GET') return handleCloudGet(req, res, url, ip);
+    if (req.method === 'POST') {
+      handleCloudPut(req, res, ip).catch(e => {
+        log('云存档上传异常：' + e.message);
+        if (!res.headersSent) json(res, 500, { ok: false, error: 'server error' });
+      });
+      return;
+    }
+    return json(res, 405, { ok: false, error: 'method not allowed' });
   }
   if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res, url.pathname);
   return json(res, 405, { ok: false, error: 'method not allowed' });

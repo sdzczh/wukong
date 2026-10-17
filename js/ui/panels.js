@@ -97,6 +97,9 @@ const Panels = {
     const gearSub = sigN ? `神兵 ${sigN}/12 · 碎片 ${shardSum}` : `碎片 ${shardSum} · 三件合成`;
     const pvpN = (s.pvpWins || 0) + (s.pvpLosses || 0);
     const pvpSub = pvpN ? `讨伐 ${s.pvpWins || 0} 胜 · ${s.pvpLosses || 0} 负` : '异步 PVP · 以阵镇守';
+    const cloudSub = s.cloudCode
+      ? `云端已绑 · ${CloudSave.timeText(s.cloudAt)}`
+      : '换机迁移 / 云同步';
 
     this._fill(
       '无敌悟空',
@@ -125,7 +128,7 @@ const Panels = {
       ['图鉴', `已识 ${cxDone}/${cxTotal}`, false, () => Codex.show('menu')],
       ['镇守讨伐', pvpSub, false, () => PvpUI.show('menu')],
       ['风云榜', '全服今日 / 本周最佳', false, () => RankUI.show('menu')],
-      ['存档码', '换机迁移', false, () => this.showSaveCode()],
+      ['存档迁移', cloudSub, false, () => this.showSaveCode()],
     ];
     for (const [name, sub, fresh, fn, wide] of tiles) {
       const el = document.createElement('button');
@@ -145,14 +148,18 @@ const Panels = {
     this.btns.appendChild(rename);
   },
 
-  /* 存档码面板：导出当前存档 / 粘贴导入覆盖 */
+  /* 存档迁移面板：本地存档码导出/导入 + 入口到云端同步 */
   showSaveCode() {
     this.card.classList.remove('menu');
-    this.title.textContent = '存 档 码';
-    this.sub.textContent = '复制存档码可在其他设备恢复进度';
+    this.title.textContent = '存 档 迁 移';
+    this.sub.textContent = '复制存档码换机恢复 · 云同步可自动接进度';
+    const cloudLine = Save.data.cloudCode
+      ? `<div class="save-cloud on">云端已绑　${CloudSave.display()}　·　上次同步 ${CloudSave.timeText(Save.data.cloudAt)}</div>`
+      : `<div class="save-cloud">未绑定云端存档　·　点下方「云端同步」生成设备码，进度自动上云</div>`;
     this.stats.innerHTML =
       '<textarea id="save-code" spellcheck="false" readonly></textarea>' +
-      '<div class="save-hint">点下方「复 制」后发送给新设备；在「导 入」框粘贴对方存档码可覆盖当前进度</div>';
+      '<div class="save-hint">点下方「复 制」后发送给新设备；在「导 入」框粘贴对方存档码可覆盖当前进度</div>' +
+      cloudLine;
     this.btns.innerHTML = '';
     const ta = this.stats.querySelector('#save-code');
     ta.value = Save.exportCode();
@@ -181,6 +188,7 @@ const Panels = {
       HUD.toast('导入成功 · 存档已更新');
       this.showMenu();
     }, true);
+    mk('云端同步', () => CloudUI.show('save'));
     mk('返 回', () => this.showMenu(), true);
     this.overlay.classList.remove('hidden');
   },

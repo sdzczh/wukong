@@ -1111,3 +1111,58 @@ body {
   box-shadow: 0 3px 0 #7a5410;
 }
 #overlay-stats .pvp-fight:active { transform: translateY(2px); box-shadow: 0 1px 0 #7a5410; }
+
+/* ============================================================
+ * 存档迁移：云端设备码绑定
+ * ============================================================ */
+#overlay-stats .save-cloud {
+  margin-top: 12px; padding: 8px 12px; border-radius: 10px; text-align: center;
+  font-size: 13px; color: #9a8fb4; line-height: 1.6;
+  background: #1e1830; border: 1px dashed #443657;
+}
+#overlay-stats .save-cloud.on { color: #9fd8ff; border-color: #3d5a72; background: #182433; }
+#overlay-stats .cloud-notice {
+  margin: 0 auto 10px; padding: 7px 12px; border-radius: 10px; text-align: center;
+  font-size: 14px; color: #ffd867; background: #3a3018; border: 1px solid #8a5c14;
+}
+#overlay-stats .cloud-box {
+  margin-top: 4px; padding: 14px 16px 12px; border-radius: 14px;
+  background: #2a2140; border: 2px solid #443657;
+}
+#overlay-stats .cloud-label {
+  font-size: 13px; letter-spacing: 4px; text-indent: 4px; color: #8a7f9e; margin-bottom: 6px;
+}
+#overlay-stats .cloud-code {
+  font-family: "Courier New", monospace; font-size: 34px; font-weight: 900;
+  letter-spacing: 6px; color: #ffd867; text-shadow: 0 2px 0 #6b3f14;
+}
+#overlay-stats .cloud-copy {
+  margin-top: 7px; padding: 2px 16px; border-radius: 999px; cursor: pointer;
+  font-size: 13px; color: #b9a8d4; background: #2e2440; border: 1px solid #5a4872;
+}
+#overlay-stats .cloud-status { margin-top: 8px; font-size: 12px; color: #9a8fb4; line-height: 1.6; }
+#overlay-stats .cloud-local { margin-top: 10px; text-align: center; font-size: 14px; color: #cfc2e4; }
+#overlay-stats .cloud-hint { margin-top: 8px; font-size: 12px; color: #8a7f9e; line-height: 1.65; text-align: left; }
+#overlay-stats .cloud-gen {
+  display: block; width: 100%; margin-top: 10px; padding: 9px 10px; cursor: pointer;
+  border-radius: 10px; border: 2px solid #7a5410;
+  background: linear-gradient(#ffd867, #e8b64c); color: #3a2606;
+  font-weight: 900; font-size: 16px; letter-spacing: 3px; text-indent: 3px;
+  box-shadow: 0 3px 0 #7a5410;
+}
+#overlay-stats .cloud-gen:active { transform: translateY(2px); box-shadow: 0 1px 0 #7a5410; }
+#overlay-stats .cloud-restore { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: #241c36; border: 1px dashed #443657; }
+#overlay-stats #cloud-input {
+  width: 100%; padding: 11px 14px; border-radius: 11px; outline: none;
+  border: 2px solid #5a4872; background: #17111f; color: #f3ead6;
+  font-size: 20px; font-weight: 700; text-align: center; letter-spacing: 3px;
+  user-select: text; -webkit-user-select: text;
+}
+#overlay-stats #cloud-input:focus { border-color: #e8b64c; box-shadow: 0 0 14px #e8b64c44; }
+#overlay-stats #cloud-input::placeholder { color: #5a4f6e; font-size: 14px; letter-spacing: 1px; }
+#overlay-stats .cloud-pull {
+  display: block; width: 100%; margin-top: 8px; padding: 8px 10px; cursor: pointer;
+  border-radius: 10px; border: 2px solid #5a4872; background: #2e2440; color: #cfc2e4;
+  font-weight: 900; font-size: 15px; letter-spacing: 3px; text-indent: 3px;
+}
+#overlay-stats .cloud-pull:active { transform: translateY(2px); }

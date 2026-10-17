@@ -25,6 +25,8 @@ const Save = {
       weeklyDone: 0,                      // 完成每周异变局数（成就）
       pvpWins: 0,                         // 讨伐成功次数（成就）
       pvpLosses: 0,                       // 讨伐失利次数
+      cloudCode: '',                      // 云存档设备码（8 位，空=未绑定）
+      cloudAt: 0,                         // 云端最近同步时间戳
       ach: {},                            // 成就达成表 {id: 时间戳}
       title: '',                          // 当前佩戴称号（对应成就 id，''=未佩戴）
     };
@@ -33,7 +35,10 @@ const Save = {
     try {
       this.data = Object.assign(this.defaults(), JSON.parse(localStorage.getItem(this.KEY)) || {});
     } catch (e) { this.data = this.defaults(); }
-    // 图鉴结构归一：{ chars, generals, charLv, genLv, genStar }（兼容早期扁平结构）
+    this.normalize();
+  },
+  /* 结构归一：图鉴 { chars, generals, charLv, genLv, genStar }（兼容早期扁平结构） */
+  normalize() {
     const raw = this.data.codex || {};
     this.data.codex = {
       chars: raw.chars || {},
@@ -44,8 +49,12 @@ const Save = {
     };
     if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
   },
-  write() {
+  write(opts) {
     try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {}
+    // 云同步：本地每次落盘后排队上传（静默写入不触发，避免同步回环）
+    if ((!opts || !opts.silent) && typeof CloudSave !== 'undefined' && CloudSave.queue) {
+      CloudSave.queue();
+    }
   },
 
   /* ---------- 存档码：导出/导入（Base64(JSON)，前缀 WK1-） ---------- */
@@ -78,19 +87,24 @@ const Save = {
         return '存档码内容无效';
       }
       this.data = Object.assign(this.defaults(), obj);
-      const raw = this.data.codex || {};
-      this.data.codex = {
-        chars: raw.chars || {},
-        generals: raw.generals || (raw.chars ? {} : raw),
-        charLv: raw.charLv || {},
-        genLv: raw.genLv || {},
-        genStar: raw.genStar || {},
-      };
-      if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
-      this.write();
+      this.normalize();
+      this.write({ silent: true });   // 本地导入不立刻回传云端
       return null;
     } catch (e) {
       return '存档码解析失败（可能被截断或不完整）';
     }
+  },
+
+  /* 云端恢复：强制绑定本次输入的设备码；失败返回错误消息 */
+  applyCloud(obj, code, updated) {
+    if (!obj || typeof obj !== 'object' || (!('bestWave' in obj) && !('crystals' in obj))) {
+      return '云端存档内容无效';
+    }
+    this.data = Object.assign(this.defaults(), obj);
+    this.normalize();
+    this.data.cloudCode = code || this.data.cloudCode || '';
+    this.data.cloudAt = updated || Date.now();
+    this.write({ silent: true });
+    return null;
   },
 };
