@@ -73,6 +73,8 @@ PORT=8088 WK_ROOT=./dist WK_DATA=/tmp/wukong-api node server.js   # 本地测试
 
 线上部署：`bash scripts/deploy-80.sh` —— 上传文件、写 systemd 单元、放行 80、内网自测，约 30 秒。外网验收 `curl -I http://43.99.15.109/`。
 
+静态服务自带抗跨境拥塞三件套（服务器在阿里云香港区，大陆晚高峰链路常掉到单连接 2~8KB/s）：文本资源 gzip（内存缓存压缩结果，整页线上传输 740KB→146KB）；带 `?v=` 戳的资源与字体图片发 `Cache-Control: immutable` 一年缓存——同戳重访零下载秒开，**改前端必须整体升缓存戳，否则用户永远拿旧文件**；HTTP keep-alive 30s 复用连接避免跨境反复慢启动。
+
 | 接口 | 方法 | 说明 |
 | --- | --- | --- |
 | `/api/board?kind=daily\|weekly` | GET | 今日/本周风云榜前 20（北京时间分桶，同名只留最佳） |
