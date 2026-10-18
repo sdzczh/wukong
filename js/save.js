@@ -15,6 +15,7 @@ const Save = {
       codex: {},                          // 神将图鉴点亮（M3）
       mastery: {},                        // 神将熟练度：上场次数累计（key → uses）
       talents: { po: 0, zs: 0, cs: 0 },   // 三系已点层数（M4）
+      rebirth: { layers: 0 },           // 转生轮回世数（3.0，每世永久增益）
       shards: {},                         // 专属装备碎片（boss 掉落，带出对局）
       sigGear: {},                        // 专属装备等级（局外合成升级，永久）
       lastLineup: null,                   // 上局阵容快照（占位建议用，{kind, seed, ts, items}）
@@ -48,6 +49,7 @@ const Save = {
       genStar: raw.genStar || {},        // 各神将历史最高星（升星系统）
     };
     if (!this.data.weekly) this.data.weekly = { key: 0, best: 0 };
+    if (!this.data.rebirth || typeof this.data.rebirth.layers !== 'number') this.data.rebirth = { layers: 0 };
   },
   write(opts) {
     try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {}

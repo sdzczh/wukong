@@ -43,7 +43,8 @@ class General extends Tower {
   gainExp(n) {
     if (this.level >= this.maxLevel) return;
     const mul = (1 + Bonds.bonus().exp) * (R.rules ? R.rules.expMul : 1)
-      * (1 + R.mods.exp * CONFIG.waveMods.steps.exp);
+      * (1 + R.mods.exp * CONFIG.waveMods.steps.exp)
+      * (1 + ((typeof Rebirth !== 'undefined') ? Rebirth.expBonus() : 0));   // 转生轮回·每世经验 +10%
     this.exp += n * mul;
     while (this.level < this.maxLevel) {
       const need = this.expNeed;

@@ -123,7 +123,8 @@ const Panels = {
     this._fill(
       '无敌悟空',
       `道友「${s.username || '无名氏'}」${titleTxt ? `·「<span style="color:#ffd867">${titleTxt}</span>」` : ''}· 文字合成塔防 · 地府篇`,
-      `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}<br>` +
+      `历史最高波次　${s.bestWave}　｜　累计击杀　${s.totalKills}　｜　魂晶　${s.crystals}` +
+      `${(typeof Rebirth !== 'undefined' && Rebirth.layers() > 0) ? `　｜　轮回第 ${Rebirth.layers()} 世` : ''}<br>` +
       `<span class="settle-break">本周异变　${Weekly.summary()}</span>`,
       []
     );
@@ -161,6 +162,11 @@ const Panels = {
       ['镇守讨伐', pvpSub, false, () => PvpUI.show('menu')],
       ['风云榜', '全服今日 / 本周最佳', false, () => RankUI.show('menu')],
       ['存档迁移', cloudSub, false, () => this.showSaveCode()],
+      ['转生轮回',
+       (typeof Rebirth !== 'undefined' && Rebirth.layers() > 0)
+         ? `第 ${Rebirth.layers()} 世 · 魂晶 ×${Rebirth.crystalMul().toFixed(2)}`
+         : (s.bestWave >= CONFIG.rebirth.needBase ? '已达门槛 · 魂晶换永世增益' : `波次达 ${CONFIG.rebirth.needBase} 解锁`),
+       false, () => this.showRebirth('menu'), true],
     ];
     for (const [name, sub, fresh, fn, wide] of tiles) {
       const el = document.createElement('button');
@@ -260,6 +266,66 @@ const Panels = {
     );
   },
 
+  /* 转生轮回面板：当前世数与增益、下一世门槛费用、两步确认转生 */
+  showRebirth(from) {
+    this.from = from || 'menu';
+    this.card.classList.remove('menu');
+    const rb = CONFIG.rebirth, n = Rebirth.layers();
+    const pct = v => Math.round(v * 100);
+    const buffs = n > 0
+      ? `结算魂晶 <b>+${pct(n * rb.crystalStep)}%</b>　｜　神将经验 <b>+${pct(n * rb.expStep)}%</b>　｜　开局蟠桃 <b>+${n * rb.peachStep}</b>`
+      : `<span class="rb-none">尚未转生 —— 第一世从历史最高波次 ${rb.needBase} 起步</span>`;
+    let next;
+    if (Rebirth.maxed()) {
+      next = `<div class="rb-next done">十世圆满 · 已至轮回尽头，功德无量</div>`;
+    } else {
+      const ok = Rebirth.can(), afford = Save.data.crystals >= Rebirth.cost();
+      next = `<div class="rb-next${ok && afford ? ' ok' : ''}">` +
+        `转生第 ${n + 1} 世：需历史最高波次达 <b>${Rebirth.need()}</b>（当前 ${Save.data.bestWave}） · 费用 <b>${Rebirth.cost()}</b> 魂晶（现有 ${Save.data.crystals}）` +
+        `<br>增益变为：魂晶结算 +${pct((n + 1) * rb.crystalStep)}% · 神将经验 +${pct((n + 1) * rb.expStep)}% · 开局蟠桃 +${(n + 1) * rb.peachStep}` +
+        `</div>`;
+    }
+    this._fill('转 生 轮 回',
+      '渡尽一世功行，魂归轮回殿再启新程 —— 转生增益永世随行，不损既有修炼与装备',
+      `<div class="rb-now">当前　第 ${n} 世${n >= rb.max ? '（圆满）' : ''}</div>` +
+      `<div class="rb-buffs">${buffs}</div>` + next,
+      []);
+    // 转生按钮（两步确认防误触；3 秒未确认自动收回）
+    if (!Rebirth.maxed()) {
+      const btn = document.createElement('button');
+      btn.className = 'btn menu-cta';
+      let armed = false, timer = null;
+      const paint = () => {
+        btn.innerHTML = armed
+          ? `<span class="mc-main">确 认 转 生</span><span class="mc-sub">魂晶 -${Rebirth.cost()} · 再点一次生效</span>`
+          : `<span class="mc-main">转 生</span><span class="mc-sub">${Rebirth.can() ? `第 ${n + 1} 世 · 费用 ${Rebirth.cost()} 魂晶` : `需历史最高波次 ${Rebirth.need()} · 费用 ${Rebirth.cost()} 魂晶`}</span>`;
+        btn.classList.toggle('rb-armed', armed);
+      };
+      paint();
+      btn.addEventListener('click', () => {
+        SFX.play('click');
+        if (!armed) {
+          armed = true; paint();
+          timer = setTimeout(() => { armed = false; paint(); }, 3000);
+          return;
+        }
+        clearTimeout(timer);
+        if (Rebirth.doRebirth()) Panels.showRebirth(this.from);
+        else { armed = false; paint(); }
+      });
+      this.btns.appendChild(btn);
+    }
+    const back = document.createElement('button');
+    back.className = 'btn';
+    back.textContent = '返 回';
+    back.addEventListener('click', () => {
+      SFX.play('click');
+      if (this.from === 'settle') Panels.showSettle(R.lastWin);
+      else Panels.showMenu();
+    });
+    this.btns.appendChild(back);
+  },
+
   showSettle(win) {
     const reward = R.crystalsEarned;
     const pvp = R.pvp;
@@ -311,15 +377,24 @@ const Panels = {
     const idleLine = (R.idleMs > 30000 || R.idle)
       ? `<br>挂机时长　${(typeof AutoBot !== 'undefined' && AutoBot.fmtMs) ? AutoBot.fmtMs(R.idleMs || 0) : Math.round((R.idleMs || 0) / 1000) + ' 秒'}　<span style="color:#8a7f9a">（托管局不上风云榜）</span>`
       : '';
+    // 转生轮回：世数加成展示 + 达标给直达入口（讨伐不计波次不参与）
+    const rbN = (typeof Rebirth !== 'undefined') ? Rebirth.layers() : 0;
+    const rbMulTxt = rbN > 0 ? ` ＋ 轮回 ×${Rebirth.crystalMul().toFixed(2)}` : '';
+    const rbLine = rbN > 0
+      ? `<br>轮回加成　第 ${rbN} 世 · 魂晶结算 ×${Rebirth.crystalMul().toFixed(2)} · 神将经验 +${Math.round(rbN * CONFIG.rebirth.expStep * 100)}%`
+      : '';
     const stats = pvp
       ? `本局阵数　${R.wave}/${R.pvpCount}　｜　击杀　${R.kills}` +
         `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
-        `<span class="settle-break">（阵数 ${R.wave * 10} ＋ 击杀 ${R.kills} ＋ 讨伐 ${win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
+        `<span class="settle-break">（阵数 ${R.wave * 10} ＋ 击杀 ${R.kills} ＋ 讨伐 ${win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}${rbMulTxt}）</span>` +
         `<br>现有魂晶　${Save.data.crystals}` + pvpLine + sigLine + achLine + dmgLine
       : `本局波次　${R.wave}　｜　击杀　${R.kills}` +
         `<br>获得魂晶　<span style="color:#9fd8ff">+${reward}</span>` +
-        `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}）</span>` +
-        `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + idleLine + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine + rankLine;
+        `<span class="settle-break">（波次 ${R.wave * 10} ＋ 击杀 ${R.kills}${R.codexBonus ? ` ＋ 图鉴 ${R.codexBonus}` : ''}${rbMulTxt}）</span>` +
+        `<br>历史最高波次　${Save.data.bestWave}　｜　现有魂晶　${Save.data.crystals}` + rbLine + idleLine + dailyLine + weeklyLine + sigLine + titleLine + achLine + dmgLine + rankLine;
+    const rebirthBtn = (!pvp && (typeof Rebirth !== 'undefined') && Rebirth.can())
+      ? [{ text: `转生轮回（第 ${Rebirth.layers() + 1} 世 · ${Rebirth.cost()} 魂晶）`, fn: () => this.showRebirth('settle') }]
+      : [];
     const buttons = pvp
       ? [
           { text: '再 讨 一 阵', fn: () => Game.startPvp(pvp) },
@@ -328,6 +403,7 @@ const Panels = {
           { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
         ]
       : [
+          ...rebirthBtn,
           { text: '再 来 一 局', fn: () => Game.startRun() },
           { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
           { text: '装 备 库', fn: () => GearUI.show('settle'), ghost: true },

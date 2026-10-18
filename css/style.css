@@ -1055,6 +1055,23 @@ body {
  * 风云榜：全服今日 / 本周最佳波次
  * ============================================================ */
 .menu-tile.wide { grid-column: 1 / -1; }
+
+/* ============================================================
+ * 转生轮回：局外永久增益层
+ * ============================================================ */
+#overlay-stats .rb-now { font-size: 21px; font-weight: 900; letter-spacing: 3px; color: #ffd867; padding: 4px 0 8px; }
+#overlay-stats .rb-buffs { font-size: 15px; color: #d8cfe8; padding-bottom: 12px; }
+#overlay-stats .rb-buffs b { color: #9fd8ff; }
+#overlay-stats .rb-none { color: #8a7f9a; }
+#overlay-stats .rb-next {
+  font-size: 14px; line-height: 1.8; color: #b9aec8;
+  padding: 10px 14px; border-radius: 11px; background: #2a2140; border: 2px solid #443657;
+  margin-bottom: 12px;
+}
+#overlay-stats .rb-next b { color: #ffd867; }
+#overlay-stats .rb-next.ok { border-color: #6fd0a8; color: #cfe8dc; }
+#overlay-stats .rb-next.done { border-color: #8a6f3a; color: #ffd867; }
+.menu-cta.rb-armed { border-color: #d64545; box-shadow: 0 0 14px #d6454566; }
 #overlay-stats .rank-meta { text-align: center; font-size: 15px; color: #b9a8d4; padding: 8px 0 2px; }
 #overlay-stats .rank-me { text-align: center; font-size: 15px; color: #cfc2e4; padding: 2px 0 8px; }
 #overlay-stats .rank-me-name { color: #ffd867; font-weight: 900; }

@@ -131,6 +131,9 @@ const Game = {
     if (RackUI.draftBar) RackUI.discardDraft();
     R.crystalsEarned += R.wave * 10 + R.kills;
     if (R.pvp) R.crystalsEarned += win ? CONFIG.pvp.winCrystals : CONFIG.pvp.loseCrystals;
+    // 转生轮回：结算魂晶按世数加成（reward 展示与入账同源）
+    if (typeof Rebirth !== 'undefined' && Rebirth.layers() > 0)
+      R.crystalsEarned = Math.round(R.crystalsEarned * Rebirth.crystalMul());
     const s = Save.data;
     s.crystals += R.crystalsEarned;
     s.totalKills += R.kills;
@@ -1355,6 +1358,8 @@ window.GAME = {
     if (g) { Skills.cast(g); return true; }
     return false;
   },
+  rebirthState: () => ({ layers: Rebirth.layers(), need: Rebirth.need(), cost: Rebirth.cost(), can: Rebirth.can(), mul: Rebirth.crystalMul() }),
+  setRebirth: n => { Save.data.rebirth.layers = n || 0; Save.write(); },
   drop: () => Game.applyDrop({ x: Grid.center(4, 3).x, y: Grid.center(4, 3).y }),
   buy: (b, i) => Talents.buy(b, i),
   setCrystals: n => { Save.data.crystals = n; Save.write(); },
