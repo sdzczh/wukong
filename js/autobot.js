@@ -1,7 +1,8 @@
 /* 无尽挂机（托管）：只在无尽征战开放。备战期自动选牌/召唤/合成/摆位/佩戴/选词条，
-   并提前叫波换取蟠桃；交战期只推进时间。任意手动操作（点棋盘/架子/按钮/按键）
-   立即暂停托管。页面切后台时 rAF 停摆，用 1 秒间隔驱动固定步长继续推；
-   关页前由 RunSave 落盘挂机标记，「继续上局」恢复后自动续挂。
+   缺心买瑶池回心、棋盘格耗尽开垦/补铲、按塔类型设索敌，并提前叫波换取蟠桃；
+   交战期只推进时间。任意手动操作（点棋盘/架子/按钮/按键）立即暂停托管。
+   页面切后台时 rAF 停摆，用 1 秒间隔驱动固定步长继续推；关页后时间不流逝，
+   由 RunSave 落盘挂机标记，「继续上局」恢复后按离线时长 headless 快进追进度。
    挂机局不上全服风云榜、不覆盖上局阵容快照。 */
 'use strict';
 
@@ -81,9 +82,13 @@ const AutoBot = {
     if (Director.cur) return;                         // 交战中不动作
     if (R.draft && R.draft.length) this.pickDraft();  // 上轮遗留选牌先处理
     this.handleGear();
+    this.handleModes();
+    this.handleBless(false);   // 缺心续命：优先买瑶池回心
     this.handleSummon();
+    this.handleShovel();       // 可放格耗尽：开垦/补铲扩地
     this.handlePlacements();
     this.housekeeping();
+    this.handleBless(true);    // 富余经济：疾风/定身抬本波战力
     // 收尾：把剩余备战秒数换成蟠桃，立即开下一波
     if (!Director.cur && !R.modOffer && Director.intermission > 0.4) {
       const bonus = Director.callNow();
@@ -337,6 +342,103 @@ const AutoBot = {
       if (s > bestScore) { bestScore = s; best = t; }
     }
     return best;
+  },
+
+  /* ---------- 瑶池祝福 ----------
+     缺心（≤35% 上限）时回心必买（先于召唤花钱）；富余时（rich=true，
+     摆位收尾后）留 30 桃运营底仓再买疾风/定身抬本波战力。 */
+  handleBless(rich) {
+    if (typeof BlessUI === 'undefined' || !BlessUI.canShow()) return;
+    if (!rich) {
+      if (R.hearts <= Math.max(2, Math.floor(R.heartsMax * 0.35))
+          && !R.blessWave.heart && R.peaches >= BlessUI.cost('heart')) {
+        BlessUI.buy('heart');
+      }
+      return;
+    }
+    for (const id of ['rate', 'slow']) {
+      const c = BlessUI.cost(id);
+      if (!R.blessWave[id] && R.peaches >= c + 30) BlessUI.buy(id);
+    }
+  },
+
+  /* ---------- 铲子扩地 ----------
+     可放格（开放且无塔）耗尽时：有铲开垦离路径最近的封地；没铲但
+     富余（≥补铲价 + 40 底仓）先花桃补铲再开垦。 */
+  handleShovel() {
+    let empty = 0;
+    const locked = [];
+    for (let r = 0; r < Grid.rows; r++) {
+      for (let c = 0; c < Grid.cols; c++) {
+        const t = Grid.tiles[r][c];
+        if (!(t.type === 'purple' || t.type === 'white')) continue;
+        if (t.locked) locked.push({ c, r });
+        else if (!t.tower) empty++;
+      }
+    }
+    if (empty > 0 || locked.length === 0) return;
+    if (R.shovelLeft <= 0) {
+      if (typeof RackUI === 'undefined' || R.peaches < RackUI.shovelBuyCost() + 40) return;
+      RackUI.buyShovel();
+      if (R.shovelLeft <= 0) return;
+    }
+    const path = this._pathCells();
+    let best = locked[0], bd = Infinity;
+    for (const k of locked) {
+      let d = Infinity;
+      for (const p of path) {
+        const dd = Math.hypot(p.c - k.c, p.r - k.r);
+        if (dd < d) d = dd;
+      }
+      if (d < bd) { bd = d; best = k; }
+    }
+    Bus.emit('shovelAt', best);
+  },
+
+  /* ---------- 索敌模式（每塔只设一次，玩家手动改过的不碰） ----------
+     减速塔盯「最先」拖住队首；近战（基准射程 ≤2 格）盯「最近」保输出
+     覆盖；其余盯「最强」集火精英。光环塔不攻击不设。
+     用 def.range 判近战（rangeFloor 会整体抬高实际射程）。 */
+  handleModes() {
+    for (const t of R.towers) {
+      if (t._botMode || t._userMode || t.def.kind === 'aura') continue;
+      if (t.def.slowHit) t.mode = 'first';
+      else if ((t.def.range || 3) <= 2.0) t.mode = 'near';
+      else t.mode = 'strong';
+      t._botMode = true;
+    }
+  },
+
+  /* ---------- 离线快进 ----------
+     关页期间时间不流逝；「继续上局」恢复后按离线时长 headless 追进
+     （封顶 2 小时模拟量、总算力 ~6 秒，120ms 分片让页面保持可响应、
+     可随时手动暂停）。推进波数由 _ffDone 汇总提示。 */
+  fastForward(offlineSec) {
+    if (!R.idle || R.state !== 'battle') return 0;
+    this._ffLeft = Math.min(Math.max(0, offlineSec), 7200);
+    this._ffWave0 = R.wave;
+    this._ffT0 = performance.now();
+    this._ffSlice();
+    return this._ffLeft;
+  },
+  _ffSlice() {
+    if (this._ffLeft === undefined) return;
+    if (!R.idle || R.state !== 'battle' || this._ffLeft <= 0) { this._ffDone(); return; }
+    const t0 = performance.now();
+    while (this._ffLeft > 0 && performance.now() - t0 < 120 && R.state === 'battle') {
+      if (!Director.cur && !R.modOffer) this.think();   // 备战期运营照常执行
+      GAME.step(0.5);
+      this._ffLeft -= 0.5;
+      R.idleMs = (R.idleMs || 0) + 500;
+    }
+    if (performance.now() - this._ffT0 > 6000) { this._ffDone(); return; }
+    setTimeout(() => this._ffSlice(), 0);
+  },
+  _ffDone() {
+    if (this._ffLeft === undefined) return;
+    const adv = R.wave - this._ffWave0;
+    this._ffLeft = undefined;
+    if (R.state === 'battle' && adv > 0) HUD.toast(`离线快进完成 · 推进 ${adv} 波`);
   },
 
   /* ---------- 静音 / 屏幕常亮 ---------- */

@@ -206,8 +206,13 @@ const RunSave = {
     if (R.pvp && R.wave >= R.pvpCount) {
       setTimeout(() => { if (R.state === 'battle') Game.gameOver(true); }, 600);
     }
-    // 挂机残局：恢复后自动续挂（静音 + 屏幕常亮 + 托管节拍）
-    if (R.idle && typeof AutoBot !== 'undefined') AutoBot.reactivate();
+    // 挂机残局：恢复后自动续挂（静音 + 屏幕常亮 + 托管节拍）；
+    // 关页超过 30 秒的按离线时长快进追进度（分片执行，可手动暂停）
+    if (R.idle && typeof AutoBot !== 'undefined') {
+      AutoBot.reactivate();
+      const off = Math.max(0, (Date.now() - (o.t || Date.now())) / 1000);
+      if (off > 30) AutoBot.fastForward(off);
+    }
   },
 
   restoreTower(s) {

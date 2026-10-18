@@ -515,6 +515,7 @@ const RackUI = {
     if (offBtn) offBtn.addEventListener('click', () => { Gear.unequip(t); this.showSel(t); });
     this.selPanel.querySelectorAll('.sel-mode').forEach(btn => btn.addEventListener('click', () => {
       t.mode = btn.dataset.mode;
+      t._userMode = true;   // 玩家手动选定：挂机托管不再覆盖此塔索敌
       SFX.play('click');
       this.showSel(t);   // 重渲染高亮
     }));
