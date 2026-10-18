@@ -398,6 +398,7 @@ const Panels = {
     const buttons = pvp
       ? [
           { text: '再 讨 一 阵', fn: () => Game.startPvp(pvp) },
+          { text: '战 绩 卡', fn: () => ShareCard.show('settle'), ghost: true },
           { text: '镇 守 讨 伐', fn: () => PvpUI.show('settle'), ghost: true },
           { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
           { text: '回主菜单', fn: () => Game.toMenu(), ghost: true },
@@ -405,6 +406,7 @@ const Panels = {
       : [
           ...rebirthBtn,
           { text: '再 来 一 局', fn: () => Game.startRun() },
+          { text: '战 绩 卡', fn: () => ShareCard.show('settle'), ghost: true },
           { text: '修 炼', fn: () => TalentUI.show('settle'), ghost: true },
           { text: '装 备 库', fn: () => GearUI.show('settle'), ghost: true },
           { text: '图 鉴', fn: () => Codex.show('settle'), ghost: true },

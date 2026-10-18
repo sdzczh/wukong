@@ -1072,6 +1072,18 @@ body {
 #overlay-stats .rb-next.ok { border-color: #6fd0a8; color: #cfe8dc; }
 #overlay-stats .rb-next.done { border-color: #8a6f3a; color: #ffd867; }
 .menu-cta.rb-armed { border-color: #d64545; box-shadow: 0 0 14px #d6454566; }
+
+/* ============================================================
+ * 战绩分享图：结算页生成的竖版战绩卡
+ * ============================================================ */
+#overlay-stats .share-img {
+  display: block; width: min(88vw, 420px); margin: 4px auto 0;
+  border-radius: 14px; border: 2px solid #8a6f3a; box-shadow: 0 10px 26px #000a;
+  -webkit-touch-callout: default; user-select: -webkit-user-select;   /* 手机长按存图 */
+}
+#overlay-stats .share-hint {
+  text-align: center; font-size: 14px; color: #8a7f9a; padding: 10px 0 2px; letter-spacing: 1px;
+}
 #overlay-stats .rank-meta { text-align: center; font-size: 15px; color: #b9a8d4; padding: 8px 0 2px; }
 #overlay-stats .rank-me { text-align: center; font-size: 15px; color: #cfc2e4; padding: 2px 0 8px; }
 #overlay-stats .rank-me-name { color: #ffd867; font-weight: 900; }
