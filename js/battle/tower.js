@@ -35,6 +35,8 @@ class Tower {
     return Math.round(this.def.atk * (1 + this.levelMul.atk * (this.level - 1)) * might * talent * dread * legend
       * (adv && adv.atkMul ? adv.atkMul : 1)   // 进阶·重金锤攻击修正
       * genPassiveAtkMul(this)   // 神将星级攻击加成 + 满星天威/督战光环
+      * (this.evAtk || 1)        // 无尽事件·铁匠重铸（本局永久）
+      * (R.eventBuff && R.eventBuff.wave === R.wave && R.eventBuff.atkMul ? R.eventBuff.atkMul : 1)   // 无尽事件·甘霖（单波）
       * (1 + this.gearMods.atkMul) * (1 + Bonds.bonus().atk) * (1 + R.mods.atk * CONFIG.waveMods.steps.atk));
   }
   get rangePx() {
@@ -143,6 +145,8 @@ class Tower {
     const adv = this.advDef();
     this.cd = 1 / (this.def.rate * this.auraMul() * haste * genPassiveRateMul(this)   // 满星木吒·连环
       * (adv && adv.rateMul ? adv.rateMul : 1)   // 进阶攻速修正（重金锤 -20% / 冰晶爆 -15%）
+      * (this.evRate || 1)                       // 无尽事件·铁匠调校（本局永久）
+      * (R.eventBuff && R.eventBuff.wave === R.wave && R.eventBuff.rateMul ? R.eventBuff.rateMul : 1)   // 无尽事件·求签军威（单波）
       * (1 + this.gearMods.rateMul)
       * (1 + bonds.rate + R.mods.rate * CONFIG.waveMods.steps.rate)
       * (1 + (R.mods.lrate || 0) * CONFIG.waveMods.legendSteps.lrate)   // 传说·神行法

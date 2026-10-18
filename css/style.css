@@ -758,13 +758,13 @@ body {
 }
 
 /* ---------- 波间命运三选一 ---------- */
-#mod-bar {
+#mod-bar, #event-bar {
   position: absolute; left: 24px; right: 24px; top: 28%; z-index: 9;
   background: #1d1630f7; border: 3px solid #8a6fd0; border-radius: 18px;
   padding: 16px 18px 18px; color: #f3ead6;
   box-shadow: 0 14px 44px #000c, 0 0 40px #8a6fd044;
 }
-#mod-bar .mod-title {
+#mod-bar .mod-title, #event-bar .mod-title {
   font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
   font-size: 36px; color: #ffd867; letter-spacing: 10px; text-align: center;
   text-shadow: 0 3px 0 #6b3f14; margin-bottom: 12px;
@@ -806,6 +806,30 @@ body {
   border: 1px solid #ffe9a8;
   box-shadow: 0 2px 8px #00000066;
 }
+
+/* ---------- 无尽幽冥异象（二选一事件） ---------- */
+#event-bar { border-color: #6fd0a8; box-shadow: 0 14px 44px #000c, 0 0 40px #6fd0a844; }
+#event-bar .mod-title { color: #9fe8c0; text-shadow: 0 3px 0 #14426b; }
+#event-bar .ev-head { text-align: center; margin-bottom: 12px; }
+#event-bar .ev-name {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 30px; font-weight: 900; color: #ffd867; line-height: 1.1;
+}
+#event-bar .ev-desc { font-size: 15px; color: #d9cdb4; margin-top: 6px; line-height: 1.5; }
+#event-bar .ev-choices { display: flex; gap: 12px; }
+#event-bar .ev-choice {
+  flex: 1; min-width: 0; cursor: pointer; border-radius: 14px;
+  padding: 14px 10px 12px; text-align: center;
+  background: #23403a; border: 3px solid #3f7a62;
+  transition: transform .08s, border-color .08s;
+}
+#event-bar .ev-choice:active { transform: translateY(3px); border-color: #9fe8c0; }
+#event-bar .ev-choice.off { opacity: 0.45; cursor: default; }
+#event-bar .ev-label {
+  font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: 26px; font-weight: 900; color: #9fe8c0; line-height: 1.1;
+}
+#event-bar .ev-hint { font-size: 15px; color: #d9cdb4; margin-top: 7px; line-height: 1.45; }
 
 /* ---------- 图鉴·成就页签 ---------- */
 .ach-grid {

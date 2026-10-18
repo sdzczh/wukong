@@ -43,6 +43,8 @@ const R = {
   pvpCount: 0,        // 镜像阵数
   mods: null,         // 波间词条累计 {atk,rate,peach,interest,exp,aura,cd,sell}（resetRun 初始化）
   modOffer: null,     // 待选词条（3 个 id），非 null 时暂停开波
+  eventOffer: null,   // 无尽事件待选（事件 id），非 null 时暂停开波
+  eventBuff: null,    // 无尽事件对下一波的修正 {wave, hpMul, atkMul, rateMul, slow, goldMul, bonus}
   shovelBuys: 0,      // 当局花桃补铲数（补铲价递增）
   blessBuys: null,    // 当局瑶池祝福已购数 {heart,rate,slow}（价格递增）
   blessWave: null,    // 本波祝福/已购标记 {heart,rate,slow}；过波清空
@@ -106,6 +108,8 @@ function resetRun() {
   R.pvpCount = 0;
   R.mods = newMods();
   R.modOffer = null;
+  R.eventOffer = null;
+  R.eventBuff = null;
   R.shovelBuys = 0;
   R.blessBuys = { heart: 0, rate: 0, slow: 0 };
   R.blessWave = {};

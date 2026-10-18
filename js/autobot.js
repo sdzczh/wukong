@@ -79,6 +79,7 @@ const AutoBot = {
   think() {
     if (!R.idle || R.state !== 'battle') return;
     if (R.modOffer) { this.pickMod(); return; }
+    if (R.eventOffer) { this.handleEvent(); return; }   // 无尽事件待选：托管按倾向挑
     if (Director.cur) return;                         // 交战中不动作
     if (R.draft && R.draft.length) this.pickDraft();  // 上轮遗留选牌先处理
     this.handleGear();
@@ -342,6 +343,12 @@ const AutoBot = {
       if (s > bestScore) { bestScore = s; best = t; }
     }
     return best;
+  },
+
+  /* ---------- 无尽事件 ---------- */
+  handleEvent() {
+    if (typeof EndlessEvents === 'undefined' || !R.eventOffer) return;
+    EndlessEvents.botPick();   // 按事件 bot 倾向分挑最高分可选项（不赌不献心）
   },
 
   /* ---------- 瑶池祝福 ----------

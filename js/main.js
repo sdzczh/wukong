@@ -1164,9 +1164,14 @@ Bus.on('waveStart', n => {
 
 Bus.on('waveClear', n => {
   R.blessWave = {};   // 瑶池祝福过波失效（价格递增保留）
-  const reward = CONFIG.economy.waveRewardBase + n
-    + (R.mods.lgold || 0) * CONFIG.waveMods.legendSteps.lgold;   // 传说·点石成桃
+  // 无尽事件·单波修正结算（问道奖励倍率 / 血月悬赏）
+  const eb = R.eventBuff && R.eventBuff.wave === n ? R.eventBuff : null;
+  const reward = Math.round((CONFIG.economy.waveRewardBase + n
+    + (R.mods.lgold || 0) * CONFIG.waveMods.legendSteps.lgold)   // 传说·点石成桃
+    * (eb && eb.goldMul ? eb.goldMul : 1));
   R.peaches += reward;
+  if (eb && eb.bonus) R.peaches += eb.bonus;
+  if (eb) R.eventBuff = null;   // 单波修正用完即清
   // 息钱：持桃生息（每 10 桃 +1，单波上限；每周「聚财」翻倍、词条「钱庄」抬上限）
   const cap = CONFIG.economy.interestCap + R.mods.interest * CONFIG.waveMods.steps.interest;
   const interest = Math.min(cap, Math.floor(R.peaches / CONFIG.economy.interestEvery * (R.rules ? R.rules.interestMul : 1)));
@@ -1195,6 +1200,8 @@ Bus.on('waveClear', n => {
       setTimeout(() => { HUD.toast(`无尽补给：铲子 +1（现有 ${R.shovelLeft}）`); SFX.play('coin'); }, 1600);
       HUD.refresh();
     }
+    // 幽冥异象：每逢 endlessEvents.every 波随机事件（三选一在弹则排队）
+    if (typeof EndlessEvents !== 'undefined') EndlessEvents.maybeOffer(n);
     if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 断点续战：无尽波间落盘
   } else {
     if (typeof RunSave !== 'undefined') RunSave.checkpoint();   // 先落盘（offerEndless 会转 paused）
@@ -1295,6 +1302,7 @@ RackUI.init();
 GearUI.init();
 Panels.init();
 WaveMods.init();
+EndlessEvents.init();
 BlessUI.init();
 RunSave.boot();   // 断点续战：备战期定时/切后台/关页前落盘
 AutoBot.boot();   // 无尽挂机：托管思考节拍 + 后台驱动 + 手动操作即暂停
@@ -1379,6 +1387,10 @@ window.GAME = {
   },
   pickMod: i => WaveMods.pick(i),
   modOffer: () => R.modOffer,
+  eventState: () => ({ offer: R.eventOffer, buff: R.eventBuff }),
+  eventOffer: () => EndlessEvents.offer(),
+  eventPick: i => EndlessEvents.pick(i),
+  eventBotPick: () => EndlessEvents.botPick(),
   buyShovel: () => RackUI.buyShovel(),
   buyBless: id => BlessUI.buy(id),
   blessWave: () => ({ ...R.blessWave }),
@@ -1428,6 +1440,7 @@ window.GAME = {
     towers: R.towers.length, rack: R.rack.map(x => x ? (x.type === 'char' ? x.ch : x.unit.def.char + ':' + x.unit.level) : null),
     pityMiss: R.pityMiss, shovelLeft: R.shovelLeft, crystalsEarned: R.crystalsEarned,
     runKind: R.runKind, mods: { ...R.mods }, modOffer: R.modOffer,
+    eventOffer: R.eventOffer, eventBuff: R.eventBuff,
     bonds: Bonds.bonus().active.map(a => a.name + a.count),
     save: { ...Save.data },
   }),

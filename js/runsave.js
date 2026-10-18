@@ -64,6 +64,7 @@ const RunSave = {
       idle: !!R.idle, idleMs: R.idleMs || 0,   // 挂机托管态：恢复后自动续挂
       masteryCounted: R.masteryCounted ? [...R.masteryCounted] : [],
       mods: R.mods, modOffer: R.modOffer || null,
+      eventOffer: R.eventOffer || null, eventBuff: R.eventBuff || null,
       parts: R.parts, equips: R.equips, sigRun: R.sigRun || 0,
       rules: R.rules, weekly: R.weekly || null,
       dmgStats: R.dmgStats || {},
@@ -85,6 +86,7 @@ const RunSave = {
       key: u.key, col: u.col, row: u.row, level: u.level || 1,
       star: u.star || 0, exp: u.exp || 0, adv: u.adv || null,
       mode: u.mode || 'first', gear: u.gear || null, tid: u.tid,
+      evAtk: u.evAtk || null, evRate: u.evRate || null,   // 无尽事件·铁匠强化（本局永久）
     };
   },
 
@@ -139,6 +141,8 @@ const RunSave = {
     R.idleMs = o.idleMs || 0;
     R.mods = Object.assign(newMods(), o.mods || {});
     R.modOffer = o.modOffer || null;
+    R.eventOffer = o.eventOffer || null;
+    R.eventBuff = o.eventBuff || null;
     R.parts = Object.assign({ feng: 0, ji: 0, yuan: 0, ling: 0 }, o.parts || {});
     R.equips = Array.isArray(o.equips) ? o.equips.map(g => ({ fam: g.fam, lv: g.lv || 1 })) : [];
     R.sigRun = o.sigRun || 0;
@@ -197,6 +201,7 @@ const RunSave = {
     GearUI.refresh();
     DpsUI.close();
     WaveMods.render();          // 待选词条（波间三选一）随快照重开
+    if (typeof EndlessEvents !== 'undefined') EndlessEvents.render();   // 待选无尽事件同重开
 
     // 通关待抉择：重弹「无尽征战 / 功成身退」二选一
     if (!R.pvp && !R.endless && !R.modOffer && R.wave >= CONFIG.waveCount) {
@@ -238,6 +243,8 @@ const RunSave = {
     else if (s.adv) u.adv = s.adv;
     u.mode = s.mode || 'first';
     if (s.gear && s.gear.fam) u.gear = { fam: s.gear.fam, lv: s.gear.lv || 1 };
+    if (s.evAtk) u.evAtk = s.evAtk;   // 无尽事件·铁匠攻击强化
+    if (s.evRate) u.evRate = s.evRate; // 无尽事件·铁匠攻速强化
   },
 
   /* ---------- 生命周期 ---------- */

@@ -325,7 +325,7 @@ const CONFIG = {
   waveIntermission: 6,   // 波间备战秒数
 
   /* 无尽模式（通关第 10 波后可选择进入）：波次无限，每 shovelEvery 波奖励 1 把铲子 */
-  endless: { shovelEvery: 5 },
+  endless: { shovelEvery: 5, eventsEvery: 5 },   // 无尽补给铲 / 幽冥异象事件节拍（波）
 
   /* 提前叫波：备战期点按钮立即开下一波，按剩余秒数给桃 */
   callWave: { perSec: 2 },

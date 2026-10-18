@@ -22,6 +22,7 @@ const Director = {
       if (R.pvp && R.wave >= R.pvpCount) return;              // 讨伐末阵已破，等结算不再出新阵
       if (R.wave >= CONFIG.waveCount && !R.endless) return;   // 已通关（由 waveClear 触发结算）
       if (R.modOffer) return;                                 // 波间词条待选：暂停开下一波
+      if (R.eventOffer) return;                               // 无尽事件待选：暂停开下一波
       this.intermission -= dt;
       if (this.intermission <= 0) this.startWave(R.wave + 1);
       return;
@@ -31,6 +32,12 @@ const Director = {
     while (this.spawnIdx < this.cur.spawns.length && this.cur.spawns[this.spawnIdx].t <= this.timer) {
       const sp = this.cur.spawns[this.spawnIdx++];
       const e = new Enemy(sp.type, this.cur.hpMul, sp.bossKind);
+      // 无尽事件对敌修正（血月 HP 提升 / 魂潮减速），仅本波
+      const eb = R.eventBuff;
+      if (eb && eb.wave === R.wave) {
+        if (eb.hpMul) { e.maxHp = Math.round(e.maxHp * eb.hpMul); e.hp = e.maxHp; }
+        if (eb.slow) e.evSlow = 1 - eb.slow;
+      }
       // 精英词缀：中后期普通怪概率升级
       if (sp.type !== 'boss' && this.cur.n >= CONFIG.elite.fromWave && RNG.next() < CONFIG.elite.chance) {
         e.makeElite();
@@ -58,7 +65,7 @@ const Director = {
   /* 提前叫波：备战期立即开下一波，返回按剩余秒数的桃奖励（不可叫时返回 0） */
   callNow() {
     if (R.state !== 'battle' || this.cur) return 0;
-    if (R.modOffer) return 0;
+    if (R.modOffer || R.eventOffer) return 0;
     if (R.pvp && R.wave >= R.pvpCount) return 0;
     if (R.wave >= CONFIG.waveCount && !R.endless) return 0;
     const bonus = Math.round(Math.max(0, this.intermission) * CONFIG.callWave.perSec);
