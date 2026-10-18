@@ -233,7 +233,7 @@ const Panels = {
 
   showPause() {
     const bondsLine = Bonds.list().length
-      ? `<br>${Bonds.list().map(a => `${a.name}(${a.count}人) ${a.desc}+${Math.round(a.v * 100)}%`).join('　｜　')}`
+      ? `<br>${Bonds.list().map(a => `${a.name}(${a.count}人) ${a.desc} ${Bonds.fmt(a.v, a.stat)}`).join('　｜　')}`
       : '';
     const weeklyLine = R.weekly
       ? `<br>本周异变　${R.weekly.map(p => p.name).join(' · ')}`

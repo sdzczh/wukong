@@ -1101,9 +1101,9 @@ document.addEventListener('touchend', e => {
 Bus.on('togglePause', () => { R.state === 'battle' ? Game.pause() : Game.resume(); });
 
 Bus.on('enemyKilled', e => {
-  // 击杀收益：精英 ×奖励倍率，每周「丰收」×桃倍率，波间「聚宝」+固定值
+  // 击杀收益：精英 ×奖励倍率，每周「丰收」×桃倍率，波间「聚宝」+固定值，羁绊「人参果会」+固定值
   const peachMul = (e.rewardMul || 1) * (R.rules ? R.rules.peachAwardMul : 1);
-  const reward = Math.max(1, Math.round(e.def.reward * peachMul + R.mods.peach * CONFIG.waveMods.steps.peach));
+  const reward = Math.max(1, Math.round(e.def.reward * peachMul + R.mods.peach * CONFIG.waveMods.steps.peach + (Bonds.bonus().peach || 0)));
   R.peaches += reward;
   R.kills += 1;
   SFX.play('die');

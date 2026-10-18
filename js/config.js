@@ -415,13 +415,21 @@ const CONFIG = {
     ],
   },
 
-  /* 羁绊：同阵营神将登场 N 名触发团队增益（2 名 / 3 名两档） */
+  /* 羁绊：同阵营 3 人档（2/3 名两档强度）+ 跨阵营双人档（2 名一档）。
+     stat：atk 攻击 / rate 攻速 / exp 神将经验 / cd 技冷却 / slow 敌方移速 / peach 击杀加桃（新轴 3.1） */
   bonds: [
     { name: '三吒同心', color: '#d66a4a', keys: ['nezha', 'jinzha', 'muzha'], stat: 'rate', tiers: [0.08, 0.15], desc: '全体攻速' },
     { name: '天庭威仪', color: '#d6b24a', keys: ['yudi', 'wangmu', 'yangjian'], stat: 'atk', tiers: [0.08, 0.15], desc: '全体攻击' },
     { name: '取经之路', color: '#c98a2e', keys: ['wukong', 'wuneng', 'wujing'], stat: 'exp', tiers: [0.3, 0.6], desc: '神将经验' },
     { name: '散仙结盟', color: '#7a6fd0', keys: ['yanwang', 'change', 'lijing'], stat: 'cd', tiers: [0.08, 0.15], desc: '技能冷却' },
     { name: '地仙会盟', color: '#5fa8a0', keys: ['honghaier', 'zhenyuanzi', 'yinjiao'], stat: 'atk', tiers: [0.08, 0.16], desc: '全体攻击' },
+    /* 跨阵营双人档（3.1 新增）：一位神将可同时供多条羁绊计数 */
+    { name: '父子同心', color: '#9aa06a', keys: ['lijing', 'nezha'], stat: 'rate', tiers: [0.08], desc: '全体攻速' },
+    { name: '真火燎原', color: '#e8703c', keys: ['nezha', 'honghaier'], stat: 'atk', tiers: [0.10], desc: '全体攻击' },
+    { name: '大闹天宫', color: '#b04a8c', keys: ['wukong', 'yangjian'], stat: 'atk', tiers: [0.10], desc: '全体攻击' },
+    { name: '瑶池月影', color: '#c8a0d8', keys: ['wangmu', 'change'], stat: 'cd', tiers: [0.08], desc: '技能冷却' },
+    { name: '幽冥同行', color: '#6a7ac0', keys: ['yanwang', 'yinjiao'], stat: 'slow', tiers: [0.08], desc: '敌方移速' },
+    { name: '人参果会', color: '#7ac08a', keys: ['zhenyuanzi', 'wukong'], stat: 'peach', tiers: [1], desc: '击杀蟠桃' },
   ],
 
   /* 局外成长：修炼天赋（魂晶购买，永久生效） */

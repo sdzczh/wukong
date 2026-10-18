@@ -1,7 +1,7 @@
 /* 无敌悟空 · 文字塔防 */
 @font-face {
   font-family: "Ma Shan Zheng";
-  src: url("../assets/msz.subset.woff2?v=20261018a") format("woff2");
+  src: url("../assets/msz.subset.woff2?v=20261018c") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
@@ -979,6 +979,25 @@ body {
   bottom: 164px; z-index: 6;
   display: flex; gap: 8px;
 }
+
+/* ---------- 羁绊条：底栏上方共享条带，全部羁绊进度芯片 ---------- */
+#bond-bar {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 164px; z-index: 5; max-width: 700px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+}
+#bond-bar .bd-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px 5px; border-radius: 999px; cursor: pointer;
+  background: #241b33e0; border: 2px solid #4a3c62;
+  touch-action: manipulation; transition: border-color .12s, background .12s;
+}
+#bond-bar .bd-chip.on { border-color: var(--bd); background: #241b33f2; }
+#bond-bar .bd-name { font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #8a7c92; }
+#bond-bar .bd-chip.on .bd-name { color: var(--bd); text-shadow: 0 0 7px var(--bd); }
+#bond-bar .bd-need { font-size: 11px; font-weight: 700; color: #6a5c80; }
+#bond-bar .bd-chip.on .bd-need { color: #ffd867; }
+#bond-bar .bd-val { font-size: 11px; font-weight: 900; color: #ffd867; }
 .bless-chip {
   width: 168px; padding: 6px 12px 7px; border-radius: 14px; cursor: pointer;
   background: #241b33e8; border: 3px solid #8a6fd0;

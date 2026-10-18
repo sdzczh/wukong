@@ -53,6 +53,7 @@ const HUD = {
       AutoBot.toggle();
     });
 
+    BondUI.init();
     this.refreshSound();
     this.refresh();
   },
@@ -61,7 +62,6 @@ const HUD = {
     document.getElementById('btn-sound').classList.toggle('off', !Save.data.sound);
     SFX.refreshBgm();
   },
-
   refresh() {
     this.peachNum.textContent = R.peaches;
     this.heartNum.textContent = R.hearts;
@@ -94,6 +94,7 @@ const HUD = {
     }
     RackUI.refresh();
     BlessUI.refresh();
+    BondUI.refresh();
   },
 
   /* 横幅：boss=true 时走红色警报样式（更久） */
@@ -126,5 +127,60 @@ const HUD = {
     this.toastEl.style.animation = '';
     clearTimeout(this._tt);
     this._tt = setTimeout(() => this.toastEl.classList.add('hidden'), 2000);
+  },
+};
+
+/* 羁绊条：底栏上方共享条带的芯片行，实时显示全部羁绊进度（灰暗=未激活 / 点亮=生效中）。
+   让位联动（用户对遮挡零容忍）：召唤选牌条、单位/字卡详情面板出现即让位；
+   装备栏打开整体上抬；祝福条可见时叠其上方；祝福确认框弹出时暂避。点芯片弹详情。 */
+const BondUI = {
+  bar: null,
+
+  init() {
+    this.bar = document.getElementById('bond-bar');
+    if (!this.bar) return;
+    this.bar.addEventListener('click', e => {
+      const chip = e.target.closest('.bd-chip');
+      if (!chip) return;
+      SFX.ensure(); SFX.play('click');
+      const st = Bonds.status()[+chip.dataset.i];
+      if (!st) return;
+      HUD.toast(st.on
+        ? `羁绊 · ${st.name}（${st.count}/${st.need}）${st.desc} ${Bonds.fmt(st.v, st.stat)}`
+        : `羁绊 · ${st.name}（${st.count}/${st.need}）再上场 ${st.need - st.count} 名神将即激活：${st.desc}`);
+    });
+  },
+
+  refresh() {
+    const bar = this.bar || (this.bar = document.getElementById('bond-bar'));
+    if (!bar) return;
+    const draftUp = !!(R.draft && R.draft.length);
+    const sel = document.getElementById('sel-panel');
+    const item = document.getElementById('item-panel');
+    const bc = document.getElementById('bless-confirm');
+    const panelUp = (sel && !sel.classList.contains('hidden'))
+      || (item && !item.classList.contains('hidden'))
+      || (bc && !bc.classList.contains('hidden'));
+    if (R.state !== 'battle' || draftUp || panelUp) {
+      bar.classList.add('hidden'); bar._html = ''; return;
+    }
+    // 底位：装备栏打开整体上抬；祝福条可见时叠在祝福条上方
+    const gb = GearUI.open && GearUI.bar && !GearUI.bar.classList.contains('hidden')
+      ? GearUI.bar.offsetHeight : 0;
+    let bottom = gb ? 156 + gb + 8 : 164;
+    const bless = document.getElementById('bless-bar');
+    if (bless && !bless.classList.contains('hidden') && bless.offsetHeight) {
+      bottom = Math.max(bottom, (parseFloat(bless.style.bottom) || 164) + bless.offsetHeight + 8);
+    }
+    bar.style.bottom = bottom + 'px';
+    const all = Bonds.status();
+    const html = all.map((b, i) => {
+      const cls = 'bd-chip' + (b.on ? ' on' : '');
+      const val = b.on ? `<span class="bd-val">${Bonds.fmt(b.v, b.stat)}</span>` : '';
+      return `<div class="${cls}" data-i="${i}" style="--bd:${b.color}">` +
+        `<span class="bd-name">${b.name}</span><span class="bd-need">${b.count}/${b.need}</span>${val}</div>`;
+    }).join('');
+    if (bar._html !== html) { bar.innerHTML = html; bar._html = html; }
+    bar.classList.remove('hidden');
   },
 };
