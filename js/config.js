@@ -312,7 +312,7 @@ const CONFIG = {
     wraith: { char: '怨', name: '怨魂', hp: 14,  speed: 1.6, reward: 1,  exp: 1, dmg: 1, size: 0.56, color: '#5cc0a8' },
     brute:  { char: '厉', name: '厉魂', hp: 70,  speed: 0.7, reward: 2,  exp: 2, dmg: 1, size: 0.70, color: '#c05a72', armor: 3 },
     swarm:  { char: '游', name: '游魂', hp: 8,   speed: 1.3, reward: 1,  exp: 1, dmg: 1, size: 0.46, color: '#9aa3b8' },
-    boss:   { char: '鬼', name: '鬼将', hp: 600, speed: 0.5, reward: 20, exp: 4, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
+    boss:   { char: '鬼', name: '鬼将', hp: 750, speed: 0.5, reward: 20, exp: 4, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
   },
 
   /* Boss 池轮换：每个鬼将波（n%5==0）从池中按波次轮换登场，机制与碎片偏好绑定。
@@ -347,22 +347,22 @@ const CONFIG = {
   },
 
   waveCount: 10,
-  waveHpGrowth: 1.14,
+  waveHpGrowth: 1.17,   // 3.0 上调：新神将+轮回增益后玩家火力富余，原 1.14 偏软
   // 前期保护：前 earlyWaveCount 波敌人血量乘 earlyWaveHpEase（给新玩家上手缓冲）
   earlyWaveCount: 3,
   earlyWaveHpEase: 0.85,
   waveIntermission: 6,   // 波间备战秒数
 
   /* 无尽模式（通关第 10 波后可选择进入）：波次无限，每 shovelEvery 波奖励 1 把铲子 */
-  endless: { shovelEvery: 5, eventsEvery: 5 },   // 无尽补给铲 / 幽冥异象事件节拍（波）
+  endless: { shovelEvery: 5, eventsEvery: 5, hpStep: 1.05 },   // 无尽补给铲 / 幽冥异象事件节拍（波）；hpStep：第 10 波后血量在成长之上每波再 ×1.05 复利（3.0 上调）
 
   /* 提前叫波：备战期点按钮立即开下一波，按剩余秒数给桃 */
   callWave: { perSec: 2 },
 
   /* 精英词缀怪：中后期概率出现，血量/奖励更高，携带一个词缀 */
   elite: {
-    fromWave: 6, chance: 0.22,        // 第 6 波起，每只普通怪 22% 概率升级为精英
-    hpMul: 2.2, rewardMul: 2, expMul: 2,
+    fromWave: 5, chance: 0.30,        // 第 5 波起，每只普通怪 30% 概率升级为精英（3.0 上调）
+    hpMul: 2.6, rewardMul: 2, expMul: 2,
     affixes: {
       split: { char: '裂', name: '分裂', color: '#e8b64c', desc: '死亡时分裂出 2 只小分身' },
       shield:{ char: '盾', name: '护盾', color: '#6fa8e8', desc: '护盾值一半血量，5 秒后重生成' },
@@ -492,7 +492,8 @@ function buildEndlessWave(n) {
     list.push({ t: 2 + i * 1.0, type });
   }
   if (isBoss) list.push({ t: 2 + count * 1.0 + 2, type: 'boss', bossKind: bossKindFor(n) });
-  return { n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1), spawns: list };
+  return { n, hpMul: Math.pow(CONFIG.waveHpGrowth, n - 1) *
+      (n > 10 ? Math.pow(CONFIG.endless.hpStep, n - 10) : 1), spawns: list };
 }
 
 /* 波次表：n=波次；刷怪事件 {t, type}；hpMul 血量倍率 */
