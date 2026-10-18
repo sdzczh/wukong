@@ -8,8 +8,9 @@
  *   4) GET  /api/pvp/list?name=            镇守阵列表 + 我的守成记录；
  *   5) POST /api/pvp/defense {name,wave,seed,lineup}  上传/覆盖镇守阵；
  *   6) POST /api/pvp/result {attacker,defender,win,wave}  讨伐结算；
- *   7) GET  /api/cloud?code=               读取设备码绑定的云存档；
- *   8) POST /api/cloud {code,name,data}    上传/覆盖云存档。
+ *   7) GET  /api/pvp/season?name=          周季榜（本周讨伐战绩排名）；
+ *   8) GET  /api/cloud?code=               读取设备码绑定的云存档；
+ *   9) POST /api/cloud {code,name,data}    上传/覆盖云存档。
  *
  * 榜单口径：按北京时间自然日 / ISO 周（周一为界）分桶，每人只留最佳波次
  * （同波次取击杀多者，再同则先到先排）。PVP 只存阵容快照（字/等级/星级）
@@ -101,12 +102,12 @@ function loadDb() {
       if (raw.cloud && typeof raw.cloud === 'object') {
         for (const k of Object.keys(raw.cloud)) cloud[k] = raw.cloud[k];
       }
-      return { v: 1, daily: raw.daily || {}, weekly: raw.weekly || {}, pvp: { defenses }, cloud };
+      return { v: 1, daily: raw.daily || {}, weekly: raw.weekly || {}, pvp: { defenses }, pvpSeason: raw.pvpSeason || {}, cloud };
     }
   } catch (e) {
     if (e.code !== 'ENOENT') log('读取数据失败：' + e.message);
   }
-  return { v: 1, daily: {}, weekly: {}, pvp: { defenses: Object.create(null) }, cloud: Object.create(null) };
+  return { v: 1, daily: {}, weekly: {}, pvp: { defenses: Object.create(null) }, pvpSeason: {}, cloud: Object.create(null) };
 }
 
 let db = loadDb();
@@ -129,9 +130,9 @@ function ensurePeriod() {
   return { d, w };
 }
 
-/* 旧榜裁剪：日榜留最近 16 天，周榜留最近 8 周 */
+/* 旧榜裁剪：日榜留最近 16 天，周榜留最近 8 周，周季榜留最近 4 周 */
 function prunePeriods() {
-  for (const [map, keep] of [[db.daily, 16], [db.weekly, 8]]) {
+  for (const [map, keep] of [[db.daily, 16], [db.weekly, 8], [db.pvpSeason, 4]]) {
     const keys = Object.keys(map).sort();
     while (keys.length > keep) delete map[keys.shift()];
   }
@@ -154,6 +155,15 @@ const toInt = v => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.floor(n) : NaN;
 };
+
+/* ---------- 战绩合理性校验（防手改上传） ----------
+   单波刷怪量 = 5 + 3n；累计刷怪 Σ(5+3n)。击杀上限给 3 倍余量
+   （精英分裂翻倍、唤魂鬼将持续召小鬼）再加 300 常数；波次上限 300。 */
+const WAVE_MAX = 300;
+function killsUpperBound(wave) {
+  const spawned = 5 * wave + 3 * wave * (wave + 1) / 2;
+  return Math.floor(spawned * 3) + 300;
+}
 
 function buildBoard(kind, name) {
   const isWeekly = kind === 'weekly';
@@ -325,9 +335,9 @@ async function handleScore(req, res, ip) {
   const name = cleanName(body.name);
   if (!name) return json(res, 400, { ok: false, error: '名号无效' });
   const wave = toInt(body.wave);
-  if (!(wave >= 1 && wave <= 999)) return json(res, 400, { ok: false, error: '波次无效' });
+  if (!(wave >= 1 && wave <= WAVE_MAX)) return json(res, 400, { ok: false, error: '波次无效' });
   const kills = toInt(body.kills);
-  if (!(kills >= 0 && kills <= 1000000)) return json(res, 400, { ok: false, error: '击杀数无效' });
+  if (!(kills >= 0 && kills <= killsUpperBound(wave))) return json(res, 400, { ok: false, error: '击杀数无效' });
   const kind = ['normal', 'daily', 'weekly'].indexOf(body.kind) >= 0 ? body.kind : 'normal';
   const rec = { w: wave, k: kills, m: kind, e: !!body.endless, t: Date.now() };
 
@@ -375,7 +385,7 @@ async function handlePvpDefense(req, res, ip) {
   const name = cleanName(body.name);
   if (!name) return json(res, 400, { ok: false, error: '名号无效' });
   const wave = toInt(body.wave);
-  if (!(wave >= 1 && wave <= 999)) return json(res, 400, { ok: false, error: '波次无效' });
+  if (!(wave >= 1 && wave <= WAVE_MAX)) return json(res, 400, { ok: false, error: '波次无效' });
   const seed = toInt(body.seed);
   if (!(seed >= 0 && seed <= 4294967295)) return json(res, 400, { ok: false, error: '地图种子无效' });
   const lineup = cleanLineup(body.lineup);
@@ -415,16 +425,58 @@ async function handlePvpResult(req, res, ip) {
 
   const win = !!body.win;   // 讨伐方是否破阵成功
   const wave = toInt(body.wave);
+  if (!(wave >= 1 && wave <= WAVE_MAX)) return json(res, 400, { ok: false, error: '波次无效' });
   if (win) rec.losses = (rec.losses || 0) + 1;   // 攻方胜 → 守方被破
   else rec.wins = (rec.wins || 0) + 1;           // 攻方败 → 守方守成
   rec.log = [{
     a: attacker,
     w: win,
-    n: wave >= 1 && wave <= 999 ? wave : 0,
+    n: wave,
     t: Date.now(),
   }].concat(rec.log || []).slice(0, 10);
+
+  // 周赛季：攻守双方本周讨伐战绩各记一笔
+  const bucket = seasonBucket();
+  const aRec = seasonRec(bucket, attacker);
+  if (win) aRec.w++; else aRec.l++;
+  const dRec = seasonRec(bucket, defender);
+  if (win) dRec.l++; else dRec.w++;
+  prunePeriods();
+
   saveDb();
   return json(res, 200, { ok: true, wins: rec.wins, losses: rec.losses });
+}
+
+/* ---------- 周赛季（讨伐战绩按周分桶，攻守双方都记） ---------- */
+function seasonBucket() {
+  const wk = String(weekKey());
+  if (!db.pvpSeason[wk]) db.pvpSeason[wk] = {};
+  return db.pvpSeason[wk];
+}
+
+function seasonRec(bucket, name) {
+  const r = bucket[name];
+  if (!r || typeof r !== 'object') return bucket[name] = { w: 0, l: 0, t: Date.now() };
+  r.t = Date.now();
+  return r;
+}
+
+function buildSeason(name) {
+  const wk = String(weekKey());
+  const bucket = db.pvpSeason[wk] || {};
+  const all = Object.keys(bucket).map(n => ({
+    name: n, w: bucket[n].w || 0, l: bucket[n].l || 0, ts: bucket[n].t || 0,
+  })).filter(r => r.w + r.l > 0)
+    .sort((a, b) => b.w - a.w || a.l - b.l || b.ts - a.ts);
+  const meIdx = name ? all.findIndex(r => r.name === name) : -1;
+  return {
+    ok: true,
+    week: wk,
+    updated: Date.now(),
+    total: all.length,
+    rows: all.slice(0, MAX_BOARD).map((r, i) => Object.assign({ rank: i + 1 }, r)),
+    me: meIdx >= 0 ? { rank: meIdx + 1, w: all[meIdx].w, l: all[meIdx].l } : null,
+  };
 }
 
 /* ---------- 云存档 API ---------- */
@@ -583,6 +635,12 @@ const server = http.createServer((req, res) => {
       if (!res.headersSent) json(res, 500, { ok: false, error: 'server error' });
     });
     return;
+  }
+  if (url.pathname === '/api/pvp/season') {
+    if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method not allowed' });
+    if (!allow(ip, 'pvpSeason', 120, 60 * 1000)) return json(res, 429, { ok: false, error: '请求太频繁' });
+    const name = cleanName(url.searchParams.get('name') || '');
+    return json(res, 200, buildSeason(name));
   }
   if (url.pathname === '/api/cloud') {
     if (req.method === 'GET') return handleCloudGet(req, res, url, ip);

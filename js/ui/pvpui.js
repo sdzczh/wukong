@@ -16,9 +16,13 @@ const PvpUI = {
   err: '',
   notice: '',
   publishing: false,
+  view: 'main',       // main 镇守讨伐 / season 周季榜
+  season: null,
+  seasonErr: '',
 
   show(from) {
     this.from = from || 'menu';
+    this.view = 'main';
     this.overlay = document.getElementById('overlay');
     Panels.card.classList.remove('menu');
     this.render();
@@ -62,6 +66,22 @@ const PvpUI = {
         this.loading = false;
         this.render();
       });
+
+    // 周季榜并行拉取（旧服务端无此接口时静默降级，不挡主面板）
+    fetch('/api/pvp/season?name=' + encodeURIComponent(User.get()) + '&t=' + Date.now(), { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(d => {
+        if (seq !== this.seq) return;
+        if (!d || d.ok !== true || !Array.isArray(d.rows)) throw new Error('bad payload');
+        this.season = d;
+        this.seasonErr = '';
+      })
+      .catch(() => {
+        if (seq !== this.seq) return;
+        this.season = null;
+        this.seasonErr = '周季榜暂不可用';
+      })
+      .then(() => { if (seq !== this.seq) return; this.render(); });
   },
 
   publish() {
@@ -114,6 +134,7 @@ const PvpUI = {
   },
 
   render() {
+    if (this.view === 'season') return this.renderSeason();
     const title = document.getElementById('overlay-title');
     const sub = document.getElementById('overlay-sub');
     const stats = document.getElementById('overlay-stats');
@@ -149,6 +170,11 @@ const PvpUI = {
         ).join('') + `</div>`;
       }
     }
+    if (this.season && this.season.me) {
+      const m = this.season.me;
+      html += `<div class="pvp-record">本周讨伐 <b>${m.w} 胜 ${m.l} 负</b>${m.rank ? ` · 暂列第 ${m.rank} 名` : ''}` +
+        `<button class="pvp-season-link">看周季榜</button></div>`;
+    }
 
     /* —— 可讨伐 —— */
     html += `<div class="pvp-sec">可 讨 伐</div>`;
@@ -179,6 +205,12 @@ const PvpUI = {
       SFX.play('click');
       Panels.showNameEntry(() => this.show(this.from));
     });
+    const slink = stats.querySelector('.pvp-season-link');
+    if (slink) slink.addEventListener('click', () => {
+      SFX.play('click');
+      this.view = 'season';
+      this.render();
+    });
     const pub = stats.querySelector('.pvp-publish');
     if (pub) pub.addEventListener('click', () => { SFX.play('click'); this.publish(); });
     stats.querySelectorAll('.pvp-fight').forEach(b => b.addEventListener('click', () => {
@@ -195,6 +227,61 @@ const PvpUI = {
       btns.appendChild(el);
     };
     mk(this.loading ? '刷 新 中…' : '刷 新', () => { if (!this.loading) this.fetchList(); });
+    mk('周 季 榜', () => { this.view = 'season'; this.render(); });
     mk('返 回', () => this.hide());
+  },
+
+  /* ---------- 周季榜视图：本周讨伐战绩（攻方胜场排名） ---------- */
+  renderSeason() {
+    const title = document.getElementById('overlay-title');
+    const sub = document.getElementById('overlay-sub');
+    const stats = document.getElementById('overlay-stats');
+    const btns = document.getElementById('overlay-btns');
+    const meName = User.get();
+
+    title.textContent = '周 季 榜';
+    sub.textContent = '每周一重置 · 讨伐破阵积胜，守成亦有功';
+    let html = '';
+    const d = this.season;
+    if (!d) {
+      html += `<div class="pvp-empty">${pvpEsc(this.seasonErr || '周季榜加载中…')}</div>`;
+    } else {
+      const wk = String(d.week || '');
+      const wkText = wk.length >= 6 ? `${wk.slice(0, 4)} 年第 ${Number(wk.slice(4))} 周` : '本周';
+      html += `<div class="pvp-sec">${wkText} · ${d.total || d.rows.length} 人参战</div>`;
+      if (!d.rows.length) {
+        html += `<div class="pvp-empty">本周还没有讨伐记录——去破一座镇守阵，榜上留名</div>`;
+      } else {
+        const shown = d.rows.slice(0, 50);
+        html += shown.map(r => {
+          const me = r.name === meName;
+          return `<div class="pvp-srow${me ? ' me' : ''}">` +
+            `<span class="pvp-srank${r.rank <= 3 ? ' top' : ''}">${r.rank}</span>` +
+            `<span class="pvp-sname">${pvpEsc(r.name)}</span>` +
+            `<span class="pvp-srec"><b>${r.w}</b> 胜 <b>${r.l}</b> 负</span>` +
+            `</div>`;
+        }).join('');
+        if (d.rows.length > shown.length) html += `<div class="pvp-empty">仅示前 50 名</div>`;
+        if (d.me && d.me.rank && !shown.some(r => r.name === meName)) {
+          html += `<div class="pvp-srow me"><span class="pvp-srank">…</span>` +
+            `<span class="pvp-sname">${pvpEsc(meName || '我')}</span>` +
+            `<span class="pvp-srec"><b>${d.me.w}</b> 胜 <b>${d.me.l}</b> 负 · 第 ${d.me.rank} 名</span></div>`;
+        }
+      }
+    }
+    stats.innerHTML = html;
+    stats.style.maxHeight = Math.max(300, Math.min(720, innerHeight - 300)) + 'px';
+    stats.style.overflowY = 'auto';
+
+    btns.innerHTML = '';
+    const mk = (text, fn) => {
+      const el = document.createElement('button');
+      el.className = 'btn ghost';
+      el.textContent = text;
+      el.addEventListener('click', () => { SFX.play('click'); fn(); });
+      btns.appendChild(el);
+    };
+    mk('刷 新', () => this.fetchList());   // fetchList 完成后按当前视图重渲
+    mk('返 回', () => { this.view = 'main'; this.render(); });
   },
 };

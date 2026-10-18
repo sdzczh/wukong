@@ -1116,6 +1116,28 @@ body {
 }
 #overlay-stats .pvp-record { text-align: center; font-size: 14px; color: #b9a8d4; margin-top: 8px; }
 #overlay-stats .pvp-record b { color: #ffd867; font-size: 16px; }
+#overlay-stats .pvp-record .pvp-season-link {
+  margin-left: 10px; padding: 2px 10px; cursor: pointer; vertical-align: 1px;
+  border-radius: 8px; border: 1px solid #5a4a78; background: #2a2140; color: #b9a8d4;
+  font-size: 12px; letter-spacing: 1px;
+}
+#overlay-stats .pvp-record .pvp-season-link:active { transform: translateY(1px); }
+#overlay-stats .pvp-srow {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 8px 12px;
+  background: #2a2140; border: 2px solid #443657; border-radius: 12px;
+}
+#overlay-stats .pvp-srow.me { border-color: #8a5c14; background: #33280f; }
+#overlay-stats .pvp-srank {
+  flex: none; width: 30px; text-align: center; font-weight: 900; font-size: 15px; color: #8a7f9e;
+}
+#overlay-stats .pvp-srank.top { color: #ffd867; font-size: 17px; }
+#overlay-stats .pvp-sname {
+  flex: 1; min-width: 0; font-weight: 900; font-size: 15px; color: #f3ead6;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#overlay-stats .pvp-srow.me .pvp-sname { color: #ffd867; }
+#overlay-stats .pvp-srec { flex: none; font-size: 13px; color: #b9a8d4; }
+#overlay-stats .pvp-srec b { color: #ffd867; font-size: 15px; }
 #overlay-stats .pvp-logs { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; }
 #overlay-stats .pvp-log { font-size: 12px; color: #8a7f9e; text-align: center; }
 #overlay-stats .pvp-row {
