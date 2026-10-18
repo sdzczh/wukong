@@ -93,7 +93,7 @@ iOS Safari 缩放封锁为三层保险：viewport `user-scalable=no` + 全页 `t
 
 ## 技术栈
 
-原生 JavaScript + Canvas 2D（渲染）+ DOM Overlay（面板），零第三方依赖，可平滑移植微信小游戏。展示字体「马善政毛笔体」已子集化（约 340KB woff2，仅含游戏用字）。服务端为零依赖 Node（`http`/`fs`/`path`），单进程同时提供静态站与 JSON API，数据落盘在站点目录之外。
+原生 JavaScript + Canvas 2D（渲染）+ DOM Overlay（面板），零第三方依赖，可平滑移植微信小游戏。展示字体「马善政毛笔体」已按源码全量字符串子集化（约 490KB woff2，覆盖全部界面文案；玩家名号等任意字符自动回退系统字体）。服务端为零依赖 Node（`http`/`fs`/`path`），单进程同时提供静态站与 JSON API，数据落盘在站点目录之外。
 
 ## 目录
 
