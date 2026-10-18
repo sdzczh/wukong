@@ -121,7 +121,7 @@ class Tower {
     const seeStealth = genSeesStealth(this);
     let best = null, bestVal = 0;
     for (const e of enemies) {
-      if (!e.alive || (e.stealth && !seeStealth) || !this.inRange(e)) continue;
+      if (!e.alive || e.banishT > 0 || (e.stealth && !seeStealth) || !this.inRange(e)) continue;   // 山底禁锢不可索敌
       let v;
       if (this.mode === 'near') v = -Math.hypot(e.x - this.x, e.y - this.y);
       else if (this.mode === 'strong') v = e.hp;

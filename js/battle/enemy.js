@@ -21,6 +21,8 @@ class Enemy {
     this.stealth = false; this.stealthT = CONFIG.bossStealth.off;   // 隐匿：现形先行
     this.enraged = false;                       // 狂暴：半血触发一次
     this.poisT = 0; this.poisDps = 0; this.poisAcc = 0; this.poisStacks = 0; this.poisSrc = null;   // 腐毒叠层
+    this.burnT = 0; this.burnDps = 0; this.burnAcc = 0; this.burnStacks = 0; this.burnSrc = null;   // 灼烧叠层（三昧真火）
+    this.banishT = 0; this.banishDmg = 0; this.banishSrc = null; this.banishStun = 0;   // 移山压顶：山底禁锢
     this.shredN = 0;                            // 碎甲层数（削基础护甲）
     if (type === 'boss' && bossKind) {
       const bp = CONFIG.bossPool.find(b => b.id === bossKind);
@@ -71,6 +73,19 @@ class Enemy {
   update(dt) {
     if (!this.alive) return;
     if (this.flash > 0) this.flash -= dt;
+    // 移山压顶：压入山底——移出战局（不移动/免伤/不可索敌），期满弹出受创
+    if (this.banishT > 0) {
+      this.banishT -= dt;
+      if (this.banishT <= 0) {
+        const bd = this.banishDmg, bs = this.banishSrc, bst = this.banishStun;
+        this.banishT = 0; this.banishDmg = 0; this.banishSrc = null; this.banishStun = 0;
+        FX.ring(this.x, this.y, Grid.tile * 1.2, '#a89ae0', { life: 0.5, width: 4 });
+        FX.spark(this.x, this.y, '#a89ae0', 8);
+        if (bst > 0) this.applyStun(bst);
+        this.takeDamage(bd, bs);
+      }
+      return;
+    }
     // Boss 池机制：唤魂召小鬼 / 隐匿周期遁形 / 狂暴半血暴走
     if (this.bossKind === 'zhaohuan') {
       this.summonT -= dt;
@@ -161,6 +176,29 @@ class Enemy {
         }
       }
     }
+    // 灼烧（三昧真火）：持续跳字（无视护甲），可与腐毒并存
+    if (this.burnT > 0) {
+      this.burnT -= dt;
+      if (this.burnT <= 0) { this.burnDps = 0; this.burnStacks = 0; }
+      else {
+        this.burnAcc += this.burnDps * dt;
+        if (this.burnAcc >= 1) {
+          const dm = Math.floor(this.burnAcc);
+          this.burnAcc -= dm;
+          this.hp -= dm;
+          this.flash = 0.08;
+          this.creditDmg(this.burnSrc, dm);
+          FX.float(String(dm), this.x + Grid.tile * 0.25, this.y - Grid.tile * 0.5, '#ff9a5c', 13);
+          if (this.hp <= 0) {
+            this.alive = false;
+            this.lastHitBy = this.burnSrc;
+            if (this.elite && this.affix === 'split') this._split();
+            Bus.emit('enemyKilled', this);
+            return;
+          }
+        }
+      }
+    }
     if (this.stun > 0) { this.stun -= dt; return; }
     if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slowF = 1; }
     this.s += this.speedPx * this.slowF * dt;
@@ -174,7 +212,7 @@ class Enemy {
   }
 
   takeDamage(dmg, src) {
-    if (!this.alive) return;
+    if (!this.alive || this.banishT > 0) return;   // 山底禁锢期间免伤
     const srcGen = src && src.isGeneral ? src : null;
     // 满星悟空·火眼金睛：攻击无视护甲
     const ignoreArmor = !!(srcGen && srcGen.starMaxed && srcGen.key === 'wukong');
@@ -231,6 +269,25 @@ class Enemy {
     this.poisSrc = src;
   }
 
+  /* 灼烧叠层（三昧真火）：同腐毒；cap 由红孩儿星级决定（业火 5→8） */
+  applyBurn(dps, dur, cap, src) {
+    if (!this.alive || this.banishT > 0) return;
+    if (this.burnStacks < cap) { this.burnStacks++; this.burnDps += dps; }
+    this.burnT = Math.max(this.burnT, dur);
+    this.burnSrc = src;
+  }
+
+  /* 移山压顶：压入山底——禁锢期满弹出并受创（stun 为满星·山威附加眩晕） */
+  applyBanish(t, dmg, src, stun) {
+    if (!this.alive) return;
+    this.banishT = t;
+    this.banishDmg = dmg;
+    this.banishSrc = src;
+    this.banishStun = stun || 0;
+    FX.ring(this.x, this.y, Grid.tile * 1.1, '#8a7fb8', { life: 0.6, width: 4 });
+    FX.float('移山', this.x, this.y - Grid.tile * 0.7, '#a89ae0', 15);
+  }
+
   /* 碎甲：削减基础护甲（不回退；同一目标叠至上限） */
   applyShred(n, cap) {
     if (!this.alive) return;
@@ -243,8 +300,7 @@ class Enemy {
   }
 
   /* 伤害统计归属（直伤/毒跳共用） */
-  creditDmg(src, out) {
-    if (!src || !src.tid || !out) return;
+  creditDmg(src, out) {    if (!src || !src.tid || !out) return;
     const st = R.dmgStats[src.tid] || (R.dmgStats[src.tid] = {
       name: '', dmg: 0,
       color: src.isGeneral ? (CONFIG.rarityColors[src.def.rarity] || '#e8933c')
@@ -258,6 +314,20 @@ class Enemy {
     const tile = Grid.tile;
     const size = tile * this.def.size * (this.mini ? 0.7 : 1) * (this.enraged ? 1 + Math.sin(now * 9) * 0.05 : 1);
     const bob = Math.sin(now * 4.5 + this.wobble) * tile * 0.04;
+
+    // 移山压顶：压入山底——只画一座下沉山影（本体与血条全隐）
+    if (this.banishT > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.5 + Math.sin(now * 3) * 0.12;
+      ctx.font = `900 ${Math.round(size * 1.25)}px "Ma Shan Zheng","Kaiti SC","STKaiti","KaiTi",serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4; ctx.strokeStyle = '#12101c';
+      ctx.strokeText('山', this.x, this.y + size * 0.18);
+      ctx.fillStyle = '#8a7fb8';
+      ctx.fillText('山', this.x, this.y + size * 0.18);
+      ctx.restore();
+      return;
+    }
 
     // 影
     ctx.save();
@@ -367,6 +437,16 @@ class Enemy {
       if (this.poisStacks > 1) {
         ctx.font = `900 ${Math.round(size * 0.24)}px sans-serif`;
         ctx.fillText('×' + this.poisStacks, this.x - size * 0.48, this.y - size * 0.18);
+      }
+    }
+    // 灼烧：燃标记（右上橙字，与毒镜像），叠层数显示小数字
+    if (this.burnT > 0) {
+      ctx.font = `900 ${Math.round(size * 0.34)}px "Ma Shan Zheng","Kaiti SC","STKaiti",serif`;
+      ctx.fillStyle = '#ff9a5c';
+      ctx.fillText('燃', this.x + size * 0.48, this.y - size * 0.5);
+      if (this.burnStacks > 1) {
+        ctx.font = `900 ${Math.round(size * 0.24)}px sans-serif`;
+        ctx.fillText('×' + this.burnStacks, this.x + size * 0.48, this.y - size * 0.18);
       }
     }
     // 隐匿：遁形提示（略提亮，隐了也得知道为啥打不着）

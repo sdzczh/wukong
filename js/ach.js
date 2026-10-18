@@ -26,7 +26,8 @@ const ACHS = [
   { id: 'lv3x5',  name: '登峰造极', title: '极字宗师', desc: '5 个字历史最高达到 Lv3', test: s => Object.values((s.codex && s.codex.charLv) || {}).filter(v => v >= 3).length >= 5 },
   { id: 'god3',   name: '神将初醒', title: '唤神者',   desc: '唤醒 3 位神将',       test: s => Object.keys((s.codex && s.codex.generals) || {}).length >= 3 },
   { id: 'god6',   name: '半壁天河', title: '天河副将', desc: '唤醒 6 位神将',       test: s => Object.keys((s.codex && s.codex.generals) || {}).length >= 6 },
-  { id: 'god12',  name: '满天神佛', title: '齐天尊者', desc: '唤醒全部 12 位神将',   test: s => Object.keys((s.codex && s.codex.generals) || {}).length >= 12 },
+  { id: 'god12',  name: '满天神佛', title: '齐天尊者', desc: '唤醒 12 位神将',       test: s => Object.keys((s.codex && s.codex.generals) || {}).length >= 12 },
+  { id: 'god15',  name: '地仙归位', title: '地仙之祖', desc: '唤醒全部 15 位神将',   test: s => Object.keys((s.codex && s.codex.generals) || {}).length >= 15 },
   /* —— 神兵与装备 —— */
   { id: 'sig1',   name: '遗宝在手', title: '遗宝传人', desc: '合成 1 件专属神兵',   test: s => Object.keys(s.sigGear || {}).length >= 1 },
   { id: 'sig4',   name: '神兵满架', title: '神兵库监', desc: '合成 4 件专属神兵',   test: s => Object.keys(s.sigGear || {}).length >= 4 },

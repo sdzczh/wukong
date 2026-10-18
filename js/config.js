@@ -46,7 +46,7 @@ const CONFIG = {
   // 召唤（抽字）：一次召唤弹出 draftSize 张卡，点选入架，未选的再召唤时消失
   summon: {
     base: 9, step: 1,                // 费用 = base + step × 已召唤次数
-    godChance: 0.24,                 // 单张神将字概率
+    godChance: 0.26,                 // 单张神将字概率（15 将池，较 12 将时的 0.24 略抬）
     pityAfter: 4,                    // 连续 N 轮 draft 无神将字后，该轮必出一张
     startChars: 4,                   // 开局免费发字
     rackSize: 5,
@@ -73,19 +73,21 @@ const CONFIG = {
   // 普通字 → 塔 key
   charToTower: { '枪': 'spear', '棍': 'staff', '弓': 'bow', '营': 'camp',
                  '毒': 'poison', '雷': 'thunder', '冰': 'frost', '锤': 'metal' },
-  // 抽字权重（普通字合计 128，神将字合计权重 42）
+  // 抽字权重（普通字合计 128，神将字合计权重 52）
   normalCharWeights: { '枪': 20, '棍': 16, '弓': 20, '营': 20,
                        '毒': 13, '雷': 13, '冰': 13, '锤': 13 },
   godCharWeights: {
     '悟': 3, '空': 2, '能': 3, '净': 3, '哪': 2, '吒': 3,
     '金': 3, '木': 3, '杨': 2, '戬': 2, '王': 3, '母': 2,
     '阎': 1, '玉': 1, '帝': 1, '嫦': 2, '娥': 2, '李': 2, '靖': 2,
+    '红': 2, '孩': 2, '镇': 1, '元': 1, '银': 2, '角': 2,
   },
   // 神将字对 → 神将 key（key 为 CONFIG.towers 中的神将名）
   pairs: {
     '悟空': 'wukong', '悟能': 'wuneng', '悟净': 'wujing', '哪吒': 'nezha',
     '金吒': 'jinzha', '木吒': 'muzha', '杨戬': 'yangjian', '王母': 'wangmu',
     '玉帝': 'yudi', '阎王': 'yanwang', '嫦娥': 'change', '李靖': 'lijing',
+    '红孩': 'honghaier', '镇元': 'zhenyuanzi', '银角': 'yinjiao',
   },
 
   // 未合成神将字摆上棋盘时的灵字塔（可升级、可与配对字合成）
@@ -223,6 +225,24 @@ const CONFIG = {
                skill: { name: '玲珑宝塔', desc: '塔影罩范围 4 秒：减速 30% 受伤 +50%', cd: 16 },
                star3: { name: '镇魂', desc: '攻击 15% 概率眩晕 0.5 秒' },
                desc: '范围控制 · 技能：玲珑宝塔' },
+    honghaier: { char: '红孩', name: '红孩儿', general: true, rarity: '橙', pair: ['红', '孩'], color: '#e0563c',
+               atkfx: { shape: 'spear', color: '#ff9a5c', size: 5.5, glow: 12, trail: '#e06030', impact: true },
+               atk: 13, rate: 1.0, range: 3.0, kind: 'arrow', maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '三昧真火', desc: '火浪灼烧眼前敌群，并在落点留下 5 秒燃烧地带', cd: 14 },
+               star3: { name: '业火', desc: '灼烧叠层上限 5 → 8' },
+               desc: '灼烧地带 · 技能：三昧真火' },
+    zhenyuanzi: { char: '镇元', name: '镇元子', general: true, rarity: '红', pair: ['镇', '元'], color: '#5fa8a0',
+               atkfx: { style: 'beam', color: '#7fd8c8', core: '#eafff8', width: 5, glow: 12 },
+               atk: 15, rate: 0.7, range: 3.2, kind: 'pierce', pierce: 2, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '缚地灵根', desc: '灵根定身敌群 2.5 秒并持续吸取，伤害的 25% 化作蟠桃', cd: 16 },
+               star3: { name: '地脉', desc: '灵根吸取转桃比例提升到 35%' },
+               desc: '伤害转桃 · 技能：缚地灵根' },
+    yinjiao: { char: '银角', name: '银角大王', general: true, rarity: '紫', pair: ['银', '角'], color: '#8a7fb8',
+               atkfx: { style: 'sweep', color: '#a89ae0', width: 9, r: 1.2, impact: 'ring' },
+               atk: 15, rate: 0.9, range: 1.8, kind: 'cleave', cleave: 2, maxLevel: 3, levelMul: { atk: 0.6, range: 0.05 },
+               skill: { name: '移山压顶', desc: '将范围内最强敌人压入山底 3 秒（移出战局），弹出时受重创', cd: 18 },
+               star3: { name: '山威', desc: '被压敌人弹出时眩晕 0.8 秒' },
+               desc: '禁锢控杀 · 技能：移山压顶' },
   },
 
   rarityColors: { '蓝': '#5b8fd6', '紫': '#9a6fd0', '橙': '#e8933c', '红': '#d64545' },
@@ -275,6 +295,12 @@ const CONFIG = {
                desc: '攻击 +{v}%；万箭齐发 +10%/级' },
     lijing:  { name: '玲珑金塔',   color: '#8a9a6a', stat: 'cdMul',   base: 0.12, per: 0.05,
                desc: '技冷却 -{v}%；玲珑宝塔 +0.5s/级' },
+    honghaier:  { name: '火尖枪',   color: '#e0563c', stat: 'atkMul', base: 0.18, per: 0.07,
+               desc: '攻击 +{v}%；灼烧每层伤害 +15%/级' },
+    zhenyuanzi: { name: '玉尘麈',   color: '#5fa8a0', stat: 'atkMul', base: 0.15, per: 0.06,
+               desc: '攻击 +{v}%；灵根定身 +0.2s/级' },
+    yinjiao:    { name: '紫金葫芦', color: '#8a7fb8', stat: 'rateMul', base: 0.12, per: 0.05,
+               desc: '攻速 +{v}%；山压禁锢 +0.3s/级' },
   },
 
   // 敌人（魂系）
@@ -291,13 +317,13 @@ const CONFIG = {
   bossPool: [
     { id: 'xuanjia', char: '甲', name: '玄甲鬼将', color: '#6a7a9a', armor: 8,
       desc: '玄甲庇体：护甲极高，且存活时全军攻击 -25%',
-      shards: ['lijing', 'jinzha', 'yanwang'] },
+      shards: ['lijing', 'jinzha', 'yanwang', 'yinjiao'] },
     { id: 'zhaohuan', char: '唤', name: '唤魂鬼将', color: '#9a6fd0',
       desc: '唤魂：行进间不断召出幽魂小鬼',
-      shards: ['wangmu', 'change', 'wuneng'] },
+      shards: ['wangmu', 'change', 'wuneng', 'zhenyuanzi'] },
     { id: 'kuangbao', char: '狂', name: '狂暴鬼将', color: '#d64545', speedMul: 1.15,
       desc: '狂暴：半血后怒不可遏，移速暴涨',
-      shards: ['wukong', 'nezha', 'muzha'] },
+      shards: ['wukong', 'nezha', 'muzha', 'honghaier'] },
     { id: 'yinshen', char: '隐', name: '隐匿鬼将', color: '#5cc0a8',
       desc: '隐匿：周期遁形 2 秒，隐身时无法被索敌',
       shards: ['yangjian', 'yudi', 'wujing'] },
@@ -392,6 +418,7 @@ const CONFIG = {
     { name: '天庭威仪', color: '#d6b24a', keys: ['yudi', 'wangmu', 'yangjian'], stat: 'atk', tiers: [0.08, 0.15], desc: '全体攻击' },
     { name: '取经之路', color: '#c98a2e', keys: ['wukong', 'wuneng', 'wujing'], stat: 'exp', tiers: [0.3, 0.6], desc: '神将经验' },
     { name: '散仙结盟', color: '#7a6fd0', keys: ['yanwang', 'change', 'lijing'], stat: 'cd', tiers: [0.08, 0.15], desc: '技能冷却' },
+    { name: '地仙会盟', color: '#5fa8a0', keys: ['honghaier', 'zhenyuanzi', 'yinjiao'], stat: 'atk', tiers: [0.08, 0.16], desc: '全体攻击' },
   ],
 
   /* 局外成长：修炼天赋（魂晶购买，永久生效） */

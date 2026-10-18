@@ -7,6 +7,8 @@ class General extends Tower {
     this.skillT = 3;      // 开局 3s 后可用技能
     this.spinT = 0; this.spinTick = 0;   // 悟空旋棍
     this.zoneT = 0; this.zoneTick = 0;   // 李靖宝塔
+    this.fireT = 0; this.fireTick = 0; this.fireZone = null;   // 红孩儿燃烧地带
+    this.rootT = 0; this.rootTick = 0; this.rootGain = 0;      // 镇元子灵根吸取
   }
 
   /* 星级加成：每星攻击 +8%、技能效果 +15% */
@@ -96,6 +98,54 @@ class General extends Tower {
       }
     }
 
+    // 红孩儿：三昧真火燃烧地带（落点固定区域，每 0.5s 灼烧 + 叠燃）
+    if (this.fireT > 0) {
+      this.fireT -= dt; this.fireTick -= dt;
+      if (this.fireTick <= 0) {
+        this.fireTick = 0.5;
+        const fz = this.fireZone || { x: this.x, y: this.y, r: Grid.tile * 1.6 };
+        const cap = this.starMaxed ? 8 : 5;   // 满星·业火
+        for (const e of R.enemies) {
+          if (!e.alive) continue;
+          if (Math.hypot(e.x - fz.x, e.y - fz.y) <= fz.r) {
+            e.takeDamage(Math.round(this.atk * 0.3 * this.starMul), this);
+            e.applyBurn(Math.max(1, Math.round(this.atk * 0.1)), 3, cap, this);
+          }
+        }
+        FX.ring(fz.x, fz.y, fz.r, '#ff9a5c');
+      }
+    }
+
+    // 镇元子：缚地灵根吸取（定身敌群逐跳吸血，期满转桃）
+    if (this.rootT > 0) {
+      this.rootT -= dt; this.rootTick -= dt;
+      if (this.rootTick <= 0) {
+        this.rootTick = 0.5;
+        let hit = 0;
+        for (const e of R.enemies) {
+          if (!e.alive || e.banishT > 0) continue;
+          if (Math.hypot(e.x - this.x, e.y - this.y) <= this.rangePx * 1.1) {
+            const dm = Math.round(this.atk * 0.45 * this.starMul);
+            e.takeDamage(dm, this);
+            hit += dm;
+            if (e.alive) e.applyStun(0.6);   // 维持定身
+          }
+        }
+        this.rootGain += hit;
+        if (hit > 0) FX.ring(this.x, this.y, this.rangePx * 1.1, '#7fd8c8');
+      }
+      if (this.rootT <= 0) {
+        const conv = this.starMaxed ? 0.35 : 0.25;   // 满星·地脉
+        const got = Math.min(12, Math.floor(this.rootGain * conv));
+        if (got > 0) {
+          R.peaches += got;
+          if (HUD.refresh) HUD.refresh();
+          FX.float('+' + got + ' 桃', this.x, this.y - Grid.tile * 1.1, '#a8e0c0', 17);
+        }
+        this.rootGain = 0;
+      }
+    }
+
     // 自动施法：就绪且（范围内有敌 / 全屏类有任意敌）
     if (this.skillT <= 0 && this._readyToCast(enemies)) {
       Skills.cast(this);
@@ -107,6 +157,8 @@ class General extends Tower {
   _readyToCast(enemies) {
     if (this.key === 'yudi' || this.key === 'wangmu') return enemies.some(e => e.alive);
     if (this.key === 'yanwang') return enemies.some(e => e.alive && !e.deathMark);
+    // 银角大王：范围内得有「未在山底」的敌人才值得施法
+    if (this.key === 'yinjiao') return enemies.some(e => e.alive && e.banishT <= 0 && this.inRange(e));
     return enemies.some(e => e.alive && this.inRange(e));
   }
 

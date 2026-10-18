@@ -138,4 +138,47 @@ const Skills = {
 
   /* 李靖：玲珑宝塔 —— 塔影罩范围（专属 +0.5s/级）：减速 30% + 持续受伤 */
   lijing(g) { g.zoneT = (4 + 0.5 * g.sigLv) * g.starMul; g.zoneTick = 0; },
+
+  /* 红孩儿：三昧真火 —— 火浪灼烧眼前敌群（120% + 叠灼烧），
+     落点（最远敌处）留下燃烧地带（专属 +0.4s/级，General.update 逐跳结算） */
+  honghaier(g) {
+    const cap = g.starMaxed ? 8 : 5;   // 满星·业火：灼烧叠层上限 5→8
+    const targets = Skills.enemiesAround(g, 1.2);
+    let far = null;
+    for (const e of targets) {
+      e.takeDamage(Math.round(g.atk * 1.2 * g.starMul), g);
+      e.applyBurn(Math.max(1, Math.round(g.atk * 0.12)), 5, cap, g);
+      if (!far || e.s > far.s) far = e;
+    }
+    const tile = Grid.tile, r = tile * 1.6;
+    const zx = far ? far.x : g.x, zy = far ? far.y : g.y;
+    g.fireZone = { x: zx, y: zy, r };
+    g.fireT = (5 + 0.4 * g.sigLv) * g.starMul;
+    g.fireTick = 0;
+    FX.ring(zx, zy, r, '#e0563c');
+    FX.float('三昧真火', zx, zy - tile * 0.8, '#ff9a5c', 16);
+  },
+
+  /* 镇元子：缚地灵根 —— 定身敌群（专属 +0.2s/级），持续吸取伤害，
+     25%（满星·地脉 35%）化作蟠桃，单次封顶 12（General.update 逐跳结算） */
+  zhenyuanzi(g) {
+    const dur = (2.5 + 0.2 * g.sigLv) * g.starMul;
+    for (const e of Skills.enemiesAround(g, 1.1)) e.applyStun(dur);
+    g.rootT = dur; g.rootTick = 0; g.rootGain = 0;
+    FX.ring(g.x, g.y, g.rangePx * 1.1, '#7fd8c8');
+    FX.float('缚地灵根', g.x, g.y - Grid.tile * 0.9, '#7fd8c8', 16);
+  },
+
+  /* 银角大王：移山压顶 —— 范围内血量最高者压入山底（专属 +0.3s/级，
+     移出战局不可索敌/免伤），弹出受 200% 重创（满星·山威：弹出眩晕 0.8s） */
+  yinjiao(g) {
+    let best = null;
+    for (const e of R.enemies) {
+      if (!e.alive || e.banishT > 0) continue;
+      if (Math.hypot(e.x - g.x, e.y - g.y) > g.rangePx * 1.2) continue;
+      if (!best || e.maxHp > best.maxHp) best = e;
+    }
+    if (best) best.applyBanish((3 + 0.3 * g.sigLv) * g.starMul,
+      Math.round(g.atk * 2 * g.starMul), g, g.starMaxed ? 0.8 : 0);
+  },
 };
