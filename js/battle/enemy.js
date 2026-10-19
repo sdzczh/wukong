@@ -5,7 +5,8 @@ class Enemy {
     this.type = type; this.def = d;
     this.pvp = !!d.pvp;                 // 讨伐镜像：金环标记
     const ruleMul = R.rules ? R.rules.enemyHpMul : 1;
-    this.maxHp = Math.round(d.hp * hpMul * ruleMul);
+    // 3.2 平衡：常规敌军整体加厚（讨伐镜像阵不吃，PVP 强度按镇守者进度另算）
+    this.maxHp = Math.round(d.hp * hpMul * ruleMul * (this.pvp ? 1 : CONFIG.enemyHpBase));
     this.hp = this.maxHp;
     this.s = 0; this.alive = true; this.leaked = false;
     this.stun = 0; this.slowT = 0; this.slowF = 1; this.flash = 0;
@@ -62,7 +63,8 @@ class Enemy {
     const bless = R.blessWave && R.blessWave.slow ? CONFIG.peachSink.bless.slow.spdMul : 1;
     const freeze = 1 - Math.min(0.5, (R.mods.lslow || 0) * CONFIG.waveMods.legendSteps.lslow);   // 传说·冰封千里
     const bondSlow = 1 - Math.min(0.4, Bonds.bonus().slow || 0);   // 羁绊·幽冥同行等慑行
-    return this.def.speed * Grid.tile * Talents.enemySpeedMul() * swift * rage * kind * bless * freeze * bondSlow
+    const base = this.pvp ? 1 : CONFIG.enemySpeedBase;            // 3.2 平衡：常规敌军行进放缓（镜像阵不吃）
+    return this.def.speed * Grid.tile * base * Talents.enemySpeedMul() * swift * rage * kind * bless * freeze * bondSlow
       * (this.evSlow || 1) * (R.rules ? R.rules.enemySpdMul : 1);   // evSlow：无尽事件·魂潮减速
   }
 

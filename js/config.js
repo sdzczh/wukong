@@ -315,6 +315,12 @@ const CONFIG = {
     boss:   { char: '鬼', name: '鬼将', hp: 750, speed: 0.5, reward: 20, exp: 4, dmg: 3, size: 0.98, color: '#a03448', armor: 2 },
   },
 
+  /* 3.2 平衡：常规波次敌军的基线系数——行进放缓、身板加厚（慢而重，压境感更强）。
+     两者成对调：敌军走得慢 ⇒ 在射程里挨打更久，故血量按同向补偿，整体难度不飘。
+     讨伐镜像阵（def.pvp）不吃这两个系数，PVP 强度仍按镇守者进度另算。 */
+  enemySpeedBase: 0.88,   // 全体常规敌军行进速度 ×0.88（-12%）
+  enemyHpBase: 1.20,      // 全体常规敌军基础血量 ×1.20（+20%）
+
   /* Boss 池轮换：每个鬼将波（n%5==0）从池中按波次轮换登场，机制与碎片偏好绑定。
      shards：该鬼将必掉的专属碎片偏向哪三位神将（碎片掉落绑定） */
   bossPool: [
@@ -349,8 +355,9 @@ const CONFIG = {
   waveCount: 10,
   waveHpGrowth: 1.17,   // 3.0 上调：新神将+轮回增益后玩家火力富余，原 1.14 偏软
   // 前期保护：前 earlyWaveCount 波敌人血量乘 earlyWaveHpEase（给新玩家上手缓冲）
+  // 3.2：enemyHpBase 1.20 上线后同向下调 0.85→0.71，保前三波绝对血量与原基线一致（0.71×1.20≈0.85）
   earlyWaveCount: 3,
-  earlyWaveHpEase: 0.85,
+  earlyWaveHpEase: 0.71,
   waveIntermission: 6,   // 波间备战秒数
 
   /* 无尽模式（通关第 10 波后可选择进入）：波次无限，每 shovelEvery 波奖励 1 把铲子 */
